@@ -1,0 +1,16 @@
+// Push data to the source QP
+syntax = "proto3";
+
+option go_package = "github.com/ease-lab/vhive_stealth/examples/prototype/proto/push_data";
+
+package proto_gen;
+
+service StreamData {
+  rpc PushData (Request) returns () {}
+}
+
+message Request {
+  bytes chunk = 1;
+  string key = 2;
+}
+
