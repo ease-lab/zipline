@@ -1,0 +1,19 @@
+// control path request
+syntax = "proto3";
+
+option go_package = "github.com/ease-lab/vhive_stealth/examples/prototype/proto/FnInvocationProto";
+
+package FnInvocationProto;
+
+service Invocation {
+    rpc RouteInvocationCall (InvocationRequest) returns (Empty) {}
+}
+
+message InvocationRequest {
+    bytes xdt_json = 1;
+    // data will be patched later by destination QP
+}
+
+message Empty {
+
+}

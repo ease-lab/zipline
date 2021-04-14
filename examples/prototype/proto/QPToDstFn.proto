@@ -1,0 +1,29 @@
+// control path request
+syntax = "proto3";
+
+option go_package = "github.com/ease-lab/vhive_stealth/examples/prototype/proto/QPToDstFnProto";
+
+package QPToDstFnProto;
+
+
+service XDTtoFn {
+    rpc XDTFnCall (InvocationRequest) returns (Empty) {}
+    rpc XDTDataServe (DataRequest) returns (stream Data) {} 
+}
+
+message InvocationRequest {
+    bytes xdt_json = 1;
+}
+
+message Empty {
+
+}
+
+message Data {
+    bytes chunk = 1;
+}
+
+message DataRequest {
+    string key = 1;
+    int64 chunk_size = 65536;
+}
