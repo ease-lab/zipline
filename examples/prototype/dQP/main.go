@@ -8,9 +8,9 @@ import (
 	"net"
 	"time"
 
-	crossQPProto "github.com/ease-lab/vhive_stealth/examples/prototype/proto/CrossQPProto"
 	FnInvocationProto "github.com/ease-lab/vhive_stealth/examples/prototype/proto/FnInvocationProto"
 	QPToDstFnProto "github.com/ease-lab/vhive_stealth/examples/prototype/proto/QPToDstFnProto"
+	crossXDT "github.com/ease-lab/vhive_stealth/examples/prototype/proto/crossXDT"
 	upXDT "github.com/ease-lab/vhive_stealth/examples/prototype/proto/upXDT"
 
 	"google.golang.org/grpc"
@@ -19,7 +19,7 @@ import (
 var data_queue = make(map[string][]byte)
 
 type pull_server struct {
-	crossQPProto.UnimplementedStreamDataServer
+	crossXDT.UnimplementedStreamDataServer
 }
 
 type push_server struct {
@@ -108,7 +108,7 @@ func (s control_call_server) RouteInvocationCall(ctx context.Context, in *FnInvo
 }
 
 // gRPC server for sQP to serve the available data to the dQP
-func (s pull_server) ServeData(in *crossQPProto.Request, srv crossQPProto.StreamData_ServeDataServer) error {
+func (s pull_server) ServeData(in *crossXDT.Request, srv crossXDT.StreamData_ServeDataServer) error {
 	//serve data to the dQP
 	log.Printf("fetch key : %d", in.Key)
 
@@ -117,13 +117,13 @@ func (s pull_server) ServeData(in *crossQPProto.Request, srv crossQPProto.Stream
 	for currentByte := int64(0); currentByte < blob_length; currentByte += in.ChunkSize {
 
 		if currentByte+in.ChunkSize > blob_length {
-			resp := crossQPProto.Response{Chunk: blob[currentByte:blob_length]}
+			resp := crossXDT.Response{Chunk: blob[currentByte:blob_length]}
 			if err := srv.Send(&resp); err != nil {
 				log.Printf("send error %v", err)
 			}
 			log.Printf("finishing request number : %d", currentByte)
 		} else {
-			resp := crossQPProto.Response{Chunk: blob[currentByte : currentByte+in.ChunkSize]}
+			resp := crossXDT.Response{Chunk: blob[currentByte : currentByte+in.ChunkSize]}
 			if err := srv.Send(&resp); err != nil {
 				log.Printf("send error %v", err)
 			}
@@ -145,8 +145,8 @@ func PullDataFromSrcQP(key string, chunk_size_in_bytes int) (time.Duration, []by
 	start := time.Now()
 
 	// create stream
-	client := crossQPProto.NewStreamDataClient(conn)
-	in := &crossQPProto.Request{Key: key, ChunkSize: int64(chunk_size_in_bytes)}
+	client := crossXDT.NewStreamDataClient(conn)
+	in := &crossXDT.Request{Key: key, ChunkSize: int64(chunk_size_in_bytes)}
 	stream, err := client.ServeData(context.Background(), in)
 	if err != nil {
 		log.Fatalf("open stream error %v", err)

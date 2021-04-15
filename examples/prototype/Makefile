@@ -27,9 +27,9 @@ proto_gen:
 	GO111MODULE="on" go get google.golang.org/protobuf/cmd/protoc-gen-go \
         google.golang.org/grpc/cmd/protoc-gen-go-grpc
 
-	GO111MODULE="on" PATH="$$PATH:$$(go env GOPATH)/bin" protoc proto/CrossQP.proto \
+	GO111MODULE="on" PATH="$$PATH:$$(go env GOPATH)/bin" protoc proto/crossXDT.proto \
 	    --proto_path=./proto \
-	    --go_out=./proto/CrossQP --go-grpc_out=./proto/CrossQP \
+	    --go_out=./proto/crossXDT --go-grpc_out=./proto/crossXDT \
 	    --go_opt=paths=source_relative --go-grpc_opt=paths=source_relative
 
 	GO111MODULE="on" PATH="$$PATH:$$(go env GOPATH)/bin" protoc proto/FnInvocation.proto \

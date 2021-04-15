@@ -6,7 +6,7 @@ replace github.com/ease-lab/vhive_stealth/examples/prototype/proto/upXDT => ../p
 
 replace github.com/ease-lab/vhive_stealth/examples/gRPC_stream/plotter => ../plotter
 
-replace github.com/ease-lab/vhive_stealth/examples/prototype/proto/CrossQPProto => ../proto/CrossQP
+replace github.com/ease-lab/vhive_stealth/examples/prototype/proto/crossXDT => ../proto/crossXDT
 
 replace github.com/ease-lab/vhive_stealth/examples/prototype/proto/FnInvocationProto => ../proto/FnInvocation
 

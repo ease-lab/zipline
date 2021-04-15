@@ -5,7 +5,7 @@ import (
 	"log"
 	"net"
 
-	crossQPProto "github.com/ease-lab/vhive_stealth/examples/prototype/proto/CrossQPProto"
+	crossXDT "github.com/ease-lab/vhive_stealth/examples/prototype/proto/crossXDT"
 	upXDT "github.com/ease-lab/vhive_stealth/examples/prototype/proto/upXDT"
 
 	"google.golang.org/grpc"
@@ -14,7 +14,7 @@ import (
 var data_queue = make(map[string][]byte)
 
 type pull_server struct {
-	crossQPProto.UnimplementedStreamDataServer
+	crossXDT.UnimplementedStreamDataServer
 }
 
 type push_server struct {
@@ -46,7 +46,7 @@ func (s push_server) CollectData(srv upXDT.StreamData_CollectDataServer) error {
 }
 
 // gRPC server to serve the available data to the dQP
-func (s pull_server) ServeData(in *crossQPProto.Request, srv crossQPProto.StreamData_ServeDataServer) error {
+func (s pull_server) ServeData(in *crossXDT.Request, srv crossXDT.StreamData_ServeDataServer) error {
 
 	log.Printf("fetch key : %d", in.Key)
 
@@ -55,13 +55,13 @@ func (s pull_server) ServeData(in *crossQPProto.Request, srv crossQPProto.Stream
 	for currentByte := int64(0); currentByte < blob_length; currentByte += in.ChunkSize {
 
 		if currentByte+in.ChunkSize > blob_length {
-			resp := crossQPProto.Response{Chunk: blob[currentByte:blob_length]}
+			resp := crossXDT.Response{Chunk: blob[currentByte:blob_length]}
 			if err := srv.Send(&resp); err != nil {
 				log.Printf("send error %v", err)
 			}
 			log.Printf("finishing request number : %d", currentByte)
 		} else {
-			resp := crossQPProto.Response{Chunk: blob[currentByte : currentByte+in.ChunkSize]}
+			resp := crossXDT.Response{Chunk: blob[currentByte : currentByte+in.ChunkSize]}
 			if err := srv.Send(&resp); err != nil {
 				log.Printf("send error %v", err)
 			}
@@ -82,7 +82,7 @@ func StartServer(serverAddr string) {
 	// create grpc server
 	sdk_server := grpc.NewServer()
 	upXDT.RegisterStreamDataServer(sdk_server, push_server{})
-	crossQPProto.RegisterStreamDataServer(sdk_server, pull_server{})
+	crossXDT.RegisterStreamDataServer(sdk_server, pull_server{})
 
 	log.Println("start server")
 	// and start...

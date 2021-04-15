@@ -6,10 +6,10 @@ replace github.com/ease-lab/vhive_stealth/examples/prototype/proto/upXDT => ../p
 
 replace github.com/ease-lab/vhive_stealth/examples/gRPC_stream/plotter => ../plotter
 
-replace github.com/ease-lab/vhive_stealth/examples/prototype/proto/CrossQPProto => ../proto/CrossQP
+replace github.com/ease-lab/vhive_stealth/examples/prototype/proto/crossXDT => ../proto/crossXDT
 
 require (
-	github.com/ease-lab/vhive_stealth/examples/prototype/proto/CrossQPProto v0.0.0-00010101000000-000000000000
+	github.com/ease-lab/vhive_stealth/examples/prototype/proto/crossXDT v0.0.0-00010101000000-000000000000
 	github.com/ease-lab/vhive_stealth/examples/prototype/proto/upXDT v0.0.0-00010101000000-000000000000
 	golang.org/x/net v0.0.0-20190620200207-3b0461eec859 // indirect
 	golang.org/x/sys v0.0.0-20210304124612-50617c2ba197 // indirect
