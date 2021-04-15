@@ -8,6 +8,7 @@ import (
 	"testing"
 	"time"
 
+	dqp "github.com/ease-lab/vhive_stealth/examples/prototype/dqp"
 	sdk "github.com/ease-lab/vhive_stealth/examples/prototype/sdk"
 	sqp "github.com/ease-lab/vhive_stealth/examples/prototype/sqp"
 	log "github.com/sirupsen/logrus"
@@ -45,4 +46,32 @@ func TestSDK_to_sQP_data_transfer(t *testing.T) {
 
 	duration := sdk.PushData(key, payloadByteArray, chunkSizeInBytes)
 	log.Printf("sent %d bytes in %s", len(payloadByteArray), duration)
+}
+
+func TestSQP_to_dQP_data_transfer(t *testing.T) {
+
+	// start server at sQP
+	go sqp.StartServer(":50005")
+
+	// create random payload
+	now := time.Now()
+	key := strconv.Itoa(int(now.UnixNano()))
+	payload_data := make([]byte, 10*1024*1024) // 10MiB
+	//create random blob
+	rand.Read(payload_data)
+	chunkSizeInBytes := 64 * 1024
+
+	payloadToSend := &payload{
+		FunctionName: "HelloXDT",
+		Data:         payload_data,
+		Key:          ""}
+	payloadByteArray, _ := json.Marshal(payloadToSend)
+
+	duration := sdk.PushData(key, payloadByteArray, chunkSizeInBytes)
+
+	log.Printf("transferred %d bytes from SrcFn to sQP in %s", len(payloadByteArray), duration)
+
+	duration, payloadData := dqp.PullDataFromSrcQP(key, chunkSizeInBytes)
+
+	log.Printf("transferred %d bytes from sQP to dQP in %s", len(payloadData), duration)
 }

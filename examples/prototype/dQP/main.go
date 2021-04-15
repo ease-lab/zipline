@@ -1,14 +1,11 @@
-package main
+package dqp
 
 import (
 	"context"
-	"crypto/rand"
 	"encoding/json"
-	"flag"
 	"io"
 	"log"
 	"net"
-	"os"
 	"time"
 
 	crossQPProto "github.com/ease-lab/vhive_stealth/examples/prototype/proto/CrossQPProto"
@@ -22,22 +19,18 @@ import (
 var data_queue = make(map[string][]byte)
 
 type pull_server struct {
-	// Embed the unimplemented server
 	crossQPProto.UnimplementedStreamDataServer
 }
 
 type push_server struct {
-	// Embed the unimplemented server
 	SrcFnToQPProto.UnimplementedStreamDataServer
 }
 
 type control_call_server struct {
-	// Embed the unimplemented server
 	FnInvocationProto.UnimplementedInvocationServer
 }
 
 type xdt_to_dst struct {
-	// Embed the unimplemented server
 	QPToDstFnProto.UnimplementedXDTtoFnServer
 }
 
@@ -88,7 +81,7 @@ func (s control_call_server) RouteInvocationCall(ctx context.Context, in *FnInvo
 
 	chunkSizeInBytes := 64 * 1024
 
-	duration, payloadData := pullDataFromSrcQP(xdtPayload.Key, chunkSizeInBytes)
+	duration, payloadData := PullDataFromSrcQP(xdtPayload.Key, chunkSizeInBytes)
 
 	log.Printf("pulled data from sQP in %s", duration)
 
@@ -142,7 +135,7 @@ func (s pull_server) ServeData(in *crossQPProto.Request, srv crossQPProto.Stream
 }
 
 // pullDataFromSrcQP pull data from src QP to dst QP
-func pullDataFromSrcQP(key string, chunk_size_in_bytes int) (time.Duration, []byte) {
+func PullDataFromSrcQP(key string, chunk_size_in_bytes int) (time.Duration, []byte) {
 
 	serverAddr := ":50005"
 	conn, err := grpc.Dial(serverAddr, grpc.WithInsecure())
@@ -158,8 +151,7 @@ func pullDataFromSrcQP(key string, chunk_size_in_bytes int) (time.Duration, []by
 	if err != nil {
 		log.Fatalf("open stream error %v", err)
 	}
-	//receive data from source QP
-	// push to data_queue
+
 	packet_count := 1
 	var payload []byte
 	for {
@@ -167,6 +159,7 @@ func pullDataFromSrcQP(key string, chunk_size_in_bytes int) (time.Duration, []by
 		if err == io.EOF {
 			elapsed := time.Since(start)
 			log.Printf("Complete packet received")
+			// push to data_queue
 			data_queue[key] = payload
 			return elapsed, payload
 		}
@@ -180,33 +173,16 @@ func pullDataFromSrcQP(key string, chunk_size_in_bytes int) (time.Duration, []by
 	return time.Duration(-1), []byte{}
 }
 
-func main() {
-	var pull = flag.Bool("pull", false, "simulate data pull")
-	flag.Parse()
-	log.Printf("%d", *pull)
-	payload := make([]byte, 10*1024*1024) // 10MiB
-	//create random payload
-	rand.Read(payload)
-	key := "123456789"
-	data_queue[key] = payload
-
-	if *pull {
-		duration, received_payload := pullDataFromSrcQP(key, 64*1024)
-
-		log.Printf("received %d bytes in %s", len(received_payload), duration)
-		os.Exit(0)
-	}
+func StartServer(serverAddr string) {
 
 	// create listener for sdk
-	lis_to_sdk, err := net.Listen("tcp", ":50006")
+	lis_to_sdk, err := net.Listen("tcp", "serverAddr")
 	if err != nil {
 		log.Fatalf("failed to listen: %v", err)
 	}
 
 	// create grpc server
 	sdk_server := grpc.NewServer()
-	// SrcFnToQPProto.RegisterStreamDataServer(sdk_server, control_call_server{})
-	// crossQPProto.RegisterStreamDataServer(sdk_server, pull_server{})
 	QPToDstFnProto.RegisterXDTtoFnServer(sdk_server, xdt_to_dst{})
 	FnInvocationProto.RegisterInvocationServer(sdk_server, control_call_server{})
 

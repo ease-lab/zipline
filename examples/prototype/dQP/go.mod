@@ -1,4 +1,4 @@
-module main
+module dqp
 
 go 1.15
 

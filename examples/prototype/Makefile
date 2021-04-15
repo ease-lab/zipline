@@ -61,4 +61,5 @@ clean:
 	
 unit-test:
 	cd sdk && go test unit_test.go -run TestSDK_to_sQP_data_transfer -v
+	cd sdk && go test unit_test.go -run TestSQP_to_dQP_data_transfer -v
 
