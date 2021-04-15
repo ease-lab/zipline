@@ -7,9 +7,12 @@ import (
 	"sort"
 	"strconv"
 	"testing"
-	"time"
 
 	plotter "github.com/ease-lab/vhive_stealth/examples/gRPC_stream/plotter"
+	dqp "github.com/ease-lab/vhive_stealth/examples/prototype/dqp"
+	gx "github.com/ease-lab/vhive_stealth/examples/prototype/gx"
+	sdk "github.com/ease-lab/vhive_stealth/examples/prototype/sdk"
+	sqp "github.com/ease-lab/vhive_stealth/examples/prototype/sqp"
 	log "github.com/sirupsen/logrus"
 )
 
@@ -17,31 +20,22 @@ var chunk_size = flag.Int("chunk", 64, "chunk_size")
 var sample_size = flag.Int("sample", 100, "sample_size")
 var URL = flag.String("URL", "", "Function URL")
 
-func TestSdk_push(t *testing.T) {
-
-	now := time.Now()
-	key := strconv.Itoa(int(now.UnixNano()))
-	payload_data := make([]byte, 10*1024*1024) // 10MiB
-	//create random blob
-	rand.Read(payload_data)
-	chunkSizeInBytes := 64 * 1024
-
-	payloadToSend := &payload{
-		FunctionName: "HelloXDT",
-		Data:         payload_data,
-		Key:          ""}
-	payloadByteArray, _ := json.Marshal(payloadToSend)
-
-	duration := push_data(key, payloadByteArray, chunkSizeInBytes)
-	// vhive_call("bla", payload, chunk_size_in_bytes)
-	log.Printf("sent %d bytes in %s", len(payloadByteArray), duration)
-
+type payload struct {
+	FunctionName string
+	Data         []byte
+	Key          string
+	isXDT        bool
 }
 
-func TestSdk_VHiveCall(t *testing.T) {
+func TestSdk_InvokeWithXDT(t *testing.T) {
 	//create random blob
 	payload_data := make([]byte, 10*1024*1024) // 10MiB
 	rand.Read(payload_data)
+
+	// start server at sQP
+	go sqp.StartServer(":50005")
+	go dqp.StartServer(":50006")
+	go gx.StartServer(":50007")
 
 	chunkSizeInBytes := 64 * 1024
 
@@ -52,22 +46,9 @@ func TestSdk_VHiveCall(t *testing.T) {
 	}
 	payloadByteArray, _ := json.Marshal(payloadToSend)
 
-	duration := vhive_call("", payloadByteArray, chunkSizeInBytes)
+	duration := sdk.InvokeWithXDT("", payloadByteArray, chunkSizeInBytes)
 
 	log.Printf("completed XDT in %s", duration)
-}
-
-func TestSdk_Fninvocation(t *testing.T) {
-	payloadToSend := &payload{
-		FunctionName: "HelloXDT",
-		Data:         []byte{},
-		Key:          "123456789",
-		isXDT:        true,
-	}
-	payloadByteArray, _ := json.Marshal(payloadToSend)
-
-	control_path_call("", payloadByteArray)
-
 }
 
 func TestBenchmark_gRPC(t *testing.T) {
@@ -96,7 +77,7 @@ func TestBenchmark_gRPC(t *testing.T) {
 		latencies := []float64{}
 		chunk_size_in_bytes := chunk_size * 1024
 		for i := 0; i < sample_size; i += 1 {
-			latency_in_us := vhive_call(URL, payload[:payload_size], chunk_size_in_bytes).Microseconds()
+			latency_in_us := sdk.InvokeWithXDT(URL, payload[:payload_size], chunk_size_in_bytes).Microseconds()
 			latencies = append(latencies, float64(latency_in_us))
 		}
 		sort.Float64s(latencies)

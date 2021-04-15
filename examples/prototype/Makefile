@@ -64,3 +64,6 @@ unit-test:
 	cd sdk && go test unit_test.go -run TestSQP_to_dQP_data_transfer -v
 	cd sdk && go test unit_test.go -run TestDQP_to_DstFn_data_transfer -v
 
+integ-test:
+	cd sdk && go test ./integration_test.go -run TestSdk_InvokeWithXDT -v
+

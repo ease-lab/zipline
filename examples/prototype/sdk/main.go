@@ -21,7 +21,7 @@ type payload struct {
 	isXDT        bool
 }
 
-func vhive_call(URL string, payloadByteArray []byte, chunk_size_in_bytes int) time.Duration {
+func InvokeWithXDT(URL string, payloadByteArray []byte, chunk_size_in_bytes int) time.Duration {
 	now := time.Now()
 	key := strconv.Itoa(int(now.UnixNano()))
 
