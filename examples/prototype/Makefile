@@ -59,9 +59,6 @@ build_local:
 clean:
 	rm -rf bins
 	
-test: local
-	cd bins && ./sqp &
-	cd bins && ./dqp &
-	cd bins && ./gx &
-	cd sdk && go test integration_test.go main.go -run TestSdk_VHiveCall
+unit-test:
+	cd sdk && go test unit_test.go -run TestSDK_to_sQP_data_transfer -v
 

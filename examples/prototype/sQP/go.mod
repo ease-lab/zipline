@@ -1,4 +1,4 @@
-module main
+module sqp
 
 go 1.15
 
@@ -9,10 +9,10 @@ replace github.com/ease-lab/vhive_stealth/examples/gRPC_stream/plotter => ../plo
 replace github.com/ease-lab/vhive_stealth/examples/prototype/proto/CrossQPProto => ../proto/CrossQP
 
 require (
-	github.com/ease-lab/vhive_stealth/examples/gRPC_stream/plotter v0.0.0-00010101000000-000000000000
 	github.com/ease-lab/vhive_stealth/examples/prototype/proto/CrossQPProto v0.0.0-00010101000000-000000000000
 	github.com/ease-lab/vhive_stealth/examples/prototype/proto/SrcFnToQPProto v0.0.0-00010101000000-000000000000
-	github.com/sirupsen/logrus v1.8.1
-	gonum.org/v1/gonum v0.9.1 // indirect
+	golang.org/x/net v0.0.0-20190620200207-3b0461eec859 // indirect
+	golang.org/x/sys v0.0.0-20210304124612-50617c2ba197 // indirect
+	golang.org/x/text v0.3.5 // indirect
 	google.golang.org/grpc v1.36.0
 )

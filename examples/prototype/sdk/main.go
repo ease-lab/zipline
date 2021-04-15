@@ -37,7 +37,7 @@ func vhive_call(URL string, payloadByteArray []byte, chunk_size_in_bytes int) ti
 
 	serialisedPayload, _ := json.Marshal(xdtPayload)
 
-	dataTransferDuration := push_data(key, payloadData, chunk_size_in_bytes)
+	dataTransferDuration := PushData(key, payloadData, chunk_size_in_bytes)
 
 	control_path_call(URL, serialisedPayload)
 
@@ -62,7 +62,7 @@ func control_path_call(URL string, serialisedPayload []byte) {
 	}
 }
 
-func push_data(key string, payload []byte, chunk_size_in_bytes int) time.Duration {
+func PushData(key string, payload []byte, chunk_size_in_bytes int) time.Duration {
 
 	serverAddr := ":50005"
 	conn, err := grpc.Dial(serverAddr, grpc.WithInsecure())
