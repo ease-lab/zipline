@@ -9,8 +9,8 @@ import (
 	"time"
 
 	FnInvocationProto "github.com/ease-lab/vhive_stealth/examples/prototype/proto/FnInvocationProto"
-	QPToDstFnProto "github.com/ease-lab/vhive_stealth/examples/prototype/proto/QPToDstFnProto"
 	crossXDT "github.com/ease-lab/vhive_stealth/examples/prototype/proto/crossXDT"
+	downXDT "github.com/ease-lab/vhive_stealth/examples/prototype/proto/downXDT"
 	upXDT "github.com/ease-lab/vhive_stealth/examples/prototype/proto/upXDT"
 
 	"google.golang.org/grpc"
@@ -31,7 +31,7 @@ type control_call_server struct {
 }
 
 type xdt_to_dst struct {
-	QPToDstFnProto.UnimplementedXDTtoFnServer
+	downXDT.UnimplementedXDTtoFnServer
 }
 
 type payload struct {
@@ -41,7 +41,7 @@ type payload struct {
 }
 
 // gRPC server to serve the available data to the DstFn
-func (s xdt_to_dst) XDTDataServe(in *QPToDstFnProto.DataRequest, srv QPToDstFnProto.XDTtoFn_XDTDataServeServer) error {
+func (s xdt_to_dst) XDTDataServe(in *downXDT.DataRequest, srv downXDT.XDTtoFn_XDTDataServeServer) error {
 	//serve data to the dQP
 	log.Printf("fetch key : %d", in.Key)
 
@@ -50,13 +50,13 @@ func (s xdt_to_dst) XDTDataServe(in *QPToDstFnProto.DataRequest, srv QPToDstFnPr
 	for currentByte := int64(0); currentByte < blob_length; currentByte += in.ChunkSize {
 
 		if currentByte+in.ChunkSize > blob_length {
-			resp := QPToDstFnProto.Data{Chunk: blob[currentByte:blob_length]}
+			resp := downXDT.Data{Chunk: blob[currentByte:blob_length]}
 			if err := srv.Send(&resp); err != nil {
 				log.Printf("send error %v", err)
 			}
 			log.Printf("finishing request number : %d", currentByte)
 		} else {
-			resp := QPToDstFnProto.Data{Chunk: blob[currentByte : currentByte+in.ChunkSize]}
+			resp := downXDT.Data{Chunk: blob[currentByte : currentByte+in.ChunkSize]}
 			if err := srv.Send(&resp); err != nil {
 				log.Printf("send error %v", err)
 			}
@@ -97,9 +97,9 @@ func (s control_call_server) RouteInvocationCall(ctx context.Context, in *FnInvo
 	}
 	defer conn.Close()
 
-	c := QPToDstFnProto.NewXDTtoFnClient(conn)
+	c := downXDT.NewXDTtoFnClient(conn)
 
-	_, err = c.XDTFnCall(context.Background(), &QPToDstFnProto.InvocationRequest{XdtJson: in.XdtJson})
+	_, err = c.XDTFnCall(context.Background(), &downXDT.InvocationRequest{XdtJson: in.XdtJson})
 	if err == nil {
 		log.Printf("Fn invocation route at dQP successful")
 	}
@@ -183,7 +183,7 @@ func StartServer(serverAddr string) {
 
 	// create grpc server
 	sdk_server := grpc.NewServer()
-	QPToDstFnProto.RegisterXDTtoFnServer(sdk_server, xdt_to_dst{})
+	downXDT.RegisterXDTtoFnServer(sdk_server, xdt_to_dst{})
 	FnInvocationProto.RegisterInvocationServer(sdk_server, control_call_server{})
 
 	log.Println("start server")

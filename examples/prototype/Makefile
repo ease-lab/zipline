@@ -37,9 +37,9 @@ proto_gen:
 	    --go_out=./proto/FnInvocation --go-grpc_out=./proto/FnInvocation \
 	    --go_opt=paths=source_relative --go-grpc_opt=paths=source_relative
 
-	GO111MODULE="on" PATH="$$PATH:$$(go env GOPATH)/bin" protoc proto/QPToDstFn.proto \
+	GO111MODULE="on" PATH="$$PATH:$$(go env GOPATH)/bin" protoc proto/downXDT.proto \
 	    --proto_path=./proto \
-	    --go_out=./proto/QPToDstFn --go-grpc_out=./proto/QPToDstFn \
+	    --go_out=./proto/downXDT --go-grpc_out=./proto/downXDT \
 	    --go_opt=paths=source_relative --go-grpc_opt=paths=source_relative
 
 	GO111MODULE="on" PATH="$$PATH:$$(go env GOPATH)/bin" protoc proto/upXDT.proto \

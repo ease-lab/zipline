@@ -8,12 +8,12 @@ import (
 	"net"
 	"time"
 
-	QPToDstFnProto "github.com/ease-lab/vhive_stealth/examples/prototype/proto/QPToDstFnProto"
+	downXDT "github.com/ease-lab/vhive_stealth/examples/prototype/proto/downXDT"
 	"google.golang.org/grpc"
 )
 
 type destination_server struct {
-	QPToDstFnProto.UnimplementedXDTtoFnServer
+	downXDT.UnimplementedXDTtoFnServer
 }
 
 type payload struct {
@@ -24,7 +24,7 @@ type payload struct {
 
 var data_queue = make(map[string][]byte)
 
-func (s destination_server) XDTFnCall(ctx context.Context, in *QPToDstFnProto.InvocationRequest) (*QPToDstFnProto.Empty, error) {
+func (s destination_server) XDTFnCall(ctx context.Context, in *downXDT.InvocationRequest) (*downXDT.Empty, error) {
 
 	log.Printf("destination received invocation call %s", in.XdtJson)
 
@@ -39,7 +39,7 @@ func (s destination_server) XDTFnCall(ctx context.Context, in *QPToDstFnProto.In
 
 	// fetch data from dQP
 	FetchFromDQP(key, chunkSizeInBytes)
-	return &QPToDstFnProto.Empty{}, nil
+	return &downXDT.Empty{}, nil
 }
 
 func FetchFromDQP(key string, chunkSizeInBytes int) (time.Duration, []byte) {
@@ -51,8 +51,8 @@ func FetchFromDQP(key string, chunkSizeInBytes int) (time.Duration, []byte) {
 	start := time.Now()
 
 	// create stream
-	client := QPToDstFnProto.NewXDTtoFnClient(conn)
-	in := &QPToDstFnProto.DataRequest{Key: key, ChunkSize: int64(chunkSizeInBytes)}
+	client := downXDT.NewXDTtoFnClient(conn)
+	in := &downXDT.DataRequest{Key: key, ChunkSize: int64(chunkSizeInBytes)}
 	stream, err := client.XDTDataServe(context.Background(), in)
 	if err != nil {
 		log.Fatalf("open stream error %v", err)
@@ -89,7 +89,7 @@ func StartServer(serverAddr string) {
 
 	// create grpc server
 	sdk_server := grpc.NewServer()
-	QPToDstFnProto.RegisterXDTtoFnServer(sdk_server, destination_server{})
+	downXDT.RegisterXDTtoFnServer(sdk_server, destination_server{})
 
 	log.Println("start server")
 	// and start...

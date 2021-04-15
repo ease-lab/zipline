@@ -1,9 +1,9 @@
 // control path request
 syntax = "proto3";
 
-option go_package = "github.com/ease-lab/vhive_stealth/examples/prototype/proto/QPToDstFnProto";
+option go_package = "github.com/ease-lab/vhive_stealth/examples/prototype/proto/downXDT";
 
-package QPToDstFnProto;
+package downXDT;
 
 
 service XDTtoFn {

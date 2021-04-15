@@ -10,7 +10,7 @@ replace github.com/ease-lab/vhive_stealth/examples/prototype/proto/crossXDT => .
 
 replace github.com/ease-lab/vhive_stealth/examples/prototype/proto/FnInvocationProto => ../proto/FnInvocation
 
-replace github.com/ease-lab/vhive_stealth/examples/prototype/proto/QPToDstFnProto => ../proto/QPToDstFn
+replace github.com/ease-lab/vhive_stealth/examples/prototype/proto/downXDT => ../proto/downXDT
 
 replace github.com/ease-lab/vhive_stealth/examples/prototype/sqp => ../sQP
 
