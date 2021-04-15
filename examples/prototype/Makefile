@@ -32,9 +32,9 @@ proto_gen:
 	    --go_out=./proto/crossXDT --go-grpc_out=./proto/crossXDT \
 	    --go_opt=paths=source_relative --go-grpc_opt=paths=source_relative
 
-	GO111MODULE="on" PATH="$$PATH:$$(go env GOPATH)/bin" protoc proto/FnInvocation.proto \
+	GO111MODULE="on" PATH="$$PATH:$$(go env GOPATH)/bin" protoc proto/fnInvocation.proto \
 	    --proto_path=./proto \
-	    --go_out=./proto/FnInvocation --go-grpc_out=./proto/FnInvocation \
+	    --go_out=./proto/fnInvocation --go-grpc_out=./proto/fnInvocation \
 	    --go_opt=paths=source_relative --go-grpc_opt=paths=source_relative
 
 	GO111MODULE="on" PATH="$$PATH:$$(go env GOPATH)/bin" protoc proto/downXDT.proto \

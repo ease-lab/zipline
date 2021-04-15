@@ -8,7 +8,7 @@ import (
 
 	log "github.com/sirupsen/logrus"
 
-	FnInvocationProto "github.com/ease-lab/vhive_stealth/examples/prototype/proto/FnInvocationProto"
+	fnInvocation "github.com/ease-lab/vhive_stealth/examples/prototype/proto/fnInvocation"
 	upXDT "github.com/ease-lab/vhive_stealth/examples/prototype/proto/upXDT"
 
 	"google.golang.org/grpc"
@@ -54,9 +54,9 @@ func control_path_call(URL string, serialisedPayload []byte) {
 	}
 	defer conn.Close()
 
-	c := FnInvocationProto.NewInvocationClient(conn)
+	c := fnInvocation.NewInvocationClient(conn)
 
-	_, err = c.RouteInvocationCall(context.Background(), &FnInvocationProto.InvocationRequest{XdtJson: serialisedPayload})
+	_, err = c.RouteInvocationCall(context.Background(), &fnInvocation.InvocationRequest{XdtJson: serialisedPayload})
 	if err == nil {
 		log.Printf("Fn invocation from source SDK successful")
 	}

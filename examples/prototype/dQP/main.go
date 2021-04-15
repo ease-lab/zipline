@@ -8,9 +8,9 @@ import (
 	"net"
 	"time"
 
-	FnInvocationProto "github.com/ease-lab/vhive_stealth/examples/prototype/proto/FnInvocationProto"
 	crossXDT "github.com/ease-lab/vhive_stealth/examples/prototype/proto/crossXDT"
 	downXDT "github.com/ease-lab/vhive_stealth/examples/prototype/proto/downXDT"
+	fnInvocation "github.com/ease-lab/vhive_stealth/examples/prototype/proto/fnInvocation"
 	upXDT "github.com/ease-lab/vhive_stealth/examples/prototype/proto/upXDT"
 
 	"google.golang.org/grpc"
@@ -27,7 +27,7 @@ type push_server struct {
 }
 
 type control_call_server struct {
-	FnInvocationProto.UnimplementedInvocationServer
+	fnInvocation.UnimplementedInvocationServer
 }
 
 type xdt_to_dst struct {
@@ -68,7 +68,7 @@ func (s xdt_to_dst) XDTDataServe(in *downXDT.DataRequest, srv downXDT.XDTtoFn_XD
 }
 
 // gRPC server to serve the available data to the dQP
-func (s control_call_server) RouteInvocationCall(ctx context.Context, in *FnInvocationProto.InvocationRequest) (*FnInvocationProto.Empty, error) {
+func (s control_call_server) RouteInvocationCall(ctx context.Context, in *fnInvocation.InvocationRequest) (*fnInvocation.Empty, error) {
 
 	log.Printf("received serialised json : %s", in.XdtJson)
 
@@ -104,7 +104,7 @@ func (s control_call_server) RouteInvocationCall(ctx context.Context, in *FnInvo
 		log.Printf("Fn invocation route at dQP successful")
 	}
 
-	return &FnInvocationProto.Empty{}, nil
+	return &fnInvocation.Empty{}, nil
 }
 
 // gRPC server for sQP to serve the available data to the dQP
@@ -184,7 +184,7 @@ func StartServer(serverAddr string) {
 	// create grpc server
 	sdk_server := grpc.NewServer()
 	downXDT.RegisterXDTtoFnServer(sdk_server, xdt_to_dst{})
-	FnInvocationProto.RegisterInvocationServer(sdk_server, control_call_server{})
+	fnInvocation.RegisterInvocationServer(sdk_server, control_call_server{})
 
 	log.Println("start server")
 	// and start...

@@ -8,7 +8,7 @@ replace github.com/ease-lab/vhive_stealth/examples/gRPC_stream/plotter => ../plo
 
 replace github.com/ease-lab/vhive_stealth/examples/prototype/proto/crossXDT => ../proto/crossXDT
 
-replace github.com/ease-lab/vhive_stealth/examples/prototype/proto/FnInvocationProto => ../proto/FnInvocation
+replace github.com/ease-lab/vhive_stealth/examples/prototype/proto/fnInvocation => ../proto/fnInvocation
 
 replace github.com/ease-lab/vhive_stealth/examples/prototype/proto/downXDT => ../proto/downXDT
 
@@ -24,7 +24,7 @@ require (
 	github.com/ease-lab/vhive_stealth/examples/gRPC_stream/plotter v0.0.0-00010101000000-000000000000
 	github.com/ease-lab/vhive_stealth/examples/prototype/dqp v0.0.0-00010101000000-000000000000
 	github.com/ease-lab/vhive_stealth/examples/prototype/gx v0.0.0-00010101000000-000000000000
-	github.com/ease-lab/vhive_stealth/examples/prototype/proto/FnInvocationProto v0.0.0-00010101000000-000000000000
+	github.com/ease-lab/vhive_stealth/examples/prototype/proto/fnInvocation v0.0.0-00010101000000-000000000000
 	github.com/ease-lab/vhive_stealth/examples/prototype/proto/upXDT v0.0.0-00010101000000-000000000000
 	github.com/ease-lab/vhive_stealth/examples/prototype/sdk v0.0.0-00010101000000-000000000000
 	github.com/ease-lab/vhive_stealth/examples/prototype/sqp v0.0.0-00010101000000-000000000000
