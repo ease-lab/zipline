@@ -1,4 +1,4 @@
-package main
+package gx
 
 import (
 	"context"
@@ -13,7 +13,6 @@ import (
 )
 
 type destination_server struct {
-	// Embed the unimplemented server
 	QPToDstFnProto.UnimplementedXDTtoFnServer
 }
 
@@ -39,11 +38,11 @@ func (s destination_server) XDTFnCall(ctx context.Context, in *QPToDstFnProto.In
 	chunkSizeInBytes := 64 * 1024
 
 	// fetch data from dQP
-	fetchFromDQP(key, chunkSizeInBytes)
+	FetchFromDQP(key, chunkSizeInBytes)
 	return &QPToDstFnProto.Empty{}, nil
 }
 
-func fetchFromDQP(key string, chunkSizeInBytes int) (time.Duration, []byte) {
+func FetchFromDQP(key string, chunkSizeInBytes int) (time.Duration, []byte) {
 	serverAddr := ":50006"
 	conn, err := grpc.Dial(serverAddr, grpc.WithInsecure())
 	if err != nil {
@@ -80,18 +79,16 @@ func fetchFromDQP(key string, chunkSizeInBytes int) (time.Duration, []byte) {
 	return time.Duration(-1), []byte{}
 }
 
-func main() {
+func StartServer(serverAddr string) {
 
 	// create listener for sdk
-	lis_to_sdk, err := net.Listen("tcp", ":50007")
+	lis_to_sdk, err := net.Listen("tcp", serverAddr)
 	if err != nil {
 		log.Fatalf("failed to listen: %v", err)
 	}
 
 	// create grpc server
 	sdk_server := grpc.NewServer()
-	// SrcFnToQPProto.RegisterStreamDataServer(sdk_server, control_call_server{})
-	// crossQPProto.RegisterStreamDataServer(sdk_server, pull_server{})
 	QPToDstFnProto.RegisterXDTtoFnServer(sdk_server, destination_server{})
 
 	log.Println("start server")

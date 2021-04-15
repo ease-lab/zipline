@@ -176,7 +176,7 @@ func PullDataFromSrcQP(key string, chunk_size_in_bytes int) (time.Duration, []by
 func StartServer(serverAddr string) {
 
 	// create listener for sdk
-	lis_to_sdk, err := net.Listen("tcp", "serverAddr")
+	lis_to_sdk, err := net.Listen("tcp", serverAddr)
 	if err != nil {
 		log.Fatalf("failed to listen: %v", err)
 	}

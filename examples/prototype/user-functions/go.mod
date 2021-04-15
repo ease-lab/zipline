@@ -1,4 +1,4 @@
-module sdk
+module gx
 
 go 1.15
 
