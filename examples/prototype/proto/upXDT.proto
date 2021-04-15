@@ -1,9 +1,9 @@
 // Push data to the source QP
 syntax = "proto3";
 
-option go_package = "github.com/ease-lab/vhive_stealth/examples/prototype/proto/SrcFnToQPProto";
+option go_package = "github.com/ease-lab/vhive_stealth/examples/prototype/proto/upXDT";
 
-package SrcFnToQPProto;
+package upXDT;
 
 service StreamData {
   rpc CollectData (stream Request) returns (Empty) {}

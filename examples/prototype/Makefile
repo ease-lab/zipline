@@ -42,9 +42,9 @@ proto_gen:
 	    --go_out=./proto/QPToDstFn --go-grpc_out=./proto/QPToDstFn \
 	    --go_opt=paths=source_relative --go-grpc_opt=paths=source_relative
 
-	GO111MODULE="on" PATH="$$PATH:$$(go env GOPATH)/bin" protoc proto/SrcFnToQP.proto \
+	GO111MODULE="on" PATH="$$PATH:$$(go env GOPATH)/bin" protoc proto/upXDT.proto \
 	    --proto_path=./proto \
-	    --go_out=./proto/SrcFnToQP --go-grpc_out=./proto/SrcFnToQP \
+	    --go_out=./proto/upXDT --go-grpc_out=./proto/upXDT \
 	    --go_opt=paths=source_relative --go-grpc_opt=paths=source_relative
 
 local: proto_gen build_local

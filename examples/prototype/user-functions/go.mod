@@ -2,7 +2,7 @@ module gx
 
 go 1.15
 
-replace github.com/ease-lab/vhive_stealth/examples/prototype/proto/SrcFnToQPProto => ../proto/SrcFnToQP
+replace github.com/ease-lab/vhive_stealth/examples/prototype/proto/upXDT => ../proto/upXDT
 
 replace github.com/ease-lab/vhive_stealth/examples/gRPC_stream/plotter => ../plotter
 

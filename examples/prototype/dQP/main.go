@@ -11,7 +11,7 @@ import (
 	crossQPProto "github.com/ease-lab/vhive_stealth/examples/prototype/proto/CrossQPProto"
 	FnInvocationProto "github.com/ease-lab/vhive_stealth/examples/prototype/proto/FnInvocationProto"
 	QPToDstFnProto "github.com/ease-lab/vhive_stealth/examples/prototype/proto/QPToDstFnProto"
-	SrcFnToQPProto "github.com/ease-lab/vhive_stealth/examples/prototype/proto/SrcFnToQPProto"
+	upXDT "github.com/ease-lab/vhive_stealth/examples/prototype/proto/upXDT"
 
 	"google.golang.org/grpc"
 )
@@ -23,7 +23,7 @@ type pull_server struct {
 }
 
 type push_server struct {
-	SrcFnToQPProto.UnimplementedStreamDataServer
+	upXDT.UnimplementedStreamDataServer
 }
 
 type control_call_server struct {

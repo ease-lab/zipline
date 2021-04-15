@@ -9,7 +9,7 @@ import (
 	log "github.com/sirupsen/logrus"
 
 	FnInvocationProto "github.com/ease-lab/vhive_stealth/examples/prototype/proto/FnInvocationProto"
-	SrcFnToQPProto "github.com/ease-lab/vhive_stealth/examples/prototype/proto/SrcFnToQPProto"
+	upXDT "github.com/ease-lab/vhive_stealth/examples/prototype/proto/upXDT"
 
 	"google.golang.org/grpc"
 )
@@ -72,7 +72,7 @@ func PushData(key string, payload []byte, chunk_size_in_bytes int) time.Duration
 	start := time.Now()
 
 	// create stream
-	client := SrcFnToQPProto.NewStreamDataClient(conn)
+	client := upXDT.NewStreamDataClient(conn)
 	payload_size := len(payload)
 	log.Printf("sending payload of size %d bytes", payload_size)
 	stream, err := client.CollectData(context.Background())
@@ -83,13 +83,13 @@ func PushData(key string, payload []byte, chunk_size_in_bytes int) time.Duration
 	for currentByte := int(0); currentByte < payload_size; currentByte += chunk_size_in_bytes {
 
 		if currentByte+chunk_size_in_bytes > payload_size {
-			req := SrcFnToQPProto.Request{Chunk: payload[currentByte:payload_size], Key: key}
+			req := upXDT.Request{Chunk: payload[currentByte:payload_size], Key: key}
 			if err := stream.Send(&req); err != nil {
 				log.Printf("send error %v", err)
 			}
 			log.Printf("finishing request number : %d", currentByte)
 		} else {
-			req := SrcFnToQPProto.Request{Chunk: payload[currentByte : currentByte+chunk_size_in_bytes], Key: key}
+			req := upXDT.Request{Chunk: payload[currentByte : currentByte+chunk_size_in_bytes], Key: key}
 			if err := stream.Send(&req); err != nil {
 				log.Printf("send error %v", err)
 			}

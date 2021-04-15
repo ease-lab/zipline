@@ -6,7 +6,7 @@ import (
 	"net"
 
 	crossQPProto "github.com/ease-lab/vhive_stealth/examples/prototype/proto/CrossQPProto"
-	SrcFnToQPProto "github.com/ease-lab/vhive_stealth/examples/prototype/proto/SrcFnToQPProto"
+	upXDT "github.com/ease-lab/vhive_stealth/examples/prototype/proto/upXDT"
 
 	"google.golang.org/grpc"
 )
@@ -18,11 +18,11 @@ type pull_server struct {
 }
 
 type push_server struct {
-	SrcFnToQPProto.UnimplementedStreamDataServer
+	upXDT.UnimplementedStreamDataServer
 }
 
 // to be called by SrcFn to push data to sQP
-func (s push_server) CollectData(srv SrcFnToQPProto.StreamData_CollectDataServer) error {
+func (s push_server) CollectData(srv upXDT.StreamData_CollectDataServer) error {
 	packet_count := 1
 	var payload []byte
 	var key string
@@ -32,7 +32,7 @@ func (s push_server) CollectData(srv SrcFnToQPProto.StreamData_CollectDataServer
 			log.Printf("Complete packet received")
 			// push to data_queue
 			data_queue[key] = payload
-			return srv.SendAndClose(&SrcFnToQPProto.Empty{})
+			return srv.SendAndClose(&upXDT.Empty{})
 		}
 		if err != nil {
 			log.Fatalf("receive error: %v", err)
@@ -81,7 +81,7 @@ func StartServer(serverAddr string) {
 
 	// create grpc server
 	sdk_server := grpc.NewServer()
-	SrcFnToQPProto.RegisterStreamDataServer(sdk_server, push_server{})
+	upXDT.RegisterStreamDataServer(sdk_server, push_server{})
 	crossQPProto.RegisterStreamDataServer(sdk_server, pull_server{})
 
 	log.Println("start server")
