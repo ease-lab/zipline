@@ -14,10 +14,10 @@ import (
 	"gonum.org/v1/plot/vg/draw"
 )
 
-func PlotLatenciesCDF(plotPath string, sortedLatencies []float64, payload_size int) {
+func PlotLatenciesCDF(plotPath string, sortedLatencies []float64, payloadSize int) {
 	plotInstance := plot.New()
 
-	plotInstance.Title.Text = fmt.Sprintf("Latency CDF for %dKiB requests", payload_size)
+	plotInstance.Title.Text = fmt.Sprintf("Latency CDF for %dKiB requests", payloadSize)
 	plotInstance.Y.Label.Text = "Portion of requests"
 	plotInstance.X.Label.Text = "Latency (ms)"
 
@@ -40,12 +40,12 @@ func PlotLatenciesCDF(plotPath string, sortedLatencies []float64, payload_size i
 
 	err := plotutil.AddLinePoints(plotInstance, latenciesToPlot)
 	if err != nil {
-		log.Errorf("[sub-experiment %dKiB] Could not add line points to CDF plot: %s", payload_size, err.Error())
+		log.Errorf("[sub-experiment %dKiB] Could not add line points to CDF plot: %s", payloadSize, err.Error())
 	}
 
 	// Save the plot to a PNG file.
 	if err := plotInstance.Save(5*vg.Inch, 5*vg.Inch, plotPath); err != nil {
-		log.Errorf("[sub-experiment %dKiB] Could not save CDF plot: %s", payload_size, err.Error())
+		log.Errorf("[sub-experiment %dKiB] Could not save CDF plot: %s", payloadSize, err.Error())
 	}
 }
 
@@ -72,8 +72,8 @@ func PlotPercentile(sorted_latency_map map[int][]float64) {
 		point_labels := []string{}
 		latenciesToPlot := make(plotter.XYs, len(sorted_latency_map))
 		i := 0
-		for payload_size, sorted_latency := range sorted_latency_map {
-			latenciesToPlot[i].X = float64(payload_size)
+		for payloadSize, sorted_latency := range sorted_latency_map {
+			latenciesToPlot[i].X = float64(payloadSize)
 			// log.Printf("inserting %dth of sorted, which is %f", int(percentile*len(sorted_latency)/100), sorted_latency[int(percentile*len(sorted_latency)/100)])
 			latenciesToPlot[i].Y = sorted_latency[int(percentile*len(sorted_latency)/100)] / 1000.0
 			point_labels = append(point_labels, fmt.Sprintf("%.2f", latenciesToPlot[i].Y))
@@ -135,10 +135,10 @@ func PlotBW(sorted_latency_map map[int][]float64) {
 	point_labels := []string{}
 	i := 0
 
-	for payload_size, sorted_latency := range sorted_latency_map {
-		latenciesToPlot[i].X = float64(payload_size)
+	for payloadSize, sorted_latency := range sorted_latency_map {
+		latenciesToPlot[i].X = float64(payloadSize)
 		// log.Printf("inserting %dth of sorted, which is %f", int(percentile*len(sorted_latency)/100), sorted_latency[int(percentile*len(sorted_latency)/100)])
-		latenciesToPlot[i].Y = float64(payload_size) / (sorted_latency[int(50*len(sorted_latency)/100)])
+		latenciesToPlot[i].Y = float64(payloadSize) / (sorted_latency[int(50*len(sorted_latency)/100)])
 		point_labels = append(point_labels, fmt.Sprintf("%.2f", latenciesToPlot[i].Y))
 		i += 1
 	}

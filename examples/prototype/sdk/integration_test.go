@@ -65,7 +65,7 @@ func TestBenchmark_gRPC(t *testing.T) {
 		log.Fatal("please enter destination url")
 	}
 
-	payload_sizes := []int{10, 100, 1000, 10000, 100000}
+	payloadSizes := []int{10, 100, 1000, 10000, 100000}
 
 	latency_map := make(map[int][]float64)
 
@@ -73,22 +73,22 @@ func TestBenchmark_gRPC(t *testing.T) {
 	//create random payload
 	rand.Read(payload)
 
-	bench_payload := func(payload_size int, chunk_size int, sample_size int, URL string, payload []byte) []float64 {
+	bench_payload := func(payloadSize int, chunk_size int, sample_size int, URL string, payload []byte) []float64 {
 		latencies := []float64{}
-		chunk_size_in_bytes := chunk_size * 1024
+		chunkSizeInBytes := chunk_size * 1024
 		for i := 0; i < sample_size; i += 1 {
-			latency_in_us := sdk.InvokeWithXDT(URL, payload[:payload_size], chunk_size_in_bytes).Microseconds()
+			latency_in_us := sdk.InvokeWithXDT(URL, payload[:payloadSize], chunkSizeInBytes).Microseconds()
 			latencies = append(latencies, float64(latency_in_us))
 		}
 		sort.Float64s(latencies)
 		return latencies
 	}
 
-	for _, payload_size := range payload_sizes {
-		log.Printf("checking for %dKiB", payload_size)
-		latencies := bench_payload(payload_size, *chunk_size, *sample_size, *URL, payload)
-		plotter.PlotLatenciesCDF("./cdf_"+strconv.Itoa(payload_size)+"KiB.png", latencies, payload_size)
-		latency_map[payload_size] = latencies
+	for _, payloadSize := range payloadSizes {
+		log.Printf("checking for %dKiB", payloadSize)
+		latencies := bench_payload(payloadSize, *chunk_size, *sample_size, *URL, payload)
+		plotter.PlotLatenciesCDF("./cdf_"+strconv.Itoa(payloadSize)+"KiB.png", latencies, payloadSize)
+		latency_map[payloadSize] = latencies
 	}
 
 	plotter.PlotPercentile(latency_map)

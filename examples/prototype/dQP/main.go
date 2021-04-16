@@ -11,26 +11,17 @@ import (
 	crossXDT "github.com/ease-lab/vhive_stealth/examples/prototype/proto/crossXDT"
 	downXDT "github.com/ease-lab/vhive_stealth/examples/prototype/proto/downXDT"
 	fnInvocation "github.com/ease-lab/vhive_stealth/examples/prototype/proto/fnInvocation"
-	upXDT "github.com/ease-lab/vhive_stealth/examples/prototype/proto/upXDT"
 
 	"google.golang.org/grpc"
 )
 
-var data_queue = make(map[string][]byte)
+var dataQueue = make(map[string][]byte)
 
-type pull_server struct {
-	crossXDT.UnimplementedStreamDataServer
-}
-
-type push_server struct {
-	upXDT.UnimplementedStreamDataServer
-}
-
-type control_call_server struct {
+type fnInvocationServer struct {
 	fnInvocation.UnimplementedInvocationServer
 }
 
-type xdt_to_dst struct {
+type downXDTServer struct {
 	downXDT.UnimplementedXDTtoFnServer
 }
 
@@ -41,16 +32,16 @@ type payload struct {
 }
 
 // gRPC server to serve the available data to the DstFn
-func (s xdt_to_dst) XDTDataServe(in *downXDT.DataRequest, srv downXDT.XDTtoFn_XDTDataServeServer) error {
-	//serve data to the dQP
+func (s downXDTServer) XDTDataServe(in *downXDT.DataRequest, srv downXDT.XDTtoFn_XDTDataServeServer) error {
+
 	log.Printf("fetch key : %d", in.Key)
 
-	blob := data_queue[in.Key]
-	blob_length := int64(len(blob))
-	for currentByte := int64(0); currentByte < blob_length; currentByte += in.ChunkSize {
+	blob := dataQueue[in.Key]
+	blobLength := int64(len(blob))
+	for currentByte := int64(0); currentByte < blobLength; currentByte += in.ChunkSize {
 
-		if currentByte+in.ChunkSize > blob_length {
-			resp := downXDT.Data{Chunk: blob[currentByte:blob_length]}
+		if currentByte+in.ChunkSize > blobLength {
+			resp := downXDT.Data{Chunk: blob[currentByte:blobLength]}
 			if err := srv.Send(&resp); err != nil {
 				log.Printf("send error %v", err)
 			}
@@ -67,8 +58,8 @@ func (s xdt_to_dst) XDTDataServe(in *downXDT.DataRequest, srv downXDT.XDTtoFn_XD
 	return nil
 }
 
-// gRPC server to serve the available data to the dQP
-func (s control_call_server) RouteInvocationCall(ctx context.Context, in *fnInvocation.InvocationRequest) (*fnInvocation.Empty, error) {
+// gRPC server to route the function call fron SrcFn to the DstFn
+func (s fnInvocationServer) RouteInvocationCall(ctx context.Context, in *fnInvocation.InvocationRequest) (*fnInvocation.Empty, error) {
 
 	log.Printf("received serialised json : %s", in.XdtJson)
 
@@ -78,19 +69,13 @@ func (s control_call_server) RouteInvocationCall(ctx context.Context, in *fnInvo
 	}
 
 	log.Printf("fetching data using key : %d", xdtPayload.Key)
-
 	chunkSizeInBytes := 64 * 1024
-
 	duration, payloadData := PullDataFromSrcQP(xdtPayload.Key, chunkSizeInBytes)
-
 	log.Printf("pulled data from sQP in %s", duration)
-
-	data_queue[xdtPayload.Key] = payloadData
+	dataQueue[xdtPayload.Key] = payloadData
 
 	// send the invocation call to destnation fn
-
 	serverAddr := ":50007"
-
 	conn, err := grpc.Dial(serverAddr, grpc.WithInsecure())
 	if err != nil {
 		log.Fatalf("did not connect: %v", err)
@@ -98,7 +83,6 @@ func (s control_call_server) RouteInvocationCall(ctx context.Context, in *fnInvo
 	defer conn.Close()
 
 	c := downXDT.NewXDTtoFnClient(conn)
-
 	_, err = c.XDTFnCall(context.Background(), &downXDT.InvocationRequest{XdtJson: in.XdtJson})
 	if err == nil {
 		log.Printf("Fn invocation route at dQP successful")
@@ -107,35 +91,8 @@ func (s control_call_server) RouteInvocationCall(ctx context.Context, in *fnInvo
 	return &fnInvocation.Empty{}, nil
 }
 
-// gRPC server for sQP to serve the available data to the dQP
-func (s pull_server) ServeData(in *crossXDT.Request, srv crossXDT.StreamData_ServeDataServer) error {
-	//serve data to the dQP
-	log.Printf("fetch key : %d", in.Key)
-
-	blob := data_queue[in.Key]
-	blob_length := int64(len(blob))
-	for currentByte := int64(0); currentByte < blob_length; currentByte += in.ChunkSize {
-
-		if currentByte+in.ChunkSize > blob_length {
-			resp := crossXDT.Response{Chunk: blob[currentByte:blob_length]}
-			if err := srv.Send(&resp); err != nil {
-				log.Printf("send error %v", err)
-			}
-			log.Printf("finishing request number : %d", currentByte)
-		} else {
-			resp := crossXDT.Response{Chunk: blob[currentByte : currentByte+in.ChunkSize]}
-			if err := srv.Send(&resp); err != nil {
-				log.Printf("send error %v", err)
-			}
-			log.Printf("finishing request number : %d", currentByte)
-		}
-
-	}
-	return nil
-}
-
-// pullDataFromSrcQP pull data from src QP to dst QP
-func PullDataFromSrcQP(key string, chunk_size_in_bytes int) (time.Duration, []byte) {
+// pull data from src QP to dst QP
+func PullDataFromSrcQP(key string, chunkSizeInBytes int) (time.Duration, []byte) {
 
 	serverAddr := ":50005"
 	conn, err := grpc.Dial(serverAddr, grpc.WithInsecure())
@@ -146,29 +103,29 @@ func PullDataFromSrcQP(key string, chunk_size_in_bytes int) (time.Duration, []by
 
 	// create stream
 	client := crossXDT.NewStreamDataClient(conn)
-	in := &crossXDT.Request{Key: key, ChunkSize: int64(chunk_size_in_bytes)}
+	in := &crossXDT.Request{Key: key, ChunkSize: int64(chunkSizeInBytes)}
 	stream, err := client.ServeData(context.Background(), in)
 	if err != nil {
 		log.Fatalf("open stream error %v", err)
 	}
 
-	packet_count := 1
+	packetCount := 1
 	var payload []byte
 	for {
 		packet, err := stream.Recv()
 		if err == io.EOF {
 			elapsed := time.Since(start)
 			log.Printf("Complete packet received")
-			// push to data_queue
-			data_queue[key] = payload
+			// push to dataQueue
+			dataQueue[key] = payload
 			return elapsed, payload
 		}
 		if err != nil {
 			log.Fatalf("receive error: %v", err)
 		}
-		log.Printf("Received chunk no. %d", packet_count)
+		log.Printf("Received chunk no. %d", packetCount)
 		payload = append(payload, packet.Chunk...)
-		packet_count += 1
+		packetCount += 1
 	}
 	return time.Duration(-1), []byte{}
 }
@@ -176,19 +133,19 @@ func PullDataFromSrcQP(key string, chunk_size_in_bytes int) (time.Duration, []by
 func StartServer(serverAddr string) {
 
 	// create listener for sdk
-	lis_to_sdk, err := net.Listen("tcp", serverAddr)
+	lis, err := net.Listen("tcp", serverAddr)
 	if err != nil {
 		log.Fatalf("failed to listen: %v", err)
 	}
 
 	// create grpc server
-	sdk_server := grpc.NewServer()
-	downXDT.RegisterXDTtoFnServer(sdk_server, xdt_to_dst{})
-	fnInvocation.RegisterInvocationServer(sdk_server, control_call_server{})
+	server := grpc.NewServer()
+	downXDT.RegisterXDTtoFnServer(server, downXDTServer{})
+	fnInvocation.RegisterInvocationServer(server, fnInvocationServer{})
 
 	log.Println("start server")
 	// and start...
-	if err := sdk_server.Serve(lis_to_sdk); err != nil {
+	if err := server.Serve(lis); err != nil {
 		log.Fatalf("failed to serve: %v", err)
 	}
 

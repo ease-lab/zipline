@@ -11,51 +11,51 @@ import (
 	"google.golang.org/grpc"
 )
 
-var data_queue = make(map[string][]byte)
+var dataQueue = make(map[string][]byte)
 
-type pull_server struct {
+type crossXDTServer struct {
 	crossXDT.UnimplementedStreamDataServer
 }
 
-type push_server struct {
+type upXDTServer struct {
 	upXDT.UnimplementedStreamDataServer
 }
 
 // to be called by SrcFn to push data to sQP
-func (s push_server) CollectData(srv upXDT.StreamData_CollectDataServer) error {
-	packet_count := 1
+func (s upXDTServer) CollectData(srv upXDT.StreamData_CollectDataServer) error {
+	packetCount := 1
 	var payload []byte
 	var key string
 	for {
 		packet, err := srv.Recv()
 		if err == io.EOF {
 			log.Printf("Complete packet received")
-			// push to data_queue
-			data_queue[key] = payload
+			// push to dataQueue
+			dataQueue[key] = payload
 			return srv.SendAndClose(&upXDT.Empty{})
 		}
 		if err != nil {
 			log.Fatalf("receive error: %v", err)
 		}
 		key = packet.Key
-		log.Printf("Key received: %s in chunk %d", key, packet_count)
+		log.Printf("Key received: %s in chunk %d", key, packetCount)
 		payload = append(payload, packet.Chunk...)
-		packet_count += 1
+		packetCount += 1
 	}
 	return nil
 }
 
 // gRPC server to serve the available data to the dQP
-func (s pull_server) ServeData(in *crossXDT.Request, srv crossXDT.StreamData_ServeDataServer) error {
+func (s crossXDTServer) ServeData(in *crossXDT.Request, srv crossXDT.StreamData_ServeDataServer) error {
 
 	log.Printf("fetch key : %d", in.Key)
 
-	blob := data_queue[in.Key]
-	blob_length := int64(len(blob))
-	for currentByte := int64(0); currentByte < blob_length; currentByte += in.ChunkSize {
+	blob := dataQueue[in.Key]
+	blobLength := int64(len(blob))
+	for currentByte := int64(0); currentByte < blobLength; currentByte += in.ChunkSize {
 
-		if currentByte+in.ChunkSize > blob_length {
-			resp := crossXDT.Response{Chunk: blob[currentByte:blob_length]}
+		if currentByte+in.ChunkSize > blobLength {
+			resp := crossXDT.Response{Chunk: blob[currentByte:blobLength]}
 			if err := srv.Send(&resp); err != nil {
 				log.Printf("send error %v", err)
 			}
@@ -80,13 +80,13 @@ func StartServer(serverAddr string) {
 	}
 
 	// create grpc server
-	sdk_server := grpc.NewServer()
-	upXDT.RegisterStreamDataServer(sdk_server, push_server{})
-	crossXDT.RegisterStreamDataServer(sdk_server, pull_server{})
+	server := grpc.NewServer()
+	upXDT.RegisterStreamDataServer(server, upXDTServer{})
+	crossXDT.RegisterStreamDataServer(server, crossXDTServer{})
 
 	log.Println("start server")
 	// and start...
-	if err := sdk_server.Serve(lis); err != nil {
+	if err := server.Serve(lis); err != nil {
 		log.Fatalf("failed to serve: %v", err)
 	}
 

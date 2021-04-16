@@ -12,7 +12,7 @@ import (
 	"google.golang.org/grpc"
 )
 
-type destination_server struct {
+type downXDTServer struct {
 	downXDT.UnimplementedXDTtoFnServer
 }
 
@@ -22,9 +22,10 @@ type payload struct {
 	Key          string
 }
 
-var data_queue = make(map[string][]byte)
+var dataQueue = make(map[string][]byte)
 
-func (s destination_server) XDTFnCall(ctx context.Context, in *downXDT.InvocationRequest) (*downXDT.Empty, error) {
+// to be called by dQP to invoke remote fn
+func (s downXDTServer) XDTFnCall(ctx context.Context, in *downXDT.InvocationRequest) (*downXDT.Empty, error) {
 
 	log.Printf("destination received invocation call %s", in.XdtJson)
 
@@ -42,6 +43,7 @@ func (s destination_server) XDTFnCall(ctx context.Context, in *downXDT.Invocatio
 	return &downXDT.Empty{}, nil
 }
 
+// fetech data from dQP
 func FetchFromDQP(key string, chunkSizeInBytes int) (time.Duration, []byte) {
 	serverAddr := ":50006"
 	conn, err := grpc.Dial(serverAddr, grpc.WithInsecure())
@@ -58,23 +60,23 @@ func FetchFromDQP(key string, chunkSizeInBytes int) (time.Duration, []byte) {
 		log.Fatalf("open stream error %v", err)
 	}
 	//receive data from source QP
-	// push to data_queue
-	packet_count := 1
+	// push to dataQueue
+	packetCount := 1
 	var payload []byte
 	for {
 		packet, err := stream.Recv()
 		if err == io.EOF {
 			elapsed := time.Since(start)
 			log.Printf("Complete packet received at dQP")
-			data_queue[key] = payload
+			dataQueue[key] = payload
 			return elapsed, payload
 		}
 		if err != nil {
 			log.Fatalf("receive error: %v", err)
 		}
-		log.Printf("Received chunk no. %d", packet_count)
+		log.Printf("Received chunk no. %d", packetCount)
 		payload = append(payload, packet.Chunk...)
-		packet_count += 1
+		packetCount += 1
 	}
 	return time.Duration(-1), []byte{}
 }
@@ -82,18 +84,18 @@ func FetchFromDQP(key string, chunkSizeInBytes int) (time.Duration, []byte) {
 func StartServer(serverAddr string) {
 
 	// create listener for sdk
-	lis_to_sdk, err := net.Listen("tcp", serverAddr)
+	lis, err := net.Listen("tcp", serverAddr)
 	if err != nil {
 		log.Fatalf("failed to listen: %v", err)
 	}
 
 	// create grpc server
-	sdk_server := grpc.NewServer()
-	downXDT.RegisterXDTtoFnServer(sdk_server, destination_server{})
+	server := grpc.NewServer()
+	downXDT.RegisterXDTtoFnServer(server, downXDTServer{})
 
 	log.Println("start server")
 	// and start...
-	if err := sdk_server.Serve(lis_to_sdk); err != nil {
+	if err := server.Serve(lis); err != nil {
 		log.Fatalf("failed to serve: %v", err)
 	}
 

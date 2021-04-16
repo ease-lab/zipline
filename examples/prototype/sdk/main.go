@@ -21,7 +21,8 @@ type payload struct {
 	isXDT        bool
 }
 
-func InvokeWithXDT(URL string, payloadByteArray []byte, chunk_size_in_bytes int) time.Duration {
+// Invoke the RPC call with XDT
+func InvokeWithXDT(URL string, payloadByteArray []byte, chunkSizeInBytes int) time.Duration {
 	now := time.Now()
 	key := strconv.Itoa(int(now.UnixNano()))
 
@@ -37,14 +38,15 @@ func InvokeWithXDT(URL string, payloadByteArray []byte, chunk_size_in_bytes int)
 
 	serialisedPayload, _ := json.Marshal(xdtPayload)
 
-	dataTransferDuration := PushData(key, payloadData, chunk_size_in_bytes)
+	dataTransferDuration := PushData(key, payloadData, chunkSizeInBytes)
 
-	control_path_call(URL, serialisedPayload)
+	fnInvocationCall(URL, serialisedPayload)
 
 	return dataTransferDuration
 }
 
-func control_path_call(URL string, serialisedPayload []byte) {
+// make fn invocation call with xdt payload
+func fnInvocationCall(URL string, serialisedPayload []byte) {
 	//gRPC call to the function in dQP responsible for fetching data for g(x)
 	serverAddr := ":50006"
 
@@ -62,7 +64,8 @@ func control_path_call(URL string, serialisedPayload []byte) {
 	}
 }
 
-func PushData(key string, payload []byte, chunk_size_in_bytes int) time.Duration {
+// push data to source QP
+func PushData(key string, payload []byte, chunkSizeInBytes int) time.Duration {
 
 	serverAddr := ":50005"
 	conn, err := grpc.Dial(serverAddr, grpc.WithInsecure())
@@ -73,23 +76,23 @@ func PushData(key string, payload []byte, chunk_size_in_bytes int) time.Duration
 
 	// create stream
 	client := upXDT.NewStreamDataClient(conn)
-	payload_size := len(payload)
-	log.Printf("sending payload of size %d bytes", payload_size)
+	payloadSize := len(payload)
+	log.Printf("sending payload of size %d bytes", payloadSize)
 	stream, err := client.CollectData(context.Background())
 	if err != nil {
 		log.Fatalf("open stream error %v", err)
 	}
 
-	for currentByte := int(0); currentByte < payload_size; currentByte += chunk_size_in_bytes {
+	for currentByte := int(0); currentByte < payloadSize; currentByte += chunkSizeInBytes {
 
-		if currentByte+chunk_size_in_bytes > payload_size {
-			req := upXDT.Request{Chunk: payload[currentByte:payload_size], Key: key}
+		if currentByte+chunkSizeInBytes > payloadSize {
+			req := upXDT.Request{Chunk: payload[currentByte:payloadSize], Key: key}
 			if err := stream.Send(&req); err != nil {
 				log.Printf("send error %v", err)
 			}
 			log.Printf("finishing request number : %d", currentByte)
 		} else {
-			req := upXDT.Request{Chunk: payload[currentByte : currentByte+chunk_size_in_bytes], Key: key}
+			req := upXDT.Request{Chunk: payload[currentByte : currentByte+chunkSizeInBytes], Key: key}
 			if err := stream.Send(&req); err != nil {
 				log.Printf("send error %v", err)
 			}
