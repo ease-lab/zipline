@@ -18,7 +18,7 @@ import (
 
 var chunk_size = flag.Int("chunk", 64, "chunk_size")
 var sample_size = flag.Int("sample", 100, "sample_size")
-var URL = flag.String("URL", "", "Function URL")
+var URL = flag.String("URL", "bla", "Function URL")
 
 type payload struct {
 	FunctionName string
@@ -61,23 +61,35 @@ func TestBenchmark_gRPC(t *testing.T) {
 		log.Fatal("invalod sample size. Acceptable input is integers >= 10")
 	}
 
-	if *URL == "" {
-		log.Fatal("please enter destination url")
-	}
+	// if *URL == "" {
+	// 	log.Fatal("please enter destination url")
+	// }
+
+	go sqp.StartServer(":50005")
+	go dqp.StartServer(":50006")
+	go gx.StartServer(":50007")
 
 	payloadSizes := []int{10, 100, 1000, 10000, 100000}
 
 	latency_map := make(map[int][]float64)
 
-	payload := make([]byte, 10*1024*1024) // 10MiB
+	payloadData := make([]byte, 101*1024*1024) // 10MiB
 	//create random payload
-	rand.Read(payload)
+	rand.Read(payloadData)
 
-	bench_payload := func(payloadSize int, chunk_size int, sample_size int, URL string, payload []byte) []float64 {
+	chunkSizeInBytes := *chunk_size * 1024
+
+	bench_payload := func(payloadSize int, chunkSizeInBytes int, sample_size int, URL string, payloadData []byte) []float64 {
 		latencies := []float64{}
-		chunkSizeInBytes := chunk_size * 1024
+		payloadToSend := &payload{
+			FunctionName: "HelloXDT",
+			Data:         payloadData[:payloadSize],
+			Key:          "",
+		}
+		payloadByteArray, _ := json.Marshal(payloadToSend)
+
 		for i := 0; i < sample_size; i += 1 {
-			latency_in_us := sdk.InvokeWithXDT(URL, payload[:payloadSize], chunkSizeInBytes).Microseconds()
+			latency_in_us := sdk.InvokeWithXDT(URL, payloadByteArray, chunkSizeInBytes).Microseconds()
 			latencies = append(latencies, float64(latency_in_us))
 		}
 		sort.Float64s(latencies)
@@ -85,8 +97,9 @@ func TestBenchmark_gRPC(t *testing.T) {
 	}
 
 	for _, payloadSize := range payloadSizes {
+		payloadSizeInBytes := payloadSize * 1024
 		log.Printf("checking for %dKiB", payloadSize)
-		latencies := bench_payload(payloadSize, *chunk_size, *sample_size, *URL, payload)
+		latencies := bench_payload(payloadSizeInBytes, chunkSizeInBytes, *sample_size, *URL, payloadData)
 		plotter.PlotLatenciesCDF("./cdf_"+strconv.Itoa(payloadSize)+"KiB.png", latencies, payloadSize)
 		latency_map[payloadSize] = latencies
 	}

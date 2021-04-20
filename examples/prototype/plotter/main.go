@@ -120,7 +120,7 @@ func PlotBW(sorted_latency_map map[int][]float64) {
 	plotInstance := plot.New()
 
 	plotInstance.Title.Text = fmt.Sprintf("Bandwidth as a function of a payload size")
-	plotInstance.Y.Label.Text = "BW in GiB/s"
+	plotInstance.Y.Label.Text = "BW in MiB/s"
 	plotInstance.X.Label.Text = "Size of payload (KiB)"
 	plotInstance.X.Scale = plot.LogScale{}
 	plotInstance.X.Tick.Marker = plot.LogTicks{}
@@ -138,7 +138,7 @@ func PlotBW(sorted_latency_map map[int][]float64) {
 	for payloadSize, sorted_latency := range sorted_latency_map {
 		latenciesToPlot[i].X = float64(payloadSize)
 		// log.Printf("inserting %dth of sorted, which is %f", int(percentile*len(sorted_latency)/100), sorted_latency[int(percentile*len(sorted_latency)/100)])
-		latenciesToPlot[i].Y = float64(payloadSize) / (sorted_latency[int(50*len(sorted_latency)/100)])
+		latenciesToPlot[i].Y = float64(payloadSize) * 1024 / (sorted_latency[int(50*len(sorted_latency)/100)])
 		point_labels = append(point_labels, fmt.Sprintf("%.2f", latenciesToPlot[i].Y))
 		i += 1
 	}

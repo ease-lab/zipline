@@ -31,6 +31,8 @@ func InvokeWithXDT(URL string, payloadByteArray []byte, chunkSizeInBytes int) ti
 		log.Fatal(err)
 	}
 
+	log.Printf("XDT invoke called with payload size %d", len(xdtPayload.Data))
+
 	payloadData := xdtPayload.Data
 	xdtPayload.Data = []byte("")
 	xdtPayload.Key = key
@@ -38,11 +40,12 @@ func InvokeWithXDT(URL string, payloadByteArray []byte, chunkSizeInBytes int) ti
 
 	serialisedPayload, _ := json.Marshal(xdtPayload)
 
-	dataTransferDuration := PushData(key, payloadData, chunkSizeInBytes)
+	_ = PushData(key, payloadData, chunkSizeInBytes)
 
 	fnInvocationCall(URL, serialisedPayload)
 
-	return dataTransferDuration
+	elapsed := time.Since(now)
+	return elapsed
 }
 
 // make fn invocation call with xdt payload
