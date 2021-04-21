@@ -16,14 +16,12 @@ replace github.com/ease-lab/vhive_stealth/examples/prototype/sqp => ../sQP
 
 replace github.com/ease-lab/vhive_stealth/examples/prototype/dqp => ../dQP
 
-replace github.com/ease-lab/vhive_stealth/examples/prototype/gx => ../user-functions
-
 replace github.com/ease-lab/vhive_stealth/examples/prototype/sdk => ./
 
 require (
 	github.com/ease-lab/vhive_stealth/examples/gRPC_stream/plotter v0.0.0-00010101000000-000000000000
 	github.com/ease-lab/vhive_stealth/examples/prototype/dqp v0.0.0-00010101000000-000000000000
-	github.com/ease-lab/vhive_stealth/examples/prototype/gx v0.0.0-00010101000000-000000000000
+	github.com/ease-lab/vhive_stealth/examples/prototype/proto/downXDT v0.0.0-00010101000000-000000000000
 	github.com/ease-lab/vhive_stealth/examples/prototype/proto/fnInvocation v0.0.0-00010101000000-000000000000
 	github.com/ease-lab/vhive_stealth/examples/prototype/proto/upXDT v0.0.0-00010101000000-000000000000
 	github.com/ease-lab/vhive_stealth/examples/prototype/sdk v0.0.0-00010101000000-000000000000

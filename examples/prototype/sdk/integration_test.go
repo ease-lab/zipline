@@ -10,7 +10,6 @@ import (
 
 	plotter "github.com/ease-lab/vhive_stealth/examples/gRPC_stream/plotter"
 	dqp "github.com/ease-lab/vhive_stealth/examples/prototype/dqp"
-	gx "github.com/ease-lab/vhive_stealth/examples/prototype/gx"
 	sdk "github.com/ease-lab/vhive_stealth/examples/prototype/sdk"
 	sqp "github.com/ease-lab/vhive_stealth/examples/prototype/sqp"
 	log "github.com/sirupsen/logrus"
@@ -35,7 +34,7 @@ func TestSdk_InvokeWithXDT(t *testing.T) {
 	// start server at sQP
 	go sqp.StartServer(":50005")
 	go dqp.StartServer(":50006")
-	go gx.StartServer(":50007")
+	go sdk.StartDstServer(":50007")
 
 	chunkSizeInBytes := 64 * 1024
 
@@ -67,7 +66,7 @@ func TestBenchmark_gRPC(t *testing.T) {
 
 	go sqp.StartServer(":50005")
 	go dqp.StartServer(":50006")
-	go gx.StartServer(":50007")
+	go sdk.StartDstServer(":50007")
 
 	payloadSizes := []int{10, 100, 1000, 10000, 100000}
 

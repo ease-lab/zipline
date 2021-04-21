@@ -9,7 +9,6 @@ import (
 	"time"
 
 	dqp "github.com/ease-lab/vhive_stealth/examples/prototype/dqp"
-	gx "github.com/ease-lab/vhive_stealth/examples/prototype/gx"
 	sdk "github.com/ease-lab/vhive_stealth/examples/prototype/sdk"
 	sqp "github.com/ease-lab/vhive_stealth/examples/prototype/sqp"
 	log "github.com/sirupsen/logrus"
@@ -105,7 +104,7 @@ func TestDQP_to_DstFn_data_transfer(t *testing.T) {
 
 	log.Printf("transferred %d bytes from sQP to dQP in %s", len(payloadData), duration)
 
-	duration, payloadData = gx.FetchFromDQP(key, chunkSizeInBytes)
+	duration, payloadData = sdk.FetchFromDQP(key, chunkSizeInBytes)
 
 	log.Printf("transferred %d bytes from dQP to DstFn in %s", len(payloadData), duration)
 
