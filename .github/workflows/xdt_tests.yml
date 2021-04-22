@@ -2,19 +2,13 @@ name: XDT tests
 
 on:
   push:
-    branches: [ master ]
+    branches: [ main ]
     paths:
       - 'examples/prototype/**'
-    paths-ignore:
-    - 'docs/**'
-    - '**.md'
   pull_request:
-    branches: [ master ]
+    branches: [ main ]
     paths:
       - 'examples/prototype/**'
-    paths-ignore:
-    - 'docs/**'
-    - '**.md'
   workflow_dispatch:
 
 env:

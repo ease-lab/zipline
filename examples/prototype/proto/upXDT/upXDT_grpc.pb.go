@@ -18,7 +18,7 @@ const _ = grpc.SupportPackageIsVersion7
 //
 // For semantics around ctx use and closing/ending streaming RPCs, please refer to https://pkg.go.dev/google.golang.org/grpc/?tab=doc#ClientConn.NewStream.
 type StreamDataClient interface {
-	CollectData(ctx context.Context, opts ...grpc.CallOption) (StreamData_CollectDataClient, error)
+	SendData(ctx context.Context, opts ...grpc.CallOption) (StreamData_SendDataClient, error)
 }
 
 type streamDataClient struct {
@@ -29,30 +29,30 @@ func NewStreamDataClient(cc grpc.ClientConnInterface) StreamDataClient {
 	return &streamDataClient{cc}
 }
 
-func (c *streamDataClient) CollectData(ctx context.Context, opts ...grpc.CallOption) (StreamData_CollectDataClient, error) {
-	stream, err := c.cc.NewStream(ctx, &StreamData_ServiceDesc.Streams[0], "/upXDT.StreamData/CollectData", opts...)
+func (c *streamDataClient) SendData(ctx context.Context, opts ...grpc.CallOption) (StreamData_SendDataClient, error) {
+	stream, err := c.cc.NewStream(ctx, &StreamData_ServiceDesc.Streams[0], "/upXDT.StreamData/SendData", opts...)
 	if err != nil {
 		return nil, err
 	}
-	x := &streamDataCollectDataClient{stream}
+	x := &streamDataSendDataClient{stream}
 	return x, nil
 }
 
-type StreamData_CollectDataClient interface {
+type StreamData_SendDataClient interface {
 	Send(*Request) error
 	CloseAndRecv() (*Empty, error)
 	grpc.ClientStream
 }
 
-type streamDataCollectDataClient struct {
+type streamDataSendDataClient struct {
 	grpc.ClientStream
 }
 
-func (x *streamDataCollectDataClient) Send(m *Request) error {
+func (x *streamDataSendDataClient) Send(m *Request) error {
 	return x.ClientStream.SendMsg(m)
 }
 
-func (x *streamDataCollectDataClient) CloseAndRecv() (*Empty, error) {
+func (x *streamDataSendDataClient) CloseAndRecv() (*Empty, error) {
 	if err := x.ClientStream.CloseSend(); err != nil {
 		return nil, err
 	}
@@ -67,7 +67,7 @@ func (x *streamDataCollectDataClient) CloseAndRecv() (*Empty, error) {
 // All implementations must embed UnimplementedStreamDataServer
 // for forward compatibility
 type StreamDataServer interface {
-	CollectData(StreamData_CollectDataServer) error
+	SendData(StreamData_SendDataServer) error
 	mustEmbedUnimplementedStreamDataServer()
 }
 
@@ -75,8 +75,8 @@ type StreamDataServer interface {
 type UnimplementedStreamDataServer struct {
 }
 
-func (UnimplementedStreamDataServer) CollectData(StreamData_CollectDataServer) error {
-	return status.Errorf(codes.Unimplemented, "method CollectData not implemented")
+func (UnimplementedStreamDataServer) SendData(StreamData_SendDataServer) error {
+	return status.Errorf(codes.Unimplemented, "method SendData not implemented")
 }
 func (UnimplementedStreamDataServer) mustEmbedUnimplementedStreamDataServer() {}
 
@@ -91,25 +91,25 @@ func RegisterStreamDataServer(s grpc.ServiceRegistrar, srv StreamDataServer) {
 	s.RegisterService(&StreamData_ServiceDesc, srv)
 }
 
-func _StreamData_CollectData_Handler(srv interface{}, stream grpc.ServerStream) error {
-	return srv.(StreamDataServer).CollectData(&streamDataCollectDataServer{stream})
+func _StreamData_SendData_Handler(srv interface{}, stream grpc.ServerStream) error {
+	return srv.(StreamDataServer).SendData(&streamDataSendDataServer{stream})
 }
 
-type StreamData_CollectDataServer interface {
+type StreamData_SendDataServer interface {
 	SendAndClose(*Empty) error
 	Recv() (*Request, error)
 	grpc.ServerStream
 }
 
-type streamDataCollectDataServer struct {
+type streamDataSendDataServer struct {
 	grpc.ServerStream
 }
 
-func (x *streamDataCollectDataServer) SendAndClose(m *Empty) error {
+func (x *streamDataSendDataServer) SendAndClose(m *Empty) error {
 	return x.ServerStream.SendMsg(m)
 }
 
-func (x *streamDataCollectDataServer) Recv() (*Request, error) {
+func (x *streamDataSendDataServer) Recv() (*Request, error) {
 	m := new(Request)
 	if err := x.ServerStream.RecvMsg(m); err != nil {
 		return nil, err
@@ -126,8 +126,8 @@ var StreamData_ServiceDesc = grpc.ServiceDesc{
 	Methods:     []grpc.MethodDesc{},
 	Streams: []grpc.StreamDesc{
 		{
-			StreamName:    "CollectData",
-			Handler:       _StreamData_CollectData_Handler,
+			StreamName:    "SendData",
+			Handler:       _StreamData_SendData_Handler,
 			ClientStreams: true,
 		},
 	},

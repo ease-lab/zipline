@@ -4,7 +4,9 @@ import (
 	"context"
 	"encoding/json"
 	"io"
+	"io/ioutil"
 	"net"
+	"os"
 	"strconv"
 	"time"
 
@@ -24,14 +26,41 @@ type payload struct {
 	isXDT        bool
 }
 
+type Config struct {
+	ChunkSizeInBytes int
+}
+
 type downXDTServer struct {
 	downXDT.UnimplementedXDTtoFnServer
 }
 
 var dataQueue = make(map[string][]byte)
 
+var config = LoadConfig("../config.json")
+
+func LoadConfig(file string) Config {
+	log.Debugf("Opening JSON file with config: %s\n", file)
+	jsonFile, err := os.Open(file)
+	if err != nil {
+		log.Fatal(err)
+	}
+	defer jsonFile.Close()
+
+	byteValue, err := ioutil.ReadAll(jsonFile)
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	var config Config
+
+	json.Unmarshal(byteValue, &config)
+
+	return config
+}
+
 // Invoke the RPC call with XDT
-func InvokeWithXDT(URL string, payloadByteArray []byte, chunkSizeInBytes int) time.Duration {
+func InvokeWithXDT(URL string, payloadByteArray []byte, chunkSizeInBytes int) {
+
 	now := time.Now()
 	key := strconv.Itoa(int(now.UnixNano()))
 
@@ -52,16 +81,12 @@ func InvokeWithXDT(URL string, payloadByteArray []byte, chunkSizeInBytes int) ti
 	_ = PushData(key, payloadData, chunkSizeInBytes)
 
 	fnInvocationCall(URL, serialisedPayload)
-
-	elapsed := time.Since(now)
-	return elapsed
 }
 
-// make fn invocation call with xdt payload
+// make fn invocation call to dQP with xdt payload
 func fnInvocationCall(URL string, serialisedPayload []byte) {
-	//gRPC call to the function in dQP responsible for fetching data for g(x)
-	serverAddr := ":50006"
 
+	serverAddr := ":50006"
 	conn, err := grpc.Dial(serverAddr, grpc.WithInsecure())
 	if err != nil {
 		log.Fatalf("did not connect: %v", err)
@@ -70,7 +95,7 @@ func fnInvocationCall(URL string, serialisedPayload []byte) {
 
 	c := fnInvocation.NewInvocationClient(conn)
 
-	_, err = c.RouteInvocationCall(context.Background(), &fnInvocation.InvocationRequest{XdtJson: serialisedPayload})
+	_, err = c.RouteInvocation(context.Background(), &fnInvocation.InvocationRequest{XdtJson: serialisedPayload})
 	if err == nil {
 		log.Printf("Fn invocation from source SDK successful")
 	}
@@ -86,11 +111,10 @@ func PushData(key string, payload []byte, chunkSizeInBytes int) time.Duration {
 	}
 	start := time.Now()
 
-	// create stream
 	client := upXDT.NewStreamDataClient(conn)
 	payloadSize := len(payload)
 	log.Printf("sending payload of size %d bytes", payloadSize)
-	stream, err := client.CollectData(context.Background())
+	stream, err := client.SendData(context.Background())
 	if err != nil {
 		log.Fatalf("open stream error %v", err)
 	}
@@ -120,7 +144,7 @@ func PushData(key string, payload []byte, chunkSizeInBytes int) time.Duration {
 	return elapsed
 }
 
-// to be called by dQP to invoke remote fn
+// to be called by dQP to invoke DstFn
 func (s downXDTServer) XDTFnCall(ctx context.Context, in *downXDT.InvocationRequest) (*downXDT.Empty, error) {
 
 	log.Printf("destination received invocation call %s", in.XdtJson)
@@ -132,14 +156,14 @@ func (s downXDTServer) XDTFnCall(ctx context.Context, in *downXDT.InvocationRequ
 
 	key := xdtPayload.Key
 
-	chunkSizeInBytes := 64 * 1024
+	chunkSizeInBytes := config.ChunkSizeInBytes
 
 	// fetch data from dQP
 	FetchFromDQP(key, chunkSizeInBytes)
 	return &downXDT.Empty{}, nil
 }
 
-// fetech data from dQP
+// fetch data from dQP to DstFn
 func FetchFromDQP(key string, chunkSizeInBytes int) (time.Duration, []byte) {
 	serverAddr := ":50006"
 	conn, err := grpc.Dial(serverAddr, grpc.WithInsecure())
@@ -148,15 +172,13 @@ func FetchFromDQP(key string, chunkSizeInBytes int) (time.Duration, []byte) {
 	}
 	start := time.Now()
 
-	// create stream
 	client := downXDT.NewXDTtoFnClient(conn)
 	in := &downXDT.DataRequest{Key: key, ChunkSize: int64(chunkSizeInBytes)}
 	stream, err := client.XDTDataServe(context.Background(), in)
 	if err != nil {
 		log.Fatalf("open stream error %v", err)
 	}
-	//receive data from source QP
-	// push to dataQueue
+
 	packetCount := 1
 	var payload []byte
 	for {
@@ -177,22 +199,19 @@ func FetchFromDQP(key string, chunkSizeInBytes int) (time.Duration, []byte) {
 	return time.Duration(-1), []byte{}
 }
 
-func StartDstServer(serverAddr string, handler func([]byte)) {
+// start DstQP server
+func StartDstServer(serverAddr string) {
 
-	// create listener for sdk
 	lis, err := net.Listen("tcp", serverAddr)
 	if err != nil {
 		log.Fatalf("failed to listen: %v", err)
 	}
 
-	// create grpc server
 	server := grpc.NewServer()
 	downXDT.RegisterXDTtoFnServer(server, downXDTServer{})
 
 	log.Println("start server")
-	// and start...
 	if err := server.Serve(lis); err != nil {
 		log.Fatalf("failed to serve: %v", err)
 	}
-
 }

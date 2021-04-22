@@ -22,7 +22,7 @@ type upXDTServer struct {
 }
 
 // to be called by SrcFn to push data to sQP
-func (s upXDTServer) CollectData(srv upXDT.StreamData_CollectDataServer) error {
+func (s upXDTServer) SendData(srv upXDT.StreamData_SendDataServer) error {
 	packetCount := 1
 	var payload []byte
 	var key string
@@ -30,7 +30,6 @@ func (s upXDTServer) CollectData(srv upXDT.StreamData_CollectDataServer) error {
 		packet, err := srv.Recv()
 		if err == io.EOF {
 			log.Printf("Complete packet received")
-			// push to dataQueue
 			dataQueue[key] = payload
 			return srv.SendAndClose(&upXDT.Empty{})
 		}
@@ -72,6 +71,7 @@ func (s crossXDTServer) ServeData(in *crossXDT.Request, srv crossXDT.StreamData_
 	return nil
 }
 
+// start SrcQP server
 func StartServer(serverAddr string) {
 
 	lis, err := net.Listen("tcp", serverAddr)
@@ -79,13 +79,11 @@ func StartServer(serverAddr string) {
 		log.Fatalf("failed to listen: %v", err)
 	}
 
-	// create grpc server
 	server := grpc.NewServer()
 	upXDT.RegisterStreamDataServer(server, upXDTServer{})
 	crossXDT.RegisterStreamDataServer(server, crossXDTServer{})
 
 	log.Println("start server")
-	// and start...
 	if err := server.Serve(lis); err != nil {
 		log.Fatalf("failed to serve: %v", err)
 	}

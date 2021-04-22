@@ -54,8 +54,8 @@ build_local:
 	cd dQP && go build -o ../bins/dqp
 	cd sdk && go build -o ../bins/sdk
 	cd sQP && go build -o ../bins/sqp
-	cd user-functions/fx && go build -o ../bins/fx
-	cd user-functions/gx && go build -o ../bins/gx
+	cd user-functions/fx && go build -o ../../bins/fx
+	cd user-functions/gx && go build -o ../../bins/gx
 
 clean:
 	rm -rf bins

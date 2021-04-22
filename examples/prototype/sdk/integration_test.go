@@ -7,6 +7,7 @@ import (
 	"sort"
 	"strconv"
 	"testing"
+	"time"
 
 	plotter "github.com/ease-lab/vhive_stealth/examples/gRPC_stream/plotter"
 	dqp "github.com/ease-lab/vhive_stealth/examples/prototype/dqp"
@@ -15,7 +16,6 @@ import (
 	log "github.com/sirupsen/logrus"
 )
 
-var chunk_size = flag.Int("chunk", 64, "chunk_size")
 var sample_size = flag.Int("sample", 100, "sample_size")
 var URL = flag.String("URL", "bla", "Function URL")
 
@@ -25,6 +25,8 @@ type payload struct {
 	Key          string
 	isXDT        bool
 }
+
+var config = sdk.LoadConfig("../config.json")
 
 func TestSdk_InvokeWithXDT(t *testing.T) {
 	//create random blob
@@ -36,7 +38,7 @@ func TestSdk_InvokeWithXDT(t *testing.T) {
 	go dqp.StartServer(":50006")
 	go sdk.StartDstServer(":50007")
 
-	chunkSizeInBytes := 64 * 1024
+	chunkSizeInBytes := config.ChunkSizeInBytes
 
 	payloadToSend := &payload{
 		FunctionName: "HelloXDT",
@@ -45,16 +47,14 @@ func TestSdk_InvokeWithXDT(t *testing.T) {
 	}
 	payloadByteArray, _ := json.Marshal(payloadToSend)
 
-	duration := sdk.InvokeWithXDT("", payloadByteArray, chunkSizeInBytes)
+	start := time.Now()
+	sdk.InvokeWithXDT("", payloadByteArray, chunkSizeInBytes)
+	elapsed := time.Since(start)
 
-	log.Printf("completed XDT in %s", duration)
+	log.Printf("completed XDT in %s", elapsed)
 }
 
 func TestBenchmark_gRPC(t *testing.T) {
-
-	if *chunk_size < 1 || *chunk_size > 4096 {
-		log.Fatal("invalod chunk size in KiB. Acceptable input is integers between 1 to 4096")
-	}
 
 	if *sample_size < 10 {
 		log.Fatal("invalod sample size. Acceptable input is integers >= 10")
@@ -76,7 +76,7 @@ func TestBenchmark_gRPC(t *testing.T) {
 	//create random payload
 	rand.Read(payloadData)
 
-	chunkSizeInBytes := *chunk_size * 1024
+	chunkSizeInBytes := config.ChunkSizeInBytes
 
 	bench_payload := func(payloadSize int, chunkSizeInBytes int, sample_size int, URL string, payloadData []byte) []float64 {
 		latencies := []float64{}
@@ -88,7 +88,9 @@ func TestBenchmark_gRPC(t *testing.T) {
 		payloadByteArray, _ := json.Marshal(payloadToSend)
 
 		for i := 0; i < sample_size; i += 1 {
-			latency_in_us := sdk.InvokeWithXDT(URL, payloadByteArray, chunkSizeInBytes).Microseconds()
+			start := time.Now()
+			sdk.InvokeWithXDT(URL, payloadByteArray, chunkSizeInBytes)
+			latency_in_us := time.Since(start).Microseconds()
 			latencies = append(latencies, float64(latency_in_us))
 		}
 		sort.Float64s(latencies)

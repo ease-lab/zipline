@@ -6,7 +6,7 @@ option go_package = "github.com/ease-lab/vhive_stealth/examples/prototype/proto/
 package upXDT;
 
 service StreamData {
-  rpc CollectData (stream Request) returns (Empty) {}
+  rpc SendData (stream Request) returns (Empty) {}
 }
 
 message Request {

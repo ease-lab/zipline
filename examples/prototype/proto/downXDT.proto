@@ -25,5 +25,5 @@ message Data {
 
 message DataRequest {
     string key = 1;
-    int64 chunk_size = 65536;
+    int64 chunk_size = 2;
 }

@@ -11,6 +11,7 @@ import (
 	crossXDT "github.com/ease-lab/vhive_stealth/examples/prototype/proto/crossXDT"
 	downXDT "github.com/ease-lab/vhive_stealth/examples/prototype/proto/downXDT"
 	fnInvocation "github.com/ease-lab/vhive_stealth/examples/prototype/proto/fnInvocation"
+	sdk "github.com/ease-lab/vhive_stealth/examples/prototype/sdk"
 
 	"google.golang.org/grpc"
 )
@@ -31,7 +32,9 @@ type payload struct {
 	Key          string
 }
 
-// gRPC server to serve the available data to the DstFn
+var config = sdk.LoadConfig("../config.json")
+
+// gRPC server to serve data to the DstFn
 func (s downXDTServer) XDTDataServe(in *downXDT.DataRequest, srv downXDT.XDTtoFn_XDTDataServeServer) error {
 
 	log.Printf("fetch key : %d", in.Key)
@@ -59,7 +62,7 @@ func (s downXDTServer) XDTDataServe(in *downXDT.DataRequest, srv downXDT.XDTtoFn
 }
 
 // gRPC server to route the function call fron SrcFn to the DstFn
-func (s fnInvocationServer) RouteInvocationCall(ctx context.Context, in *fnInvocation.InvocationRequest) (*fnInvocation.Empty, error) {
+func (s fnInvocationServer) RouteInvocation(ctx context.Context, in *fnInvocation.InvocationRequest) (*fnInvocation.Empty, error) {
 
 	log.Printf("received serialised json : %s", in.XdtJson)
 
@@ -69,12 +72,12 @@ func (s fnInvocationServer) RouteInvocationCall(ctx context.Context, in *fnInvoc
 	}
 
 	log.Printf("fetching data using key : %d", xdtPayload.Key)
-	chunkSizeInBytes := 64 * 1024
+	chunkSizeInBytes := config.ChunkSizeInBytes
 	duration, payloadData := PullDataFromSrcQP(xdtPayload.Key, chunkSizeInBytes)
 	log.Printf("pulled data from sQP in %s", duration)
 	dataQueue[xdtPayload.Key] = payloadData
 
-	// send the invocation call to destnation fn
+	// route the invocation call to destnation fn
 	serverAddr := ":50007"
 	conn, err := grpc.Dial(serverAddr, grpc.WithInsecure())
 	if err != nil {
@@ -101,7 +104,6 @@ func PullDataFromSrcQP(key string, chunkSizeInBytes int) (time.Duration, []byte)
 	}
 	start := time.Now()
 
-	// create stream
 	client := crossXDT.NewStreamDataClient(conn)
 	in := &crossXDT.Request{Key: key, ChunkSize: int64(chunkSizeInBytes)}
 	stream, err := client.ServeData(context.Background(), in)
@@ -116,7 +118,6 @@ func PullDataFromSrcQP(key string, chunkSizeInBytes int) (time.Duration, []byte)
 		if err == io.EOF {
 			elapsed := time.Since(start)
 			log.Printf("Complete packet received")
-			// push to dataQueue
 			dataQueue[key] = payload
 			return elapsed, payload
 		}
@@ -130,21 +131,19 @@ func PullDataFromSrcQP(key string, chunkSizeInBytes int) (time.Duration, []byte)
 	return time.Duration(-1), []byte{}
 }
 
+// start DstQP server
 func StartServer(serverAddr string) {
 
-	// create listener for sdk
 	lis, err := net.Listen("tcp", serverAddr)
 	if err != nil {
 		log.Fatalf("failed to listen: %v", err)
 	}
 
-	// create grpc server
 	server := grpc.NewServer()
 	downXDT.RegisterXDTtoFnServer(server, downXDTServer{})
 	fnInvocation.RegisterInvocationServer(server, fnInvocationServer{})
 
 	log.Println("start server")
-	// and start...
 	if err := server.Serve(lis); err != nil {
 		log.Fatalf("failed to serve: %v", err)
 	}

@@ -18,7 +18,7 @@ const _ = grpc.SupportPackageIsVersion7
 //
 // For semantics around ctx use and closing/ending streaming RPCs, please refer to https://pkg.go.dev/google.golang.org/grpc/?tab=doc#ClientConn.NewStream.
 type InvocationClient interface {
-	RouteInvocationCall(ctx context.Context, in *InvocationRequest, opts ...grpc.CallOption) (*Empty, error)
+	RouteInvocation(ctx context.Context, in *InvocationRequest, opts ...grpc.CallOption) (*Empty, error)
 }
 
 type invocationClient struct {
@@ -29,9 +29,9 @@ func NewInvocationClient(cc grpc.ClientConnInterface) InvocationClient {
 	return &invocationClient{cc}
 }
 
-func (c *invocationClient) RouteInvocationCall(ctx context.Context, in *InvocationRequest, opts ...grpc.CallOption) (*Empty, error) {
+func (c *invocationClient) RouteInvocation(ctx context.Context, in *InvocationRequest, opts ...grpc.CallOption) (*Empty, error) {
 	out := new(Empty)
-	err := c.cc.Invoke(ctx, "/fnInvocation.Invocation/RouteInvocationCall", in, out, opts...)
+	err := c.cc.Invoke(ctx, "/fnInvocation.Invocation/RouteInvocation", in, out, opts...)
 	if err != nil {
 		return nil, err
 	}
@@ -42,7 +42,7 @@ func (c *invocationClient) RouteInvocationCall(ctx context.Context, in *Invocati
 // All implementations must embed UnimplementedInvocationServer
 // for forward compatibility
 type InvocationServer interface {
-	RouteInvocationCall(context.Context, *InvocationRequest) (*Empty, error)
+	RouteInvocation(context.Context, *InvocationRequest) (*Empty, error)
 	mustEmbedUnimplementedInvocationServer()
 }
 
@@ -50,8 +50,8 @@ type InvocationServer interface {
 type UnimplementedInvocationServer struct {
 }
 
-func (UnimplementedInvocationServer) RouteInvocationCall(context.Context, *InvocationRequest) (*Empty, error) {
-	return nil, status.Errorf(codes.Unimplemented, "method RouteInvocationCall not implemented")
+func (UnimplementedInvocationServer) RouteInvocation(context.Context, *InvocationRequest) (*Empty, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method RouteInvocation not implemented")
 }
 func (UnimplementedInvocationServer) mustEmbedUnimplementedInvocationServer() {}
 
@@ -66,20 +66,20 @@ func RegisterInvocationServer(s grpc.ServiceRegistrar, srv InvocationServer) {
 	s.RegisterService(&Invocation_ServiceDesc, srv)
 }
 
-func _Invocation_RouteInvocationCall_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+func _Invocation_RouteInvocation_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
 	in := new(InvocationRequest)
 	if err := dec(in); err != nil {
 		return nil, err
 	}
 	if interceptor == nil {
-		return srv.(InvocationServer).RouteInvocationCall(ctx, in)
+		return srv.(InvocationServer).RouteInvocation(ctx, in)
 	}
 	info := &grpc.UnaryServerInfo{
 		Server:     srv,
-		FullMethod: "/fnInvocation.Invocation/RouteInvocationCall",
+		FullMethod: "/fnInvocation.Invocation/RouteInvocation",
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(InvocationServer).RouteInvocationCall(ctx, req.(*InvocationRequest))
+		return srv.(InvocationServer).RouteInvocation(ctx, req.(*InvocationRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }
@@ -92,8 +92,8 @@ var Invocation_ServiceDesc = grpc.ServiceDesc{
 	HandlerType: (*InvocationServer)(nil),
 	Methods: []grpc.MethodDesc{
 		{
-			MethodName: "RouteInvocationCall",
-			Handler:    _Invocation_RouteInvocationCall_Handler,
+			MethodName: "RouteInvocation",
+			Handler:    _Invocation_RouteInvocation_Handler,
 		},
 	},
 	Streams:  []grpc.StreamDesc{},

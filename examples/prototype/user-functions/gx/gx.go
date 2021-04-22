@@ -17,5 +17,5 @@ var handler = func(data []byte) {
 }
 
 func main() {
-	sdk.StartDstServer(":50007", handler)
+	sdk.StartDstServer(":50007")
 }

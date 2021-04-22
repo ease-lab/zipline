@@ -4,6 +4,7 @@ import (
 	"crypto/rand"
 	"encoding/json"
 	"log"
+	"time"
 
 	sdk "github.com/ease-lab/vhive_stealth/examples/prototype/sdk"
 )
@@ -15,11 +16,13 @@ type payload struct {
 	isXDT        bool
 }
 
+var config = sdk.LoadConfig("../config.json")
+
 func main() {
 	payload_data := make([]byte, 10*1024*1024) // 10MiB
 	rand.Read(payload_data)
 
-	chunkSizeInBytes := 64 * 1024
+	chunkSizeInBytes := config.ChunkSizeInBytes
 
 	payloadToSend := &payload{
 		FunctionName: "HelloXDT",
@@ -28,7 +31,9 @@ func main() {
 	}
 	payloadByteArray, _ := json.Marshal(payloadToSend)
 
-	duration := sdk.InvokeWithXDT("", payloadByteArray, chunkSizeInBytes)
+	start := time.Now()
+	sdk.InvokeWithXDT("", payloadByteArray, chunkSizeInBytes)
+	elapsed := time.Since(start)
 
-	log.Printf("completed XDT in %s", duration)
+	log.Printf("completed XDT in %s", elapsed)
 }

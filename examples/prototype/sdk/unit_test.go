@@ -14,7 +14,6 @@ import (
 	log "github.com/sirupsen/logrus"
 )
 
-var chunk_size = flag.Int("chunk", 64, "chunk_size")
 var sample_size = flag.Int("sample", 100, "sample_size")
 var URL = flag.String("URL", "", "Function URL")
 
@@ -24,6 +23,8 @@ type payload struct {
 	Key          string
 	isXDT        bool
 }
+
+var config = sdk.LoadConfig("../config.json")
 
 func TestSDK_to_sQP_data_transfer(t *testing.T) {
 
@@ -36,7 +37,7 @@ func TestSDK_to_sQP_data_transfer(t *testing.T) {
 	payload_data := make([]byte, 10*1024*1024) // 10MiB
 	//create random blob
 	rand.Read(payload_data)
-	chunkSizeInBytes := 64 * 1024
+	chunkSizeInBytes := config.ChunkSizeInBytes
 
 	payloadToSend := &payload{
 		FunctionName: "HelloXDT",
@@ -59,7 +60,7 @@ func TestSQP_to_dQP_data_transfer(t *testing.T) {
 	payload_data := make([]byte, 10*1024*1024) // 10MiB
 	//create random blob
 	rand.Read(payload_data)
-	chunkSizeInBytes := 64 * 1024
+	chunkSizeInBytes := config.ChunkSizeInBytes
 
 	payloadToSend := &payload{
 		FunctionName: "HelloXDT",
@@ -88,7 +89,7 @@ func TestDQP_to_DstFn_data_transfer(t *testing.T) {
 	payload_data := make([]byte, 10*1024*1024) // 10MiB
 	//create random blob
 	rand.Read(payload_data)
-	chunkSizeInBytes := 64 * 1024
+	chunkSizeInBytes := config.ChunkSizeInBytes
 
 	payloadToSend := &payload{
 		FunctionName: "HelloXDT",
