@@ -17,6 +17,7 @@ import (
 // Invoke the RPC call with XDT
 func InvokeWithXDT(URL string, payloadByteArray []byte, chunkSizeInBytes int) {
 
+	log.Infof("XDT invoke start")
 	now := time.Now()
 	key := strconv.Itoa(int(now.UnixNano()))
 
@@ -25,7 +26,7 @@ func InvokeWithXDT(URL string, payloadByteArray []byte, chunkSizeInBytes int) {
 		log.Fatal(err)
 	}
 
-	log.Printf("XDT invoke called with payload size %d", len(xdtPayload.Data))
+	log.Infof("XDT invoke called with payload size %d", len(xdtPayload.Data))
 
 	payloadData := xdtPayload.Data
 	xdtPayload.Data = []byte("")
@@ -51,9 +52,10 @@ func fnInvocationCall(URL string, serialisedPayload []byte) {
 
 	c := fnInvocation.NewInvocationClient(conn)
 
+	log.Infof("Fn invocation from source SDK start")
 	_, err = c.RouteInvocation(context.Background(), &fnInvocation.InvocationRequest{XdtJson: serialisedPayload})
 	if err == nil {
-		log.Printf("Fn invocation from source SDK successful")
+		log.Infof("Fn invocation from source SDK successful")
 	}
 }
 
@@ -69,26 +71,26 @@ func PushData(key string, payload []byte, chunkSizeInBytes int) time.Duration {
 
 	client := upXDT.NewStreamDataClient(conn)
 	payloadSize := len(payload)
-	log.Printf("sending payload of size %d bytes", payloadSize)
+	log.Infof("Transfering %d bytes to sQP", payloadSize)
 	stream, err := client.SendData(context.Background())
 	if err != nil {
 		log.Fatalf("open stream error %v", err)
 	}
 
-	for currentByte := int(0); currentByte < payloadSize; currentByte += chunkSizeInBytes {
+	for currentByte := 0; currentByte < payloadSize; currentByte += chunkSizeInBytes {
 
 		if currentByte+chunkSizeInBytes > payloadSize {
 			req := upXDT.Request{Chunk: payload[currentByte:payloadSize], Key: key}
 			if err := stream.Send(&req); err != nil {
-				log.Printf("send error %v", err)
+				log.Fatalf("send error %v", err)
 			}
-			log.Printf("finishing request number : %d", currentByte)
+			log.Tracef("finishing request number : %d", currentByte)
 		} else {
 			req := upXDT.Request{Chunk: payload[currentByte : currentByte+chunkSizeInBytes], Key: key}
 			if err := stream.Send(&req); err != nil {
-				log.Printf("send error %v", err)
+				log.Fatalf("send error %v", err)
 			}
-			log.Printf("finishing request number : %d", currentByte)
+			log.Tracef("finishing request number : %d", currentByte)
 		}
 
 	}

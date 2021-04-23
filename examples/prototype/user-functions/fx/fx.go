@@ -3,8 +3,9 @@ package fx
 import (
 	"crypto/rand"
 	"encoding/json"
-	"log"
 	"time"
+
+	log "github.com/sirupsen/logrus"
 
 	sdk "github.com/ease-lab/vhive_stealth/examples/prototype/sdk"
 )

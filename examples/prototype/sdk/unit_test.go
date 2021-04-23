@@ -26,6 +26,11 @@ type payload struct {
 
 var config = sdk.LoadConfig("../config.json")
 
+func init(){
+	log.SetLevel(log.DebugLevel)
+	log.SetFormatter(&log.TextFormatter{TimestampFormat: "2006-01-02 15:04:05.000000", FullTimestamp: true})
+}
+
 func TestSDK_to_sQP_data_transfer(t *testing.T) {
 
 	// start server at sQP

@@ -28,6 +28,11 @@ type payload struct {
 
 var config = sdk.LoadConfig("../config.json")
 
+func init(){
+	log.SetLevel(log.DebugLevel)
+	log.SetFormatter(&log.TextFormatter{TimestampFormat: "2006-01-02 15:04:05.000000", FullTimestamp: true})
+}
+
 func TestSdk_InvokeWithXDT(t *testing.T) {
 	//create random blob
 	payload_data := make([]byte, 10*1024*1024) // 10MiB
@@ -48,6 +53,7 @@ func TestSdk_InvokeWithXDT(t *testing.T) {
 	payloadByteArray, _ := json.Marshal(payloadToSend)
 
 	start := time.Now()
+	log.Infof("starting integ test")
 	sdk.InvokeWithXDT("", payloadByteArray, chunkSizeInBytes)
 	elapsed := time.Since(start)
 

@@ -4,9 +4,10 @@ import (
 	"context"
 	"encoding/json"
 	"io"
-	"log"
 	"net"
 	"time"
+
+	log "github.com/sirupsen/logrus"
 
 	crossXDT "github.com/ease-lab/vhive_stealth/examples/prototype/proto/crossXDT"
 	downXDT "github.com/ease-lab/vhive_stealth/examples/prototype/proto/downXDT"
@@ -37,7 +38,7 @@ var config = sdk.LoadConfig("../config.json")
 // gRPC server to serve data to the DstFn
 func (s downXDTServer) XDTDataServe(in *downXDT.DataRequest, srv downXDT.XDTtoFn_XDTDataServeServer) error {
 
-	log.Printf("fetch key : %d", in.Key)
+	log.Infof("fetching from dQP using key : %s", in.Key)
 
 	blob := dataQueue[in.Key]
 	blobLength := int64(len(blob))
@@ -46,49 +47,49 @@ func (s downXDTServer) XDTDataServe(in *downXDT.DataRequest, srv downXDT.XDTtoFn
 		if currentByte+in.ChunkSize > blobLength {
 			resp := downXDT.Data{Chunk: blob[currentByte:blobLength]}
 			if err := srv.Send(&resp); err != nil {
-				log.Printf("send error %v", err)
+				log.Errorf("send error %v", err)
 			}
-			log.Printf("finishing request number : %d", currentByte)
+			log.Tracef("finishing request number : %d", currentByte)
 		} else {
 			resp := downXDT.Data{Chunk: blob[currentByte : currentByte+in.ChunkSize]}
 			if err := srv.Send(&resp); err != nil {
-				log.Printf("send error %v", err)
+				log.Errorf("send error %v", err)
 			}
-			log.Printf("finishing request number : %d", currentByte)
+			log.Tracef("finishing request number : %d", currentByte)
 		}
 
 	}
 	return nil
 }
 
-// gRPC server to route the function call fron SrcFn to the DstFn
+// gRPC server to route the function call from SrcFn to the DstFn
 func (s fnInvocationServer) RouteInvocation(ctx context.Context, in *fnInvocation.InvocationRequest) (*fnInvocation.Empty, error) {
 
-	log.Printf("received serialised json : %s", in.XdtJson)
+	log.Infof("received serialised json at dQP: %s", in.XdtJson)
 
 	var xdtPayload payload
 	if err := json.Unmarshal(in.XdtJson, &xdtPayload); err != nil {
-		log.Fatal(err)
+		log.Error(err)
 	}
 
-	log.Printf("fetching data using key : %d", xdtPayload.Key)
+	log.Infof("fetching data from sQP using key : %s", xdtPayload.Key)
 	chunkSizeInBytes := config.ChunkSizeInBytes
 	duration, payloadData := PullDataFromSrcQP(xdtPayload.Key, chunkSizeInBytes)
-	log.Printf("pulled data from sQP in %s", duration)
+	log.Infof("pulled data from sQP in %s", duration)
 	dataQueue[xdtPayload.Key] = payloadData
 
-	// route the invocation call to destnation fn
+	// route the invocation call to destination fn
 	serverAddr := ":50007"
 	conn, err := grpc.Dial(serverAddr, grpc.WithInsecure())
 	if err != nil {
-		log.Fatalf("did not connect: %v", err)
+		log.Errorf("did not connect: %v", err)
 	}
 	defer conn.Close()
 
 	c := downXDT.NewXDTtoFnClient(conn)
 	_, err = c.XDTFnCall(context.Background(), &downXDT.InvocationRequest{XdtJson: in.XdtJson})
 	if err == nil {
-		log.Printf("Fn invocation route at dQP successful")
+		log.Infof("Fn invocation route at dQP successful")
 	}
 
 	return &fnInvocation.Empty{}, nil
@@ -100,7 +101,7 @@ func PullDataFromSrcQP(key string, chunkSizeInBytes int) (time.Duration, []byte)
 	serverAddr := ":50005"
 	conn, err := grpc.Dial(serverAddr, grpc.WithInsecure())
 	if err != nil {
-		log.Fatalf("can not connect with server %v", err)
+		log.Errorf("can not connect with server %v", err)
 	}
 	start := time.Now()
 
@@ -108,7 +109,7 @@ func PullDataFromSrcQP(key string, chunkSizeInBytes int) (time.Duration, []byte)
 	in := &crossXDT.Request{Key: key, ChunkSize: int64(chunkSizeInBytes)}
 	stream, err := client.ServeData(context.Background(), in)
 	if err != nil {
-		log.Fatalf("open stream error %v", err)
+		log.Errorf("open stream error %v", err)
 	}
 
 	packetCount := 1
@@ -117,18 +118,17 @@ func PullDataFromSrcQP(key string, chunkSizeInBytes int) (time.Duration, []byte)
 		packet, err := stream.Recv()
 		if err == io.EOF {
 			elapsed := time.Since(start)
-			log.Printf("Complete packet received")
+			log.Tracef("Complete packet received")
 			dataQueue[key] = payload
 			return elapsed, payload
 		}
 		if err != nil {
-			log.Fatalf("receive error: %v", err)
+			log.Errorf("receive error: %v", err)
 		}
-		log.Printf("Received chunk no. %d", packetCount)
+		log.Tracef("Received chunk no. %d", packetCount)
 		payload = append(payload, packet.Chunk...)
 		packetCount += 1
 	}
-	return time.Duration(-1), []byte{}
 }
 
 // start DstQP server

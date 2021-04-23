@@ -20,5 +20,5 @@ replace github.com/ease-lab/vhive_stealth/examples/prototype/dqp => ../../dQP
 
 require (
 	github.com/ease-lab/vhive_stealth/examples/prototype/sdk v0.0.0-00010101000000-000000000000
-	gonum.org/v1/gonum v0.9.1 // indirect
+	github.com/sirupsen/logrus v1.8.1
 )

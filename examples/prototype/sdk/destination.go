@@ -17,7 +17,7 @@ import (
 // to be called by dQP to invoke DstFn
 func (s downXDTServer) XDTFnCall(ctx context.Context, in *downXDT.InvocationRequest) (*downXDT.Empty, error) {
 
-	log.Printf("destination received invocation call %s", in.XdtJson)
+	log.Infof("destination received invocation call %s", in.XdtJson)
 
 	var xdtPayload payload
 	if err := json.Unmarshal(in.XdtJson, &xdtPayload); err != nil {
@@ -55,18 +55,17 @@ func FetchFromDQP(key string, chunkSizeInBytes int) (time.Duration, []byte) {
 		packet, err := stream.Recv()
 		if err == io.EOF {
 			elapsed := time.Since(start)
-			log.Printf("Complete packet received at dQP")
+			log.Infof("Complete packet received at dQP")
 			dataQueue[key] = payload
 			return elapsed, payload
 		}
 		if err != nil {
 			log.Fatalf("receive error: %v", err)
 		}
-		log.Printf("Received chunk no. %d", packetCount)
+		log.Tracef("Received chunk no. %d", packetCount)
 		payload = append(payload, packet.Chunk...)
 		packetCount += 1
 	}
-	return time.Duration(-1), []byte{}
 }
 
 // start DstQP server

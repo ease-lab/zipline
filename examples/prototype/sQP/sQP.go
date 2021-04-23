@@ -2,8 +2,9 @@ package sqp
 
 import (
 	"io"
-	"log"
 	"net"
+
+	log "github.com/sirupsen/logrus"
 
 	crossXDT "github.com/ease-lab/vhive_stealth/examples/prototype/proto/crossXDT"
 	upXDT "github.com/ease-lab/vhive_stealth/examples/prototype/proto/upXDT"
@@ -29,7 +30,7 @@ func (s upXDTServer) SendData(srv upXDT.StreamData_SendDataServer) error {
 	for {
 		packet, err := srv.Recv()
 		if err == io.EOF {
-			log.Printf("Complete packet received")
+			log.Infof("Complete packet received at sQP")
 			dataQueue[key] = payload
 			return srv.SendAndClose(&upXDT.Empty{})
 		}
@@ -37,7 +38,7 @@ func (s upXDTServer) SendData(srv upXDT.StreamData_SendDataServer) error {
 			log.Fatalf("receive error: %v", err)
 		}
 		key = packet.Key
-		log.Printf("Key received: %s in chunk %d", key, packetCount)
+		log.Tracef("Key received: %s in chunk %d", key, packetCount)
 		payload = append(payload, packet.Chunk...)
 		packetCount += 1
 	}
@@ -47,7 +48,7 @@ func (s upXDTServer) SendData(srv upXDT.StreamData_SendDataServer) error {
 // gRPC server to serve the available data to the dQP
 func (s crossXDTServer) ServeData(in *crossXDT.Request, srv crossXDT.StreamData_ServeDataServer) error {
 
-	log.Printf("fetch key : %d", in.Key)
+	log.Infof("fetch key: %d from sQP", in.Key)
 
 	blob := dataQueue[in.Key]
 	blobLength := int64(len(blob))
@@ -56,15 +57,15 @@ func (s crossXDTServer) ServeData(in *crossXDT.Request, srv crossXDT.StreamData_
 		if currentByte+in.ChunkSize > blobLength {
 			resp := crossXDT.Response{Chunk: blob[currentByte:blobLength]}
 			if err := srv.Send(&resp); err != nil {
-				log.Printf("send error %v", err)
+				log.Fatalf("send error %v", err)
 			}
-			log.Printf("finishing request number : %d", currentByte)
+			log.Tracef("finishing request number : %d", currentByte)
 		} else {
 			resp := crossXDT.Response{Chunk: blob[currentByte : currentByte+in.ChunkSize]}
 			if err := srv.Send(&resp); err != nil {
-				log.Printf("send error %v", err)
+				log.Fatalf("send error %v", err)
 			}
-			log.Printf("finishing request number : %d", currentByte)
+			log.Tracef("finishing request number : %d", currentByte)
 		}
 
 	}

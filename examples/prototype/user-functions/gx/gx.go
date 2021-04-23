@@ -1,7 +1,7 @@
 package gx
 
 import (
-	"log"
+	log "github.com/sirupsen/logrus"
 
 	sdk "github.com/ease-lab/vhive_stealth/examples/prototype/sdk"
 )
