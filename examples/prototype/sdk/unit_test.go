@@ -2,7 +2,6 @@ package sdk
 
 import (
 	"crypto/rand"
-	"encoding/json"
 	"flag"
 	"strconv"
 	"testing"
@@ -16,13 +15,6 @@ import (
 
 var sample_size = flag.Int("sample", 100, "sample_size")
 var URL = flag.String("URL", "", "Function URL")
-
-type payload struct {
-	FunctionName string
-	Data         []byte
-	Key          string
-	isXDT        bool
-}
 
 var config = sdk.LoadConfig("../config.json")
 
@@ -44,14 +36,8 @@ func TestSDK_to_sQP_data_transfer(t *testing.T) {
 	rand.Read(payload_data)
 	chunkSizeInBytes := config.ChunkSizeInBytes
 
-	payloadToSend := &payload{
-		FunctionName: "HelloXDT",
-		Data:         payload_data,
-		Key:          ""}
-	payloadByteArray, _ := json.Marshal(payloadToSend)
-
-	duration := sdk.PushData(key, payloadByteArray, chunkSizeInBytes)
-	log.Printf("sent %d bytes in %s", len(payloadByteArray), duration)
+	duration := sdk.PushData(key, payload_data, chunkSizeInBytes)
+	log.Printf("sent %d bytes in %s", len(payload_data), duration)
 }
 
 func TestSQP_to_dQP_data_transfer(t *testing.T) {
@@ -67,15 +53,9 @@ func TestSQP_to_dQP_data_transfer(t *testing.T) {
 	rand.Read(payload_data)
 	chunkSizeInBytes := config.ChunkSizeInBytes
 
-	payloadToSend := &payload{
-		FunctionName: "HelloXDT",
-		Data:         payload_data,
-		Key:          ""}
-	payloadByteArray, _ := json.Marshal(payloadToSend)
+	duration := sdk.PushData(key, payload_data, chunkSizeInBytes)
 
-	duration := sdk.PushData(key, payloadByteArray, chunkSizeInBytes)
-
-	log.Printf("transferred %d bytes from SrcFn to sQP in %s", len(payloadByteArray), duration)
+	log.Printf("transferred %d bytes from SrcFn to sQP in %s", len(payload_data), duration)
 
 	duration, payloadData := dqp.PullDataFromSrcQP(key, chunkSizeInBytes)
 
@@ -96,15 +76,9 @@ func TestDQP_to_DstFn_data_transfer(t *testing.T) {
 	rand.Read(payload_data)
 	chunkSizeInBytes := config.ChunkSizeInBytes
 
-	payloadToSend := &payload{
-		FunctionName: "HelloXDT",
-		Data:         payload_data,
-		Key:          ""}
-	payloadByteArray, _ := json.Marshal(payloadToSend)
+	duration := sdk.PushData(key, payload_data, chunkSizeInBytes)
 
-	duration := sdk.PushData(key, payloadByteArray, chunkSizeInBytes)
-
-	log.Printf("transferred %d bytes from SrcFn to sQP in %s", len(payloadByteArray), duration)
+	log.Printf("transferred %d bytes from SrcFn to sQP in %s", len(payload_data), duration)
 
 	duration, payloadData := dqp.PullDataFromSrcQP(key, chunkSizeInBytes)
 

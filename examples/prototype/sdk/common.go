@@ -10,11 +10,11 @@ import (
 	downXDT "github.com/ease-lab/vhive_stealth/examples/prototype/proto/downXDT"
 )
 
-type payload struct {
+type Payload struct {
 	FunctionName string
 	Data         []byte
 	Key          string
-	isXDT        bool
+	IsXDT        bool
 }
 
 type Config struct {

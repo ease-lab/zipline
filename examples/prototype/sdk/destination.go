@@ -19,7 +19,7 @@ func (s downXDTServer) XDTFnCall(ctx context.Context, in *downXDT.InvocationRequ
 
 	log.Infof("destination received invocation call %s", in.XdtJson)
 
-	var xdtPayload payload
+	var xdtPayload Payload
 	if err := json.Unmarshal(in.XdtJson, &xdtPayload); err != nil {
 		log.Fatal(err)
 	}

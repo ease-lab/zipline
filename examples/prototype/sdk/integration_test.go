@@ -2,7 +2,6 @@ package sdk
 
 import (
 	"crypto/rand"
-	"encoding/json"
 	"flag"
 	"sort"
 	"strconv"
@@ -18,13 +17,6 @@ import (
 
 var sample_size = flag.Int("sample", 100, "sample_size")
 var URL = flag.String("URL", "bla", "Function URL")
-
-type payload struct {
-	FunctionName string
-	Data         []byte
-	Key          string
-	isXDT        bool
-}
 
 var config = sdk.LoadConfig("../config.json")
 
@@ -45,16 +37,16 @@ func TestSdk_InvokeWithXDT(t *testing.T) {
 
 	chunkSizeInBytes := config.ChunkSizeInBytes
 
-	payloadToSend := &payload{
+	payloadToSend := sdk.Payload{
 		FunctionName: "HelloXDT",
 		Data:         payload_data,
 		Key:          "",
 	}
-	payloadByteArray, _ := json.Marshal(payloadToSend)
 
 	start := time.Now()
 	log.Infof("starting integ test")
-	sdk.InvokeWithXDT("", payloadByteArray, chunkSizeInBytes)
+	//sdk.InvokeWithXDT("", payloadByteArray, chunkSizeInBytes)
+	sdk.InvokeWithXDT("", payloadToSend, chunkSizeInBytes)
 	elapsed := time.Since(start)
 
 	log.Printf("completed XDT in %s", elapsed)
@@ -86,16 +78,15 @@ func TestBenchmark_gRPC(t *testing.T) {
 
 	bench_payload := func(payloadSize int, chunkSizeInBytes int, sample_size int, URL string, payloadData []byte) []float64 {
 		latencies := []float64{}
-		payloadToSend := &payload{
+		payloadToSend := sdk.Payload{
 			FunctionName: "HelloXDT",
 			Data:         payloadData[:payloadSize],
 			Key:          "",
 		}
-		payloadByteArray, _ := json.Marshal(payloadToSend)
 
 		for i := 0; i < sample_size; i += 1 {
 			start := time.Now()
-			sdk.InvokeWithXDT(URL, payloadByteArray, chunkSizeInBytes)
+			sdk.InvokeWithXDT(URL, payloadToSend, chunkSizeInBytes)
 			latency_in_us := time.Since(start).Microseconds()
 			latencies = append(latencies, float64(latency_in_us))
 		}

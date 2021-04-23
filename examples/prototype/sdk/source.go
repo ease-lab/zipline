@@ -15,23 +15,24 @@ import (
 )
 
 // Invoke the RPC call with XDT
-func InvokeWithXDT(URL string, payloadByteArray []byte, chunkSizeInBytes int) {
+//func InvokeWithXDT(URL string, payloadByteArray []byte, chunkSizeInBytes int) {
+func InvokeWithXDT(URL string, xdtPayload Payload, chunkSizeInBytes int) {
 
 	log.Infof("XDT invoke start")
 	now := time.Now()
 	key := strconv.Itoa(int(now.UnixNano()))
 
-	var xdtPayload payload
-	if err := json.Unmarshal(payloadByteArray, &xdtPayload); err != nil {
-		log.Fatal(err)
-	}
+	//var xdtPayload payload
+	//if err := json.Unmarshal(payloadByteArray, &xdtPayload); err != nil {
+	//	log.Fatal(err)
+	//}
 
 	log.Infof("XDT invoke called with payload size %d", len(xdtPayload.Data))
 
 	payloadData := xdtPayload.Data
 	xdtPayload.Data = []byte("")
 	xdtPayload.Key = key
-	xdtPayload.isXDT = true
+	xdtPayload.IsXDT = true
 
 	serialisedPayload, _ := json.Marshal(xdtPayload)
 

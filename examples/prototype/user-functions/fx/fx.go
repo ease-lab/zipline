@@ -2,7 +2,6 @@ package fx
 
 import (
 	"crypto/rand"
-	"encoding/json"
 	"time"
 
 	log "github.com/sirupsen/logrus"
@@ -25,15 +24,15 @@ func main() {
 
 	chunkSizeInBytes := config.ChunkSizeInBytes
 
-	payloadToSend := &payload{
+	payloadToSend := &sdk.Payload{
 		FunctionName: "HelloXDT",
 		Data:         payload_data,
 		Key:          "",
 	}
-	payloadByteArray, _ := json.Marshal(payloadToSend)
+	//payloadByteArray, _ := json.Marshal(payloadToSend)
 
 	start := time.Now()
-	sdk.InvokeWithXDT("", payloadByteArray, chunkSizeInBytes)
+	sdk.InvokeWithXDT("", *payloadToSend, chunkSizeInBytes)
 	elapsed := time.Since(start)
 
 	log.Printf("completed XDT in %s", elapsed)
