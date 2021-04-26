@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"io"
 	"net"
+	"strconv"
 	"time"
 
 	log "github.com/sirupsen/logrus"
@@ -34,7 +35,7 @@ func (s downXDTServer) XDTFnCall(ctx context.Context, in *downXDT.InvocationRequ
 }
 
 // fetch data from dQP to DstFn
-func FetchFromDQP(key string, chunkSizeInBytes int) (time.Duration, []byte) {
+func FetchFromDQP(key string, chunkSizeInBytes int) (time.Duration, int) {
 	serverAddr := ":50006"
 	conn, err := grpc.Dial(serverAddr, grpc.WithInsecure())
 	if err != nil {
@@ -49,21 +50,22 @@ func FetchFromDQP(key string, chunkSizeInBytes int) (time.Duration, []byte) {
 		log.Fatalf("open stream error %v", err)
 	}
 
-	packetCount := 1
-	var payload []byte
+	packetCount := 0
+	//var payload []byte
 	for {
 		packet, err := stream.Recv()
 		if err == io.EOF {
 			elapsed := time.Since(start)
 			log.Infof("Complete packet received at dQP")
-			dataQueue[key] = payload
-			return elapsed, payload
+			//dataQueue[key] = payload
+			return elapsed, packetCount
 		}
 		if err != nil {
 			log.Fatalf("receive error: %v", err)
 		}
 		log.Tracef("Received chunk no. %d", packetCount)
-		payload = append(payload, packet.Chunk...)
+		//payload = append(payload, packet.Chunk...)
+		dataQueue[key+";"+strconv.Itoa(packetCount)] = packet.Chunk
 		packetCount += 1
 	}
 }

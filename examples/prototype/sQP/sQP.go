@@ -2,7 +2,9 @@ package sqp
 
 import (
 	"io"
+	//"math"
 	"net"
+	"strconv"
 
 	log "github.com/sirupsen/logrus"
 
@@ -12,6 +14,7 @@ import (
 	"google.golang.org/grpc"
 )
 
+// 1562 chunks of size 64KB are required to store 100 MB
 var dataQueue = make(map[string][]byte)
 
 type crossXDTServer struct {
@@ -24,14 +27,14 @@ type upXDTServer struct {
 
 // to be called by SrcFn to push data to sQP
 func (s upXDTServer) SendData(srv upXDT.StreamData_SendDataServer) error {
-	packetCount := 1
-	var payload []byte
+	packetCount := 0
+	//var payload []byte
 	var key string
 	for {
 		packet, err := srv.Recv()
 		if err == io.EOF {
-			log.Infof("Complete packet received at sQP")
-			dataQueue[key] = payload
+			log.Infof("%d chunks received at sQP",packetCount)
+			//dataQueue[key] = payload
 			return srv.SendAndClose(&upXDT.Empty{})
 		}
 		if err != nil {
@@ -39,7 +42,9 @@ func (s upXDTServer) SendData(srv upXDT.StreamData_SendDataServer) error {
 		}
 		key = packet.Key
 		log.Tracef("Key received: %s in chunk %d", key, packetCount)
-		payload = append(payload, packet.Chunk...)
+		//payload = append(payload, packet.Chunk...
+		//log.Infof("storing chunk using key %s",key+";"+strconv.Itoa(packetCount))
+		dataQueue[key+";"+strconv.Itoa(packetCount)] = packet.Chunk
 		packetCount += 1
 	}
 	return nil
@@ -50,25 +55,39 @@ func (s crossXDTServer) ServeData(in *crossXDT.Request, srv crossXDT.StreamData_
 
 	log.Infof("fetch key: %d from sQP", in.Key)
 
-	blob := dataQueue[in.Key]
-	blobLength := int64(len(blob))
-	for currentByte := int64(0); currentByte < blobLength; currentByte += in.ChunkSize {
-
-		if currentByte+in.ChunkSize > blobLength {
-			resp := crossXDT.Response{Chunk: blob[currentByte:blobLength]}
-			if err := srv.Send(&resp); err != nil {
-				log.Fatalf("send error %v", err)
-			}
-			log.Tracef("finishing request number : %d", currentByte)
-		} else {
-			resp := crossXDT.Response{Chunk: blob[currentByte : currentByte+in.ChunkSize]}
-			if err := srv.Send(&resp); err != nil {
-				log.Fatalf("send error %v", err)
-			}
-			log.Tracef("finishing request number : %d", currentByte)
+	packetCount := 0
+	for {
+		chunk, ok := dataQueue[in.Key+";"+strconv.Itoa(packetCount)]
+		if !ok {
+			break
 		}
-
+		log.Tracef("chunk fetched from sQP using key %s",in.Key+";"+strconv.Itoa(packetCount))
+		resp := crossXDT.Response{Chunk:chunk }
+		if err := srv.Send(&resp); err != nil {
+			log.Fatalf("send error %v", err)
+		}
+		log.Tracef("finishing request number : %d", packetCount)
+		packetCount +=1
 	}
+	//blob := dataQueue[in.Key]
+	//blobLength := int64(len(blob))
+	//for currentByte := int64(0); currentByte < blobLength; currentByte += in.ChunkSize {
+	//
+	//	if currentByte+in.ChunkSize > blobLength {
+	//		resp := crossXDT.Response{Chunk: blob[currentByte:blobLength]}
+	//		if err := srv.Send(&resp); err != nil {
+	//			log.Fatalf("send error %v", err)
+	//		}
+	//		log.Tracef("finishing request number : %d", currentByte)
+	//	} else {
+	//		resp := crossXDT.Response{Chunk: blob[currentByte : currentByte+in.ChunkSize]}
+	//		if err := srv.Send(&resp); err != nil {
+	//			log.Fatalf("send error %v", err)
+	//		}
+	//		log.Tracef("finishing request number : %d", currentByte)
+	//	}
+	//
+	//}
 	return nil
 }
 

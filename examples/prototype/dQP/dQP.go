@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"io"
 	"net"
+	"strconv"
 	"time"
 
 	log "github.com/sirupsen/logrus"
@@ -40,25 +41,40 @@ func (s downXDTServer) XDTDataServe(in *downXDT.DataRequest, srv downXDT.XDTtoFn
 
 	log.Infof("fetching from dQP using key : %s", in.Key)
 
-	blob := dataQueue[in.Key]
-	blobLength := int64(len(blob))
-	for currentByte := int64(0); currentByte < blobLength; currentByte += in.ChunkSize {
+	packetCount := 0
 
-		if currentByte+in.ChunkSize > blobLength {
-			resp := downXDT.Data{Chunk: blob[currentByte:blobLength]}
-			if err := srv.Send(&resp); err != nil {
-				log.Errorf("send error %v", err)
-			}
-			log.Tracef("finishing request number : %d", currentByte)
-		} else {
-			resp := downXDT.Data{Chunk: blob[currentByte : currentByte+in.ChunkSize]}
-			if err := srv.Send(&resp); err != nil {
-				log.Errorf("send error %v", err)
-			}
-			log.Tracef("finishing request number : %d", currentByte)
+	for {
+		chunk, ok := dataQueue[in.Key+";"+strconv.Itoa(packetCount)]
+		if !ok {
+			break
 		}
-
+		resp := downXDT.Data{Chunk:chunk }
+		if err := srv.Send(&resp); err != nil {
+			log.Fatalf("send error %v", err)
+		}
+		log.Tracef("finishing request number : %d", packetCount)
+		packetCount+=1
 	}
+
+	//blob := dataQueue[in.Key]
+	//blobLength := int64(len(blob))
+	//for currentByte := int64(0); currentByte < blobLength; currentByte += in.ChunkSize {
+	//
+	//	if currentByte+in.ChunkSize > blobLength {
+	//		resp := downXDT.Data{Chunk: blob[currentByte:blobLength]}
+	//		if err := srv.Send(&resp); err != nil {
+	//			log.Errorf("send error %v", err)
+	//		}
+	//		log.Tracef("finishing request number : %d", currentByte)
+	//	} else {
+	//		resp := downXDT.Data{Chunk: blob[currentByte : currentByte+in.ChunkSize]}
+	//		if err := srv.Send(&resp); err != nil {
+	//			log.Errorf("send error %v", err)
+	//		}
+	//		log.Tracef("finishing request number : %d", currentByte)
+	//	}
+	//
+	//}
 	return nil
 }
 
@@ -74,9 +90,9 @@ func (s fnInvocationServer) RouteInvocation(ctx context.Context, in *fnInvocatio
 
 	log.Infof("fetching data from sQP using key : %s", xdtPayload.Key)
 	chunkSizeInBytes := config.ChunkSizeInBytes
-	duration, payloadData := PullDataFromSrcQP(xdtPayload.Key, chunkSizeInBytes)
-	log.Infof("pulled data from sQP in %s", duration)
-	dataQueue[xdtPayload.Key] = payloadData
+	duration, payloadCount := PullDataFromSrcQP(xdtPayload.Key, chunkSizeInBytes)
+	log.Infof("pulled %d packets from sQP in %s",payloadCount, duration)
+	//dataQueue[xdtPayload.Key] = payloadData
 
 	// route the invocation call to destination fn
 	serverAddr := ":50007"
@@ -96,7 +112,7 @@ func (s fnInvocationServer) RouteInvocation(ctx context.Context, in *fnInvocatio
 }
 
 // pull data from src QP to dst QP
-func PullDataFromSrcQP(key string, chunkSizeInBytes int) (time.Duration, []byte) {
+func PullDataFromSrcQP(key string, chunkSizeInBytes int) (time.Duration, int) {
 
 	serverAddr := ":50005"
 	conn, err := grpc.Dial(serverAddr, grpc.WithInsecure())
@@ -112,21 +128,22 @@ func PullDataFromSrcQP(key string, chunkSizeInBytes int) (time.Duration, []byte)
 		log.Errorf("open stream error %v", err)
 	}
 
-	packetCount := 1
-	var payload []byte
+	packetCount := 0
+	//var payload []byte
 	for {
 		packet, err := stream.Recv()
 		if err == io.EOF {
 			elapsed := time.Since(start)
 			log.Tracef("Complete packet received")
-			dataQueue[key] = payload
-			return elapsed, payload
+			//dataQueue[key] = payload
+			return elapsed, packetCount
 		}
 		if err != nil {
 			log.Errorf("receive error: %v", err)
 		}
 		log.Tracef("Received chunk no. %d", packetCount)
-		payload = append(payload, packet.Chunk...)
+		//payload = append(payload, packet.Chunk...)
+		dataQueue[key+";"+strconv.Itoa(packetCount)] = packet.Chunk
 		packetCount += 1
 	}
 }

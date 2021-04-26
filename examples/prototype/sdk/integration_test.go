@@ -15,7 +15,7 @@ import (
 	log "github.com/sirupsen/logrus"
 )
 
-var sample_size = flag.Int("sample", 100, "sample_size")
+var sample_size = flag.Int("sample", 10, "sample_size")
 var URL = flag.String("URL", "bla", "Function URL")
 
 var config = sdk.LoadConfig("../config.json")
