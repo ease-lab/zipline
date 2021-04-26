@@ -49,7 +49,7 @@ func PlotLatenciesCDF(plotPath string, sortedLatencies []float64, payloadSize in
 	}
 }
 
-func PlotPercentile(sorted_latency_map map[int][]float64) {
+func PlotPercentile(sortedLatencyMap map[int][]float64) {
 	plotInstance := plot.New()
 
 	plotInstance.Title.Text = fmt.Sprintf("Latency (50th percentile) as a function of payload size")
@@ -70,9 +70,9 @@ func PlotPercentile(sorted_latency_map map[int][]float64) {
 
 	for _, percentile := range percentiles {
 		point_labels := []string{}
-		latenciesToPlot := make(plotter.XYs, len(sorted_latency_map))
+		latenciesToPlot := make(plotter.XYs, len(sortedLatencyMap))
 		i := 0
-		for payloadSize, sorted_latency := range sorted_latency_map {
+		for payloadSize, sorted_latency := range sortedLatencyMap {
 			latenciesToPlot[i].X = float64(payloadSize)
 			// log.Printf("inserting %dth of sorted, which is %f", int(percentile*len(sorted_latency)/100), sorted_latency[int(percentile*len(sorted_latency)/100)])
 			latenciesToPlot[i].Y = sorted_latency[int(percentile*len(sorted_latency)/100)] / 1000.0
@@ -116,7 +116,7 @@ func PlotPercentile(sorted_latency_map map[int][]float64) {
 	}
 }
 
-func PlotBW(sorted_latency_map map[int][]float64) {
+func PlotBW(sortedLatencyMap map[int][]float64) {
 	plotInstance := plot.New()
 
 	plotInstance.Title.Text = fmt.Sprintf("Bandwidth as a function of a payload size")
@@ -131,11 +131,11 @@ func PlotBW(sorted_latency_map map[int][]float64) {
 	//}
 	//sortedLatencies = sortedLatencies[:maxIndexKept]
 
-	latenciesToPlot := make(plotter.XYs, len(sorted_latency_map))
+	latenciesToPlot := make(plotter.XYs, len(sortedLatencyMap))
 	point_labels := []string{}
 	i := 0
 
-	for payloadSize, sorted_latency := range sorted_latency_map {
+	for payloadSize, sorted_latency := range sortedLatencyMap {
 		latenciesToPlot[i].X = float64(payloadSize)
 		// log.Printf("inserting %dth of sorted, which is %f", int(percentile*len(sorted_latency)/100), sorted_latency[int(percentile*len(sorted_latency)/100)])
 		latenciesToPlot[i].Y = float64(payloadSize) * 1024 / (sorted_latency[int(50*len(sorted_latency)/100)])

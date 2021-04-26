@@ -15,28 +15,22 @@ import (
 )
 
 // Invoke the RPC call with XDT
-//func InvokeWithXDT(URL string, payloadByteArray []byte, chunkSizeInBytes int) {
 func InvokeWithXDT(URL string, xdtPayload Payload, chunkSizeInBytes int) {
 
 	log.Infof("XDT invoke start")
 	now := time.Now()
 	key := strconv.Itoa(int(now.UnixNano()))
-
-	//var xdtPayload payload
-	//if err := json.Unmarshal(payloadByteArray, &xdtPayload); err != nil {
-	//	log.Fatal(err)
-	//}
-
 	log.Infof("XDT invoke called with payload size %d", len(xdtPayload.Data))
 
 	payloadData := xdtPayload.Data
+	log.Info(payloadData[0:9],payloadData[len(payloadData)-9:])
 	xdtPayload.Data = []byte("")
 	xdtPayload.Key = key
 	xdtPayload.IsXDT = true
 
 	serialisedPayload, _ := json.Marshal(xdtPayload)
 
-	_ = PushData(key, payloadData, chunkSizeInBytes)
+	PushData(key, payloadData, chunkSizeInBytes)
 
 	fnInvocationCall(URL, serialisedPayload)
 }
@@ -44,7 +38,7 @@ func InvokeWithXDT(URL string, xdtPayload Payload, chunkSizeInBytes int) {
 // make fn invocation call to dQP with xdt payload
 func fnInvocationCall(URL string, serialisedPayload []byte) {
 
-	serverAddr := ":50006"
+	serverAddr := config.DQPServerAddr
 	conn, err := grpc.Dial(serverAddr, grpc.WithInsecure())
 	if err != nil {
 		log.Fatalf("did not connect: %v", err)
@@ -61,14 +55,13 @@ func fnInvocationCall(URL string, serialisedPayload []byte) {
 }
 
 // push data to source QP
-func PushData(key string, payload []byte, chunkSizeInBytes int) time.Duration {
+func PushData(key string, payload []byte, chunkSizeInBytes int) {
 
-	serverAddr := ":50005"
+	serverAddr := config.SQPServerAddr
 	conn, err := grpc.Dial(serverAddr, grpc.WithInsecure())
 	if err != nil {
 		log.Fatalf("can not connect with server %v", err)
 	}
-	start := time.Now()
 
 	client := upXDT.NewStreamDataClient(conn)
 	payloadSize := len(payload)
@@ -99,6 +92,4 @@ func PushData(key string, payload []byte, chunkSizeInBytes int) time.Duration {
 	if err != nil {
 		log.Fatalf("%v.CloseAndRecv() got error %v, want %v", stream, err, nil)
 	}
-	elapsed := time.Since(start)
-	return elapsed
 }

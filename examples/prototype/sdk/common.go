@@ -19,6 +19,9 @@ type Payload struct {
 
 type Config struct {
 	ChunkSizeInBytes int
+	DQPServerAddr string
+	DstServerAddr string
+	SQPServerAddr string
 }
 
 type downXDTServer struct {

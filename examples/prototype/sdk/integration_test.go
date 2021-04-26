@@ -27,25 +27,24 @@ func init(){
 
 func TestSdk_InvokeWithXDT(t *testing.T) {
 	//create random blob
-	payload_data := make([]byte, 10*1024*1024) // 10MiB
-	rand.Read(payload_data)
+	payloadData := make([]byte, 10*1024*1024) // 10MiB
+	rand.Read(payloadData)
 
 	// start server at sQP
-	go sqp.StartServer(":50005")
-	go dqp.StartServer(":50006")
-	go sdk.StartDstServer(":50007")
+	go sqp.StartServer(config.SQPServerAddr)
+	go dqp.StartServer(config.DQPServerAddr)
+	go sdk.StartDstServer(config.DstServerAddr)
 
 	chunkSizeInBytes := config.ChunkSizeInBytes
 
 	payloadToSend := sdk.Payload{
 		FunctionName: "HelloXDT",
-		Data:         payload_data,
+		Data:         payloadData,
 		Key:          "",
 	}
 
 	start := time.Now()
 	log.Infof("starting integ test")
-	//sdk.InvokeWithXDT("", payloadByteArray, chunkSizeInBytes)
 	sdk.InvokeWithXDT("", payloadToSend, chunkSizeInBytes)
 	elapsed := time.Since(start)
 
@@ -55,20 +54,20 @@ func TestSdk_InvokeWithXDT(t *testing.T) {
 func TestBenchmark_gRPC(t *testing.T) {
 
 	if *sample_size < 10 {
-		log.Fatal("invalod sample size. Acceptable input is integers >= 10")
+		log.Fatal("invalid sample size. Acceptable input is integers >= 10")
 	}
 
 	// if *URL == "" {
 	// 	log.Fatal("please enter destination url")
 	// }
 
-	go sqp.StartServer(":50005")
-	go dqp.StartServer(":50006")
-	go sdk.StartDstServer(":50007")
+	go sqp.StartServer(config.SQPServerAddr)
+	go dqp.StartServer(config.DQPServerAddr)
+	go sdk.StartDstServer(config.DstServerAddr)
 
 	payloadSizes := []int{10, 100, 1000, 10000, 100000}
 
-	latency_map := make(map[int][]float64)
+	latencyMap := make(map[int][]float64)
 
 	payloadData := make([]byte, 101*1024*1024) // 10MiB
 	//create random payload
@@ -77,7 +76,7 @@ func TestBenchmark_gRPC(t *testing.T) {
 	chunkSizeInBytes := config.ChunkSizeInBytes
 
 	bench_payload := func(payloadSize int, chunkSizeInBytes int, sample_size int, URL string, payloadData []byte) []float64 {
-		latencies := []float64{}
+		var latencies []float64
 		payloadToSend := sdk.Payload{
 			FunctionName: "HelloXDT",
 			Data:         payloadData[:payloadSize],
@@ -99,9 +98,9 @@ func TestBenchmark_gRPC(t *testing.T) {
 		log.Printf("checking for %dKiB", payloadSize)
 		latencies := bench_payload(payloadSizeInBytes, chunkSizeInBytes, *sample_size, *URL, payloadData)
 		plotter.PlotLatenciesCDF("./cdf_"+strconv.Itoa(payloadSize)+"KiB.png", latencies, payloadSize)
-		latency_map[payloadSize] = latencies
+		latencyMap[payloadSize] = latencies
 	}
 
-	plotter.PlotPercentile(latency_map)
-	plotter.PlotBW((latency_map))
+	plotter.PlotPercentile(latencyMap)
+	plotter.PlotBW((latencyMap))
 }

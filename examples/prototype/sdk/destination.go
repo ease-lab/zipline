@@ -36,7 +36,7 @@ func (s downXDTServer) XDTFnCall(ctx context.Context, in *downXDT.InvocationRequ
 
 // fetch data from dQP to DstFn
 func FetchFromDQP(key string, chunkSizeInBytes int) (time.Duration, int) {
-	serverAddr := ":50006"
+	serverAddr := config.DQPServerAddr
 	conn, err := grpc.Dial(serverAddr, grpc.WithInsecure())
 	if err != nil {
 		log.Fatalf("can not connect with server %v", err)
@@ -50,24 +50,23 @@ func FetchFromDQP(key string, chunkSizeInBytes int) (time.Duration, int) {
 		log.Fatalf("open stream error %v", err)
 	}
 
-	packetCount := 0
-	//var payload []byte
+	chunkCount := 0
 	for {
-		packet, err := stream.Recv()
+		chunk, err := stream.Recv()
 		if err == io.EOF {
 			elapsed := time.Since(start)
-			log.Infof("Complete packet received at dQP")
-			//dataQueue[key] = payload
-			return elapsed, packetCount
+			log.Infof("Complete packet received at dQP with first/last bytes as:")
+			log.Trace(dataQueue[key+";0"][0:9],dataQueue[key+";"+strconv.Itoa(chunkCount-1)][len(dataQueue[key+";"+strconv.Itoa(chunkCount-1)])-9:])
+			return elapsed, chunkCount
 		}
 		if err != nil {
 			log.Fatalf("receive error: %v", err)
 		}
-		log.Tracef("Received chunk no. %d", packetCount)
-		//payload = append(payload, packet.Chunk...)
-		dataQueue[key+";"+strconv.Itoa(packetCount)] = packet.Chunk
-		packetCount += 1
+		log.Tracef("Received chunk no. %d", chunkCount)
+		dataQueue[key+";"+strconv.Itoa(chunkCount)] = chunk.Chunk
+		chunkCount += 1
 	}
+
 }
 
 // start DstQP server

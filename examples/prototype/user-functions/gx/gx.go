@@ -16,6 +16,8 @@ var handler = func(data []byte) {
 	log.Printf("destination handler received data of size %d", len(data))
 }
 
+var config = sdk.LoadConfig("../../config.json")
+
 func main() {
-	sdk.StartDstServer(":50007")
+	sdk.StartDstServer(config.DstServerAddr)
 }

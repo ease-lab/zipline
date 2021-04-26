@@ -1,3 +1,6 @@
 {
-    "ChunkSizeInBytes":65536
+  "ChunkSizeInBytes": 65536,
+  "DQPServerAddr": ":50006",
+  "DstServerAddr": ":50007",
+  "SQPServerAddr": ":50005"
 }

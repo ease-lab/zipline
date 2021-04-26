@@ -19,14 +19,14 @@ type payload struct {
 var config = sdk.LoadConfig("../config.json")
 
 func main() {
-	payload_data := make([]byte, 10*1024*1024) // 10MiB
-	rand.Read(payload_data)
+	payloadData := make([]byte, 10*1024*1024) // 10MiB
+	rand.Read(payloadData)
 
 	chunkSizeInBytes := config.ChunkSizeInBytes
 
 	payloadToSend := &sdk.Payload{
 		FunctionName: "HelloXDT",
-		Data:         payload_data,
+		Data:         payloadData,
 		Key:          "",
 	}
 	//payloadByteArray, _ := json.Marshal(payloadToSend)

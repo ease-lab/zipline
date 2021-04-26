@@ -26,66 +26,73 @@ func init(){
 func TestSDK_to_sQP_data_transfer(t *testing.T) {
 
 	// start server at sQP
-	go sqp.StartServer(":50005")
+	go sqp.StartServer(config.SQPServerAddr)
 
 	// create random payload
 	now := time.Now()
 	key := strconv.Itoa(int(now.UnixNano()))
-	payload_data := make([]byte, 10*1024*1024) // 10MiB
+	payloadData := make([]byte, 10*1024*1024) // 10MiB
 	//create random blob
-	rand.Read(payload_data)
+	rand.Read(payloadData)
 	chunkSizeInBytes := config.ChunkSizeInBytes
 
-	duration := sdk.PushData(key, payload_data, chunkSizeInBytes)
-	log.Printf("sent %d bytes in %s", len(payload_data), duration)
+	start := time.Now()
+	sdk.PushData(key, payloadData, chunkSizeInBytes)
+	duration := time.Since(start)
+	log.Printf("sent %d bytes in %s", len(payloadData), duration)
 }
 
 func TestSQP_to_dQP_data_transfer(t *testing.T) {
 
 	// start server at sQP
-	go sqp.StartServer(":50005")
+	go sqp.StartServer(config.SQPServerAddr)
 
 	// create random payload
 	now := time.Now()
 	key := strconv.Itoa(int(now.UnixNano()))
-	payload_data := make([]byte, 10*1024*1024) // 10MiB
+	payloadData := make([]byte, 10*1024*1024) // 10MiB
 	//create random blob
-	rand.Read(payload_data)
+	rand.Read(payloadData)
 	chunkSizeInBytes := config.ChunkSizeInBytes
 
-	duration := sdk.PushData(key, payload_data, chunkSizeInBytes)
+	start := time.Now()
+	sdk.PushData(key, payloadData, chunkSizeInBytes)
+	duration := time.Since(start)
+	log.Printf("sent %d bytes in %s", len(payloadData), duration)
 
-	log.Printf("transferred %d bytes from SrcFn to sQP in %s", len(payload_data), duration)
+	log.Printf("transferred %d bytes from SrcFn to sQP in %s", len(payloadData), duration)
 
 	duration, payloadCount := dqp.PullDataFromSrcQP(key, chunkSizeInBytes)
 
-	log.Printf("transferred %d packets from sQP to dQP in %s", payloadCount, duration)
+	log.Printf("transferred %d chunks from sQP to dQP in %s", payloadCount, duration)
 }
 
 func TestDQP_to_DstFn_data_transfer(t *testing.T) {
 
 	// start server at sQP
-	go sqp.StartServer(":50005")
-	go dqp.StartServer(":50006")
+	go sqp.StartServer(config.SQPServerAddr)
+	go dqp.StartServer(config.DQPServerAddr)
 
 	// create random payload
 	now := time.Now()
 	key := strconv.Itoa(int(now.UnixNano()))
-	payload_data := make([]byte, 10*1024*1024) // 10MiB
+	payloadData := make([]byte, 10*1024*1024) // 10MiB
 	//create random blob
-	rand.Read(payload_data)
+	rand.Read(payloadData)
 	chunkSizeInBytes := config.ChunkSizeInBytes
 
-	duration := sdk.PushData(key, payload_data, chunkSizeInBytes)
+	start := time.Now()
+	sdk.PushData(key, payloadData, chunkSizeInBytes)
+	duration := time.Since(start)
 
-	log.Printf("transferred %d bytes from SrcFn to sQP in %s", len(payload_data), duration)
+	log.Printf("transferred %d bytes from SrcFn to sQP in %s", len(payloadData), duration)
 
 	duration, payloadCount := dqp.PullDataFromSrcQP(key, chunkSizeInBytes)
 
-	log.Printf("transferred %d packets from sQP to dQP in %s", payloadCount, duration)
+	log.Printf("transferred %d chunks from sQP to dQP in %s", payloadCount, duration)
 
 	duration, payloadCount = sdk.FetchFromDQP(key, chunkSizeInBytes)
 
-	log.Printf("transferred %d packets from dQP to DstFn in %s", payloadCount, duration)
+	log.Printf("transferred %d chunks from dQP to DstFn in %s", payloadCount, duration)
 
 }
