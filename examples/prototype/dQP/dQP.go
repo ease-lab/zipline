@@ -3,12 +3,9 @@ package dqp
 import (
 	"context"
 	"encoding/json"
+	log "github.com/sirupsen/logrus"
 	"io"
 	"net"
-	"strconv"
-	"time"
-
-	log "github.com/sirupsen/logrus"
 
 	crossXDT "github.com/ease-lab/vhive_stealth/examples/prototype/proto/crossXDT"
 	downXDT "github.com/ease-lab/vhive_stealth/examples/prototype/proto/downXDT"
@@ -18,7 +15,8 @@ import (
 	"google.golang.org/grpc"
 )
 
-var dataQueue = make(map[string][]byte)
+var dataQueue = make(map[string]chan []byte)
+var dataQueueSize = make(map[string]int)
 
 type fnInvocationServer struct {
 	fnInvocation.UnimplementedInvocationServer
@@ -42,20 +40,29 @@ func (s downXDTServer) XDTDataServe(in *downXDT.DataRequest, srv downXDT.XDTtoFn
 	log.Infof("fetching from dQP using key : %s", in.Key)
 
 	chunkCount := 0
-
+	var channel chan []byte
+	var ok bool
 	for {
-		chunk, ok := dataQueue[in.Key+";"+strconv.Itoa(chunkCount)]
-		if !ok {
+		if channel,ok = dataQueue[in.Key]; ok {
 			break
 		}
-		resp := downXDT.Data{Chunk:chunk }
-		if err := srv.Send(&resp); err != nil {
-			log.Fatalf("send error %v", err)
-		}
-		log.Tracef("finishing request number : %d", chunkCount)
-		chunkCount+=1
 	}
 
+	for {
+		select {
+		case chunk := <-channel:
+			resp := downXDT.Data{Chunk:chunk }
+			if err := srv.Send(&resp); err != nil {
+				log.Fatalf("send error %v", err)
+			}
+			log.Tracef("Sending chunk : %d to DstFn", chunkCount)
+			chunkCount+=1
+		default:
+			if totalChunks, ok := dataQueueSize[in.Key]; ok && totalChunks == chunkCount {
+				return nil
+			}
+		}
+	}
 	return nil
 }
 
@@ -71,8 +78,8 @@ func (s fnInvocationServer) RouteInvocation(ctx context.Context, in *fnInvocatio
 
 	log.Infof("fetching data from sQP using key : %s", xdtPayload.Key)
 	chunkSizeInBytes := config.ChunkSizeInBytes
-	duration, payloadCount := PullDataFromSrcQP(xdtPayload.Key, chunkSizeInBytes)
-	log.Infof("pulled %d chunks from sQP in %s",payloadCount, duration)
+
+	go PullDataFromSrcQP(xdtPayload.Key, chunkSizeInBytes)
 
 	// route the invocation call to destination fn
 	serverAddr := config.DstServerAddr
@@ -92,37 +99,45 @@ func (s fnInvocationServer) RouteInvocation(ctx context.Context, in *fnInvocatio
 }
 
 // pull data from src QP to dst QP
-func PullDataFromSrcQP(key string, chunkSizeInBytes int) (time.Duration, int) {
+func PullDataFromSrcQP(key string, chunkSizeInBytes int) {
 
 	serverAddr := config.SQPServerAddr
 	conn, err := grpc.Dial(serverAddr, grpc.WithInsecure())
 	if err != nil {
 		log.Errorf("can not connect with server %v", err)
 	}
-	start := time.Now()
 
+	//ctx,cancel := context.WithTimeout(context.Background(), time.Second)
+	//defer cancel()
+	ctx := context.Background()
 	client := crossXDT.NewStreamDataClient(conn)
 	in := &crossXDT.Request{Key: key, ChunkSize: int64(chunkSizeInBytes)}
-	stream, err := client.ServeData(context.Background(), in)
+	stream, err := client.ServeData(ctx, in)
 	if err != nil {
 		log.Errorf("open stream error %v", err)
 	}
 
 	chunkCount := 0
+	var channel chan []byte
 	for {
 		chunk, err := stream.Recv()
 		if err == io.EOF {
-			elapsed := time.Since(start)
-			log.Tracef("Complete packet received")
-			log.Trace(dataQueue[key+";0"][0:9],dataQueue[key+";"+strconv.Itoa(chunkCount-1)][len(dataQueue[key+";"+strconv.Itoa(chunkCount-1)])-9:])
-			//dataQueue[key] = payload
-			return elapsed, chunkCount
+			log.Tracef("%d chunks received at Dst",chunkCount)
+			dataQueueSize[key] = chunkCount
+			//log.Trace(dataQueue[key+";0"][0:9],dataQueue[key+";"+strconv.Itoa(chunkCount-1)][len(dataQueue[key+";"+strconv.Itoa(chunkCount-1)])-9:])
+			return
 		}
 		if err != nil {
 			log.Errorf("receive error: %v", err)
 		}
-		log.Tracef("Received chunk no. %d", chunkCount)
-		dataQueue[key+";"+strconv.Itoa(chunkCount)] = chunk.Chunk
+		log.Tracef("Received chunk no. %d at dQP", chunkCount)
+		if _,ok := dataQueue[key]; !ok {
+			log.Infof("creating a new channel at dQP")
+			channel = make(chan []byte, config.ChannelBufferSize)
+			dataQueue[key] = channel
+		}
+		log.Infof("Enquing chunk number %d at dQP",chunkCount)
+		channel <- chunk.Chunk
 		chunkCount += 1
 	}
 }

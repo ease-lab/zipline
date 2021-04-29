@@ -30,7 +30,7 @@ func InvokeWithXDT(URL string, xdtPayload Payload, chunkSizeInBytes int) {
 
 	serialisedPayload, _ := json.Marshal(xdtPayload)
 
-	PushData(key, payloadData, chunkSizeInBytes)
+	go PushData(key, payloadData, chunkSizeInBytes)
 
 	fnInvocationCall(URL, serialisedPayload)
 }

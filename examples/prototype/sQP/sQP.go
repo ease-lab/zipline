@@ -2,6 +2,8 @@ package sqp
 
 import (
 	"io"
+	sdk "github.com/ease-lab/vhive_stealth/examples/prototype/sdk"
+
 	//"math"
 	"net"
 	"strconv"
@@ -14,7 +16,8 @@ import (
 	"google.golang.org/grpc"
 )
 
-var dataQueue = make(map[string][]byte)
+var dataQueue = make(map[string]chan []byte)
+var dataQueueSize = make(map[string]int)
 
 type crossXDTServer struct {
 	crossXDT.UnimplementedStreamDataServer
@@ -24,15 +27,18 @@ type upXDTServer struct {
 	upXDT.UnimplementedStreamDataServer
 }
 
+var config = sdk.LoadConfig("../config.json")
+
 // to be called by SrcFn to push data to sQP
 func (s upXDTServer) SendData(srv upXDT.StreamData_SendDataServer) error {
 	chunkCount := 0
-	//var payload []byte
 	var key string
+	var channel chan []byte
 	for {
 		chunk, err := srv.Recv()
 		if err == io.EOF {
 			log.Infof("%d chunks received at sQP",chunkCount)
+			dataQueueSize[key] = chunkCount
 			return srv.SendAndClose(&upXDT.Empty{})
 		}
 		if err != nil {
@@ -40,7 +46,13 @@ func (s upXDTServer) SendData(srv upXDT.StreamData_SendDataServer) error {
 		}
 		key = chunk.Key
 		log.Tracef("Key received: %s in chunk %d", key, chunkCount)
-		dataQueue[key+";"+strconv.Itoa(chunkCount)] = chunk.Chunk
+		if _,ok := dataQueue[key]; !ok {
+			log.Infof("creating a new channel at sQP")
+			channel = make(chan []byte, config.ChannelBufferSize)
+			dataQueue[key] = channel
+		}
+		log.Infof("Enquing chunk number %d at sQP",chunkCount)
+		channel <- chunk.Chunk
 		chunkCount += 1
 	}
 	return nil
@@ -49,21 +61,33 @@ func (s upXDTServer) SendData(srv upXDT.StreamData_SendDataServer) error {
 // gRPC server to serve the available data to the dQP
 func (s crossXDTServer) ServeData(in *crossXDT.Request, srv crossXDT.StreamData_ServeDataServer) error {
 
-	log.Infof("fetch key: %d from sQP", in.Key)
+	log.Infof("fetch key: %s from sQP", in.Key)
+
 
 	chunkCount := 0
+	var channel chan []byte
+	var ok bool
 	for {
-		chunk, ok := dataQueue[in.Key+";"+strconv.Itoa(chunkCount)]
-		if !ok {
+		if channel,ok = dataQueue[in.Key]; ok {
 			break
 		}
-		log.Tracef("chunk fetched from sQP using key %s",in.Key+";"+strconv.Itoa(chunkCount))
-		resp := crossXDT.Response{Chunk:chunk }
-		if err := srv.Send(&resp); err != nil {
-			log.Fatalf("send error %v", err)
+	}
+
+	for {
+		select {
+		case chunk := <-channel:
+			log.Tracef("chunk fetched from sQP using key %s", in.Key+";"+strconv.Itoa(chunkCount))
+			resp := crossXDT.Response{Chunk: chunk}
+			if err := srv.Send(&resp); err != nil {
+				log.Fatalf("send error %v", err)
+			}
+			log.Infof("pushing chunk no. %d to dQP", chunkCount)
+			chunkCount += 1
+		default:
+			if totalChunks, ok := dataQueueSize[in.Key]; ok && totalChunks == chunkCount {
+				return nil
+			}
 		}
-		log.Tracef("finishing request number : %d", chunkCount)
-		chunkCount +=1
 	}
 	return nil
 }

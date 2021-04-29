@@ -62,9 +62,9 @@ func TestSQP_to_dQP_data_transfer(t *testing.T) {
 
 	log.Printf("transferred %d bytes from SrcFn to sQP in %s", len(payloadData), duration)
 
-	duration, payloadCount := dqp.PullDataFromSrcQP(key, chunkSizeInBytes)
+	dqp.PullDataFromSrcQP(key, chunkSizeInBytes)
 
-	log.Printf("transferred %d chunks from sQP to dQP in %s", payloadCount, duration)
+	log.Printf("transferred packet from sQP to dQP in %s", duration)
 }
 
 func TestDQP_to_DstFn_data_transfer(t *testing.T) {
@@ -87,11 +87,13 @@ func TestDQP_to_DstFn_data_transfer(t *testing.T) {
 
 	log.Printf("transferred %d bytes from SrcFn to sQP in %s", len(payloadData), duration)
 
-	duration, payloadCount := dqp.PullDataFromSrcQP(key, chunkSizeInBytes)
+	start = time.Now()
+	dqp.PullDataFromSrcQP(key, chunkSizeInBytes)
+	duration = time.Since(start)
 
-	log.Printf("transferred %d chunks from sQP to dQP in %s", payloadCount, duration)
+	log.Printf("transferred packet from sQP to dQP in %s", duration)
 
-	duration, payloadCount = sdk.FetchFromDQP(key, chunkSizeInBytes)
+	duration, payloadCount := sdk.FetchFromDQP(key, chunkSizeInBytes)
 
 	log.Printf("transferred %d chunks from dQP to DstFn in %s", payloadCount, duration)
 

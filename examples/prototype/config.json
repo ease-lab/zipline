@@ -2,5 +2,6 @@
   "ChunkSizeInBytes": 65536,
   "DQPServerAddr": ":50006",
   "DstServerAddr": ":50007",
-  "SQPServerAddr": ":50005"
+  "SQPServerAddr": ":50005",
+  "ChannelBufferSize": 16
 }

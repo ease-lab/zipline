@@ -5,7 +5,6 @@ import (
 	"encoding/json"
 	"io"
 	"net"
-	"strconv"
 	"time"
 
 	log "github.com/sirupsen/logrus"
@@ -14,6 +13,9 @@ import (
 
 	"google.golang.org/grpc"
 )
+
+var dataQueue = make(map[string]chan []byte)
+var dataQueueSize = make(map[string]int)
 
 // to be called by dQP to invoke DstFn
 func (s downXDTServer) XDTFnCall(ctx context.Context, in *downXDT.InvocationRequest) (*downXDT.Empty, error) {
@@ -55,15 +57,21 @@ func FetchFromDQP(key string, chunkSizeInBytes int) (time.Duration, int) {
 		chunk, err := stream.Recv()
 		if err == io.EOF {
 			elapsed := time.Since(start)
-			log.Infof("Complete packet received at dQP with first/last bytes as:")
-			log.Trace(dataQueue[key+";0"][0:9],dataQueue[key+";"+strconv.Itoa(chunkCount-1)][len(dataQueue[key+";"+strconv.Itoa(chunkCount-1)])-9:])
+			log.Infof("Received %d chunks at DstFn with first/last bytes as:",chunkCount)
+			//log.Trace(dataQueue[key+";0"][0:9],dataQueue[key+";"+strconv.Itoa(chunkCount-1)][len(dataQueue[key+";"+strconv.Itoa(chunkCount-1)])-9:])
 			return elapsed, chunkCount
 		}
 		if err != nil {
 			log.Fatalf("receive error: %v", err)
 		}
-		log.Tracef("Received chunk no. %d", chunkCount)
-		dataQueue[key+";"+strconv.Itoa(chunkCount)] = chunk.Chunk
+		log.Infof("Received chunk no. %d at DstFn", chunkCount)
+		if _,ok := dataQueue[key]; !ok {
+			dataQueue[key] = make(chan []byte, 1600)
+		}
+		for ;len(dataQueue[key]) == cap(dataQueue[key]); {
+		}
+		dataQueue[key] <- chunk.Chunk
+		dataQueueSize[key] = chunkCount
 		chunkCount += 1
 	}
 

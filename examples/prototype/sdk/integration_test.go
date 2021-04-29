@@ -27,7 +27,7 @@ func init(){
 
 func TestSdk_InvokeWithXDT(t *testing.T) {
 	//create random blob
-	payloadData := make([]byte, 10*1024*1024) // 10MiB
+	payloadData := make([]byte, 100*1024*1024) // 10MiB
 	rand.Read(payloadData)
 
 	// start server at sQP

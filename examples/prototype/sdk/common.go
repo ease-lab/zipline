@@ -22,13 +22,12 @@ type Config struct {
 	DQPServerAddr string
 	DstServerAddr string
 	SQPServerAddr string
+	ChannelBufferSize int
 }
 
 type downXDTServer struct {
 	downXDT.UnimplementedXDTtoFnServer
 }
-
-var dataQueue = make(map[string][]byte)
 
 var config = LoadConfig("../config.json")
 
