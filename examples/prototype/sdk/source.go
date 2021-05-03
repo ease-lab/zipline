@@ -38,7 +38,7 @@ func InvokeWithXDT(URL string, xdtPayload Payload, chunkSizeInBytes int) {
 // make fn invocation call to dQP with xdt payload
 func fnInvocationCall(URL string, serialisedPayload []byte) {
 
-	serverAddr := config.DQPServerAddr
+	serverAddr := LoadedConfig.DQPServerAddr
 	conn, err := grpc.Dial(serverAddr, grpc.WithInsecure())
 	if err != nil {
 		log.Fatalf("did not connect: %v", err)
@@ -57,7 +57,7 @@ func fnInvocationCall(URL string, serialisedPayload []byte) {
 // push data to source QP
 func PushData(key string, payload []byte, chunkSizeInBytes int) {
 
-	serverAddr := config.SQPServerAddr
+	serverAddr := LoadedConfig.SQPServerAddr
 	conn, err := grpc.Dial(serverAddr, grpc.WithInsecure())
 	if err != nil {
 		log.Fatalf("can not connect with server %v", err)
@@ -71,16 +71,21 @@ func PushData(key string, payload []byte, chunkSizeInBytes int) {
 		log.Fatalf("open stream error %v", err)
 	}
 
+	chunkTotal := len(payload)/chunkSizeInBytes
+	if len(payload)%chunkSizeInBytes!=0 {
+		chunkTotal+=1
+	}
+
 	for currentByte := 0; currentByte < payloadSize; currentByte += chunkSizeInBytes {
 
 		if currentByte+chunkSizeInBytes > payloadSize {
-			req := upXDT.Request{Chunk: payload[currentByte:payloadSize], Key: key}
+			req := upXDT.Request{Chunk: payload[currentByte:payloadSize], Key: key, ChunkTotal: int64(chunkTotal)}
 			if err := stream.Send(&req); err != nil {
 				log.Fatalf("send error %v", err)
 			}
 			log.Tracef("finishing request number : %d", currentByte)
 		} else {
-			req := upXDT.Request{Chunk: payload[currentByte : currentByte+chunkSizeInBytes], Key: key}
+			req := upXDT.Request{Chunk: payload[currentByte : currentByte+chunkSizeInBytes], Key: key, ChunkTotal: int64(chunkTotal)}
 			if err := stream.Send(&req); err != nil {
 				log.Fatalf("send error %v", err)
 			}

@@ -18,8 +18,6 @@ import (
 var sample_size = flag.Int("sample", 10, "sample_size")
 var URL = flag.String("URL", "bla", "Function URL")
 
-var config = sdk.LoadConfig("../config.json")
-
 func init(){
 	log.SetLevel(log.DebugLevel)
 	log.SetFormatter(&log.TextFormatter{TimestampFormat: "2006-01-02 15:04:05.000000", FullTimestamp: true})
@@ -27,15 +25,15 @@ func init(){
 
 func TestSdk_InvokeWithXDT(t *testing.T) {
 	//create random blob
-	payloadData := make([]byte, 100*1024*1024) // 10MiB
+	payloadData := make([]byte, 10*1024*1024) // 10MiB
 	rand.Read(payloadData)
 
 	// start server at sQP
-	go sqp.StartServer(config.SQPServerAddr)
-	go dqp.StartServer(config.DQPServerAddr)
-	go sdk.StartDstServer(config.DstServerAddr)
+	go sqp.StartServer(sdk.LoadedConfig.SQPServerAddr)
+	go dqp.StartServer(sdk.LoadedConfig.DQPServerAddr)
+	go sdk.StartDstServer(sdk.LoadedConfig.DstServerAddr)
 
-	chunkSizeInBytes := config.ChunkSizeInBytes
+	chunkSizeInBytes := sdk.LoadedConfig.ChunkSizeInBytes
 
 	payloadToSend := sdk.Payload{
 		FunctionName: "HelloXDT",
@@ -61,9 +59,9 @@ func TestBenchmark_gRPC(t *testing.T) {
 	// 	log.Fatal("please enter destination url")
 	// }
 
-	go sqp.StartServer(config.SQPServerAddr)
-	go dqp.StartServer(config.DQPServerAddr)
-	go sdk.StartDstServer(config.DstServerAddr)
+	go sqp.StartServer(sdk.LoadedConfig.SQPServerAddr)
+	go dqp.StartServer(sdk.LoadedConfig.DQPServerAddr)
+	go sdk.StartDstServer(sdk.LoadedConfig.DstServerAddr)
 
 	payloadSizes := []int{10, 100, 1000, 10000, 100000}
 
@@ -73,7 +71,7 @@ func TestBenchmark_gRPC(t *testing.T) {
 	//create random payload
 	rand.Read(payloadData)
 
-	chunkSizeInBytes := config.ChunkSizeInBytes
+	chunkSizeInBytes := sdk.LoadedConfig.ChunkSizeInBytes
 
 	bench_payload := func(payloadSize int, chunkSizeInBytes int, sample_size int, URL string, payloadData []byte) []float64 {
 		var latencies []float64

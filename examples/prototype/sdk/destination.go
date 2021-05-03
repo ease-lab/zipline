@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"io"
 	"net"
+	"sync"
 	"time"
 
 	log "github.com/sirupsen/logrus"
@@ -14,8 +15,8 @@ import (
 	"google.golang.org/grpc"
 )
 
-var dataQueue = make(map[string]chan []byte)
-var dataQueueSize = make(map[string]int)
+var dataQueue sync.Map
+var dataQueueSize sync.Map
 
 // to be called by dQP to invoke DstFn
 func (s downXDTServer) XDTFnCall(ctx context.Context, in *downXDT.InvocationRequest) (*downXDT.Empty, error) {
@@ -29,7 +30,7 @@ func (s downXDTServer) XDTFnCall(ctx context.Context, in *downXDT.InvocationRequ
 
 	key := xdtPayload.Key
 
-	chunkSizeInBytes := config.ChunkSizeInBytes
+	chunkSizeInBytes := LoadedConfig.ChunkSizeInBytes
 
 	// fetch data from dQP
 	FetchFromDQP(key, chunkSizeInBytes)
@@ -38,7 +39,7 @@ func (s downXDTServer) XDTFnCall(ctx context.Context, in *downXDT.InvocationRequ
 
 // fetch data from dQP to DstFn
 func FetchFromDQP(key string, chunkSizeInBytes int) (time.Duration, int) {
-	serverAddr := config.DQPServerAddr
+	serverAddr := LoadedConfig.DQPServerAddr
 	conn, err := grpc.Dial(serverAddr, grpc.WithInsecure())
 	if err != nil {
 		log.Fatalf("can not connect with server %v", err)
@@ -53,6 +54,7 @@ func FetchFromDQP(key string, chunkSizeInBytes int) (time.Duration, int) {
 	}
 
 	chunkCount := 0
+	var channel chan []byte
 	for {
 		chunk, err := stream.Recv()
 		if err == io.EOF {
@@ -64,14 +66,16 @@ func FetchFromDQP(key string, chunkSizeInBytes int) (time.Duration, int) {
 		if err != nil {
 			log.Fatalf("receive error: %v", err)
 		}
-		log.Infof("Received chunk no. %d at DstFn", chunkCount)
-		if _,ok := dataQueue[key]; !ok {
-			dataQueue[key] = make(chan []byte, 1600)
+		log.Tracef("Received chunk no. %d at DstFn", chunkCount)
+		if _,ok := dataQueue.Load(key); !ok {
+			log.Infof("creating a new channel at sQP")
+			channel = make(chan []byte, 1600)
+			dataQueue.Store(key, channel)
+			log.Infof("chunkTotal = %d",chunk.ChunkTotal)
+			dataQueueSize.Store(key,chunk.ChunkTotal)
 		}
-		for ;len(dataQueue[key]) == cap(dataQueue[key]); {
-		}
-		dataQueue[key] <- chunk.Chunk
-		dataQueueSize[key] = chunkCount
+		log.Infof("Enquing chunk number %d at dQP",chunkCount)
+		channel <- chunk.Chunk
 		chunkCount += 1
 	}
 

@@ -16,5 +16,6 @@ message Request {
 
 message Response {
   bytes chunk = 1;
+  int64 ChunkTotal = 3;
 }
 

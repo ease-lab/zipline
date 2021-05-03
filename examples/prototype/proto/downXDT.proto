@@ -21,6 +21,7 @@ message Empty {
 
 message Data {
     bytes chunk = 1;
+    int64 chunkTotal = 3;
 }
 
 message DataRequest {

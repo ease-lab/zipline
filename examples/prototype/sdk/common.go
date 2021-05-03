@@ -22,14 +22,14 @@ type Config struct {
 	DQPServerAddr string
 	DstServerAddr string
 	SQPServerAddr string
-	ChannelBufferSize int
+	BufferSize int
 }
 
 type downXDTServer struct {
 	downXDT.UnimplementedXDTtoFnServer
 }
 
-var config = LoadConfig("../config.json")
+var LoadedConfig = LoadConfig("../config.json")
 
 func LoadConfig(file string) Config {
 	log.Debugf("Opening JSON file with config: %s\n", file)

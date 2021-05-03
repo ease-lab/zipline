@@ -16,13 +16,13 @@ type payload struct {
 	isXDT        bool
 }
 
-var config = sdk.LoadConfig("../config.json")
+
 
 func main() {
 	payloadData := make([]byte, 10*1024*1024) // 10MiB
 	rand.Read(payloadData)
 
-	chunkSizeInBytes := config.ChunkSizeInBytes
+	chunkSizeInBytes := sdk.LoadedConfig.ChunkSizeInBytes
 
 	payloadToSend := &sdk.Payload{
 		FunctionName: "HelloXDT",

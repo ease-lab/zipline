@@ -2,7 +2,6 @@ package sdk
 
 import (
 	"crypto/rand"
-	"flag"
 	"strconv"
 	"testing"
 	"time"
@@ -13,10 +12,8 @@ import (
 	log "github.com/sirupsen/logrus"
 )
 
-var sample_size = flag.Int("sample", 100, "sample_size")
-var URL = flag.String("URL", "", "Function URL")
-
-var config = sdk.LoadConfig("../config.json")
+//var sample_size = flag.Int("sample", 100, "sample_size")
+//var URL = flag.String("URL", "", "Function URL")
 
 func init(){
 	log.SetLevel(log.DebugLevel)
@@ -26,7 +23,7 @@ func init(){
 func TestSDK_to_sQP_data_transfer(t *testing.T) {
 
 	// start server at sQP
-	go sqp.StartServer(config.SQPServerAddr)
+	go sqp.StartServer(sdk.LoadedConfig.SQPServerAddr)
 
 	// create random payload
 	now := time.Now()
@@ -34,7 +31,7 @@ func TestSDK_to_sQP_data_transfer(t *testing.T) {
 	payloadData := make([]byte, 10*1024*1024) // 10MiB
 	//create random blob
 	rand.Read(payloadData)
-	chunkSizeInBytes := config.ChunkSizeInBytes
+	chunkSizeInBytes := sdk.LoadedConfig.ChunkSizeInBytes
 
 	start := time.Now()
 	sdk.PushData(key, payloadData, chunkSizeInBytes)
@@ -45,7 +42,7 @@ func TestSDK_to_sQP_data_transfer(t *testing.T) {
 func TestSQP_to_dQP_data_transfer(t *testing.T) {
 
 	// start server at sQP
-	go sqp.StartServer(config.SQPServerAddr)
+	go sqp.StartServer(sdk.LoadedConfig.SQPServerAddr)
 
 	// create random payload
 	now := time.Now()
@@ -53,7 +50,7 @@ func TestSQP_to_dQP_data_transfer(t *testing.T) {
 	payloadData := make([]byte, 10*1024*1024) // 10MiB
 	//create random blob
 	rand.Read(payloadData)
-	chunkSizeInBytes := config.ChunkSizeInBytes
+	chunkSizeInBytes := sdk.LoadedConfig.ChunkSizeInBytes
 
 	start := time.Now()
 	sdk.PushData(key, payloadData, chunkSizeInBytes)
@@ -70,8 +67,8 @@ func TestSQP_to_dQP_data_transfer(t *testing.T) {
 func TestDQP_to_DstFn_data_transfer(t *testing.T) {
 
 	// start server at sQP
-	go sqp.StartServer(config.SQPServerAddr)
-	go dqp.StartServer(config.DQPServerAddr)
+	go sqp.StartServer(sdk.LoadedConfig.SQPServerAddr)
+	go dqp.StartServer(sdk.LoadedConfig.DQPServerAddr)
 
 	// create random payload
 	now := time.Now()
@@ -79,7 +76,7 @@ func TestDQP_to_DstFn_data_transfer(t *testing.T) {
 	payloadData := make([]byte, 10*1024*1024) // 10MiB
 	//create random blob
 	rand.Read(payloadData)
-	chunkSizeInBytes := config.ChunkSizeInBytes
+	chunkSizeInBytes := sdk.LoadedConfig.ChunkSizeInBytes
 
 	start := time.Now()
 	sdk.PushData(key, payloadData, chunkSizeInBytes)

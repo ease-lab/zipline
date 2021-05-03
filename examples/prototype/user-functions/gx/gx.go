@@ -19,5 +19,5 @@ var handler = func(data []byte) {
 var config = sdk.LoadConfig("../../config.json")
 
 func main() {
-	sdk.StartDstServer(config.DstServerAddr)
+	sdk.StartDstServer(sdk.LoadedConfig.DstServerAddr)
 }

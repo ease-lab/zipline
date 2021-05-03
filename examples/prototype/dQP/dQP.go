@@ -6,6 +6,7 @@ import (
 	log "github.com/sirupsen/logrus"
 	"io"
 	"net"
+	"sync"
 
 	crossXDT "github.com/ease-lab/vhive_stealth/examples/prototype/proto/crossXDT"
 	downXDT "github.com/ease-lab/vhive_stealth/examples/prototype/proto/downXDT"
@@ -15,8 +16,8 @@ import (
 	"google.golang.org/grpc"
 )
 
-var dataQueue = make(map[string]chan []byte)
-var dataQueueSize = make(map[string]int)
+var dataQueue sync.Map
+var dataQueueSize sync.Map
 
 type fnInvocationServer struct {
 	fnInvocation.UnimplementedInvocationServer
@@ -32,7 +33,7 @@ type payload struct {
 	Key          string
 }
 
-var config = sdk.LoadConfig("../config.json")
+
 
 // gRPC server to serve data to the DstFn
 func (s downXDTServer) XDTDataServe(in *downXDT.DataRequest, srv downXDT.XDTtoFn_XDTDataServeServer) error {
@@ -41,9 +42,19 @@ func (s downXDTServer) XDTDataServe(in *downXDT.DataRequest, srv downXDT.XDTtoFn
 
 	chunkCount := 0
 	var channel chan []byte
-	var ok bool
+	var chunkTotal int64
 	for {
-		if channel,ok = dataQueue[in.Key]; ok {
+		log.Tracef("dQP: finding channel for key %s",in.Key)
+		if tmp,ok := dataQueue.Load(in.Key); ok {
+			log.Tracef("dQP: found channel for key %s",in.Key)
+			channel = tmp.(chan []byte)
+			break
+		}
+	}
+	for {
+		if tmp,ok := dataQueueSize.Load(in.Key); ok {
+			chunkTotal = tmp.(int64)
+			log.Tracef("dQP: found chunkTotal %d for key %s",chunkTotal,in.Key)
 			break
 		}
 	}
@@ -58,7 +69,10 @@ func (s downXDTServer) XDTDataServe(in *downXDT.DataRequest, srv downXDT.XDTtoFn
 			log.Tracef("Sending chunk : %d to DstFn", chunkCount)
 			chunkCount+=1
 		default:
-			if totalChunks, ok := dataQueueSize[in.Key]; ok && totalChunks == chunkCount {
+			if chunkTotal == int64(chunkCount) {
+				dataQueue.Delete(in.Key)
+				dataQueueSize.Delete(in.Key)
+				close(channel)
 				return nil
 			}
 		}
@@ -77,12 +91,12 @@ func (s fnInvocationServer) RouteInvocation(ctx context.Context, in *fnInvocatio
 	}
 
 	log.Infof("fetching data from sQP using key : %s", xdtPayload.Key)
-	chunkSizeInBytes := config.ChunkSizeInBytes
+	chunkSizeInBytes := sdk.LoadedConfig.ChunkSizeInBytes
 
 	go PullDataFromSrcQP(xdtPayload.Key, chunkSizeInBytes)
 
 	// route the invocation call to destination fn
-	serverAddr := config.DstServerAddr
+	serverAddr := sdk.LoadedConfig.DstServerAddr
 	conn, err := grpc.Dial(serverAddr, grpc.WithInsecure())
 	if err != nil {
 		log.Errorf("did not connect: %v", err)
@@ -91,17 +105,17 @@ func (s fnInvocationServer) RouteInvocation(ctx context.Context, in *fnInvocatio
 
 	c := downXDT.NewXDTtoFnClient(conn)
 	_, err = c.XDTFnCall(context.Background(), &downXDT.InvocationRequest{XdtJson: in.XdtJson})
-	if err == nil {
-		log.Infof("Fn invocation route at dQP successful")
+	if err != nil {
+		log.Infof("Fn invocation route at dQP unsuccessful")
 	}
-
+	log.Infof("Fn invocation route at dQP successful")
 	return &fnInvocation.Empty{}, nil
 }
 
 // pull data from src QP to dst QP
 func PullDataFromSrcQP(key string, chunkSizeInBytes int) {
 
-	serverAddr := config.SQPServerAddr
+	serverAddr := sdk.LoadedConfig.SQPServerAddr
 	conn, err := grpc.Dial(serverAddr, grpc.WithInsecure())
 	if err != nil {
 		log.Errorf("can not connect with server %v", err)
@@ -123,7 +137,6 @@ func PullDataFromSrcQP(key string, chunkSizeInBytes int) {
 		chunk, err := stream.Recv()
 		if err == io.EOF {
 			log.Tracef("%d chunks received at Dst",chunkCount)
-			dataQueueSize[key] = chunkCount
 			//log.Trace(dataQueue[key+";0"][0:9],dataQueue[key+";"+strconv.Itoa(chunkCount-1)][len(dataQueue[key+";"+strconv.Itoa(chunkCount-1)])-9:])
 			return
 		}
@@ -131,10 +144,12 @@ func PullDataFromSrcQP(key string, chunkSizeInBytes int) {
 			log.Errorf("receive error: %v", err)
 		}
 		log.Tracef("Received chunk no. %d at dQP", chunkCount)
-		if _,ok := dataQueue[key]; !ok {
-			log.Infof("creating a new channel at dQP")
-			channel = make(chan []byte, config.ChannelBufferSize)
-			dataQueue[key] = channel
+		if _,ok := dataQueue.Load(key); !ok {
+			log.Infof("creating a new channel at sQP")
+			channel = make(chan []byte, sdk.LoadedConfig.BufferSize)
+			dataQueue.Store(key, channel)
+			log.Infof("chunkTotal = %d",chunk.ChunkTotal)
+			dataQueueSize.Store(key,chunk.ChunkTotal)
 		}
 		log.Infof("Enquing chunk number %d at dQP",chunkCount)
 		channel <- chunk.Chunk
