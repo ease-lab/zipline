@@ -17,7 +17,7 @@ import (
 // Invoke the RPC call with XDT
 func InvokeWithXDT(URL string, xdtPayload Payload, chunkSizeInBytes int) {
 
-	log.Infof("XDT invoke start")
+	log.Infof("SDK: XDT invoke start")
 	now := time.Now()
 	key := strconv.Itoa(int(now.UnixNano()))
 	log.Infof("XDT invoke called with payload size %d", len(xdtPayload.Data))
@@ -30,7 +30,13 @@ func InvokeWithXDT(URL string, xdtPayload Payload, chunkSizeInBytes int) {
 
 	serialisedPayload, _ := json.Marshal(xdtPayload)
 
-	go PushData(key, payloadData, chunkSizeInBytes)
+	if LoadedConfig.Routing == "S&F" {
+		log.Info("SDK: using store & forward routing")
+		PushData(key, payloadData, chunkSizeInBytes)
+	}else if  LoadedConfig.Routing == "CT" {
+		log.Info("SDK: using cut through routing")
+		go PushData(key, payloadData, chunkSizeInBytes)
+	}
 
 	fnInvocationCall(URL, serialisedPayload)
 }
@@ -47,10 +53,10 @@ func fnInvocationCall(URL string, serialisedPayload []byte) {
 
 	c := fnInvocation.NewInvocationClient(conn)
 
-	log.Infof("Fn invocation from source SDK start")
+	log.Infof("SDK: Fn invocation start")
 	_, err = c.RouteInvocation(context.Background(), &fnInvocation.InvocationRequest{XdtJson: serialisedPayload})
 	if err == nil {
-		log.Infof("Fn invocation from source SDK successful")
+		log.Infof("SDK: Fn invocation successful")
 	}
 }
 

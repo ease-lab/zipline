@@ -38,7 +38,7 @@ type payload struct {
 // gRPC server to serve data to the DstFn
 func (s downXDTServer) XDTDataServe(in *downXDT.DataRequest, srv downXDT.XDTtoFn_XDTDataServeServer) error {
 
-	log.Infof("fetching from dQP using key : %s", in.Key)
+	log.Infof("dQP: data being fetched by DstFn using key : %s", in.Key)
 
 	chunkCount := 0
 	var channel chan []byte
@@ -64,9 +64,9 @@ func (s downXDTServer) XDTDataServe(in *downXDT.DataRequest, srv downXDT.XDTtoFn
 		case chunk := <-channel:
 			resp := downXDT.Data{Chunk:chunk }
 			if err := srv.Send(&resp); err != nil {
-				log.Fatalf("send error %v", err)
+				log.Fatalf("dQP: send error %v", err)
 			}
-			log.Tracef("Sending chunk : %d to DstFn", chunkCount)
+			log.Tracef("dQP: Sending chunk : %d to DstFn", chunkCount)
 			chunkCount+=1
 		default:
 			if chunkTotal == int64(chunkCount) {
@@ -83,17 +83,23 @@ func (s downXDTServer) XDTDataServe(in *downXDT.DataRequest, srv downXDT.XDTtoFn
 // gRPC server to route the function call from SrcFn to the DstFn
 func (s fnInvocationServer) RouteInvocation(ctx context.Context, in *fnInvocation.InvocationRequest) (*fnInvocation.Empty, error) {
 
-	log.Infof("received serialised json at dQP: %s", in.XdtJson)
+	log.Infof("dQP: received serialised json: %s", in.XdtJson)
 
 	var xdtPayload payload
 	if err := json.Unmarshal(in.XdtJson, &xdtPayload); err != nil {
 		log.Error(err)
 	}
 
-	log.Infof("fetching data from sQP using key : %s", xdtPayload.Key)
+	log.Infof("dQP: fetching data from sQP using key : %s", xdtPayload.Key)
 	chunkSizeInBytes := sdk.LoadedConfig.ChunkSizeInBytes
 
-	go PullDataFromSrcQP(xdtPayload.Key, chunkSizeInBytes)
+	if sdk.LoadedConfig.Routing == "CT" {
+		log.Infof("dQP: CT: pulling data from sQP")
+		go PullDataFromSrcQP(xdtPayload.Key, chunkSizeInBytes)
+	}else if sdk.LoadedConfig.Routing == "S&F"{
+		log.Infof("dQP: S&F: pulling data from sQP")
+		PullDataFromSrcQP(xdtPayload.Key, chunkSizeInBytes)
+	}
 
 	// route the invocation call to destination fn
 	serverAddr := sdk.LoadedConfig.DstServerAddr
@@ -106,9 +112,9 @@ func (s fnInvocationServer) RouteInvocation(ctx context.Context, in *fnInvocatio
 	c := downXDT.NewXDTtoFnClient(conn)
 	_, err = c.XDTFnCall(context.Background(), &downXDT.InvocationRequest{XdtJson: in.XdtJson})
 	if err != nil {
-		log.Infof("Fn invocation route at dQP unsuccessful")
+		log.Infof("dQP: Fn invocation route unsuccessful")
 	}
-	log.Infof("Fn invocation route at dQP successful")
+	log.Infof("dQP: Fn invocation route successful")
 	return &fnInvocation.Empty{}, nil
 }
 
@@ -118,7 +124,7 @@ func PullDataFromSrcQP(key string, chunkSizeInBytes int) {
 	serverAddr := sdk.LoadedConfig.SQPServerAddr
 	conn, err := grpc.Dial(serverAddr, grpc.WithInsecure())
 	if err != nil {
-		log.Errorf("can not connect with server %v", err)
+		log.Errorf("dQP: can not connect with server %v", err)
 	}
 
 	//ctx,cancel := context.WithTimeout(context.Background(), time.Second)
@@ -128,7 +134,7 @@ func PullDataFromSrcQP(key string, chunkSizeInBytes int) {
 	in := &crossXDT.Request{Key: key, ChunkSize: int64(chunkSizeInBytes)}
 	stream, err := client.ServeData(ctx, in)
 	if err != nil {
-		log.Errorf("open stream error %v", err)
+		log.Errorf("dQP: open stream error %v", err)
 	}
 
 	chunkCount := 0
@@ -136,22 +142,31 @@ func PullDataFromSrcQP(key string, chunkSizeInBytes int) {
 	for {
 		chunk, err := stream.Recv()
 		if err == io.EOF {
-			log.Tracef("%d chunks received at Dst",chunkCount)
+			log.Tracef("dQP: %d chunks received at Dst",chunkCount)
 			//log.Trace(dataQueue[key+";0"][0:9],dataQueue[key+";"+strconv.Itoa(chunkCount-1)][len(dataQueue[key+";"+strconv.Itoa(chunkCount-1)])-9:])
+			if sdk.LoadedConfig.Routing == "S&F" {
+				dataQueue.Store(key, channel)
+			}
 			return
 		}
 		if err != nil {
-			log.Errorf("receive error: %v", err)
+			log.Errorf("dQP: receive error: %v", err)
 		}
-		log.Tracef("Received chunk no. %d at dQP", chunkCount)
-		if _,ok := dataQueue.Load(key); !ok {
-			log.Infof("creating a new channel at sQP")
-			channel = make(chan []byte, sdk.LoadedConfig.BufferSize)
-			dataQueue.Store(key, channel)
-			log.Infof("chunkTotal = %d",chunk.ChunkTotal)
+		log.Tracef("dQP: Received chunk no. %d", chunkCount)
+		if _,ok := dataQueueSize.Load(key); !ok {
+			log.Infof("dQP: creating a new channel")
+			if sdk.LoadedConfig.Routing == "CT" {
+				channel = make(chan []byte, sdk.LoadedConfig.BufferSize)
+				dataQueue.Store(key, channel)
+			}else if sdk.LoadedConfig.Routing == "S&F" {
+				channel = make(chan []byte, sdk.LoadedConfig.StAndFwBufferSize)
+			}else {
+				log.Errorf("dQP: Invalid route type. Check config.json")
+			}
+			log.Infof("dQP: chunkTotal = %d",chunk.ChunkTotal)
 			dataQueueSize.Store(key,chunk.ChunkTotal)
 		}
-		log.Infof("Enquing chunk number %d at dQP",chunkCount)
+		log.Infof("dQP: Enquing chunk number %d",chunkCount)
 		channel <- chunk.Chunk
 		chunkCount += 1
 	}
@@ -162,16 +177,16 @@ func StartServer(serverAddr string) {
 
 	lis, err := net.Listen("tcp", serverAddr)
 	if err != nil {
-		log.Fatalf("failed to listen: %v", err)
+		log.Fatalf("dQP: failed to listen: %v", err)
 	}
 
 	server := grpc.NewServer()
 	downXDT.RegisterXDTtoFnServer(server, downXDTServer{})
 	fnInvocation.RegisterInvocationServer(server, fnInvocationServer{})
 
-	log.Println("start server")
+	log.Println("dQP: start server")
 	if err := server.Serve(lis); err != nil {
-		log.Fatalf("failed to serve: %v", err)
+		log.Fatalf("dQP: failed to serve: %v", err)
 	}
 
 }

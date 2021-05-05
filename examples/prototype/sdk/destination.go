@@ -21,7 +21,7 @@ var dataQueueSize sync.Map
 // to be called by dQP to invoke DstFn
 func (s downXDTServer) XDTFnCall(ctx context.Context, in *downXDT.InvocationRequest) (*downXDT.Empty, error) {
 
-	log.Infof("destination received invocation call %s", in.XdtJson)
+	log.Infof("DST: received invocation call %s", in.XdtJson)
 
 	var xdtPayload Payload
 	if err := json.Unmarshal(in.XdtJson, &xdtPayload); err != nil {
@@ -42,7 +42,7 @@ func FetchFromDQP(key string, chunkSizeInBytes int) (time.Duration, int) {
 	serverAddr := LoadedConfig.DQPServerAddr
 	conn, err := grpc.Dial(serverAddr, grpc.WithInsecure())
 	if err != nil {
-		log.Fatalf("can not connect with server %v", err)
+		log.Fatalf("DST: can not connect with server %v", err)
 	}
 	start := time.Now()
 
@@ -50,7 +50,7 @@ func FetchFromDQP(key string, chunkSizeInBytes int) (time.Duration, int) {
 	in := &downXDT.DataRequest{Key: key, ChunkSize: int64(chunkSizeInBytes)}
 	stream, err := client.XDTDataServe(context.Background(), in)
 	if err != nil {
-		log.Fatalf("open stream error %v", err)
+		log.Fatalf("DST: open stream error %v", err)
 	}
 
 	chunkCount := 0
@@ -59,22 +59,22 @@ func FetchFromDQP(key string, chunkSizeInBytes int) (time.Duration, int) {
 		chunk, err := stream.Recv()
 		if err == io.EOF {
 			elapsed := time.Since(start)
-			log.Infof("Received %d chunks at DstFn with first/last bytes as:",chunkCount)
+			log.Infof("DST: Received %d chunks at DstFn with first/last bytes as:",chunkCount)
 			//log.Trace(dataQueue[key+";0"][0:9],dataQueue[key+";"+strconv.Itoa(chunkCount-1)][len(dataQueue[key+";"+strconv.Itoa(chunkCount-1)])-9:])
 			return elapsed, chunkCount
 		}
 		if err != nil {
-			log.Fatalf("receive error: %v", err)
+			log.Fatalf("DST: receive error: %v", err)
 		}
-		log.Tracef("Received chunk no. %d at DstFn", chunkCount)
+		log.Tracef("DST: Received chunk no. %d", chunkCount)
 		if _,ok := dataQueue.Load(key); !ok {
-			log.Infof("creating a new channel at sQP")
+			log.Infof("DST: creating a new channel")
 			channel = make(chan []byte, 1600)
 			dataQueue.Store(key, channel)
-			log.Infof("chunkTotal = %d",chunk.ChunkTotal)
+			log.Infof("DST: chunkTotal = %d",chunk.ChunkTotal)
 			dataQueueSize.Store(key,chunk.ChunkTotal)
 		}
-		log.Infof("Enquing chunk number %d at dQP",chunkCount)
+		log.Infof("DST: Enquing chunk number %d",chunkCount)
 		channel <- chunk.Chunk
 		chunkCount += 1
 	}
@@ -86,14 +86,14 @@ func StartDstServer(serverAddr string) {
 
 	lis, err := net.Listen("tcp", serverAddr)
 	if err != nil {
-		log.Fatalf("failed to listen: %v", err)
+		log.Fatalf("DST: failed to listen: %v", err)
 	}
 
 	server := grpc.NewServer()
 	downXDT.RegisterXDTtoFnServer(server, downXDTServer{})
 
-	log.Println("start server")
+	log.Println("DST: start server")
 	if err := server.Serve(lis); err != nil {
-		log.Fatalf("failed to serve: %v", err)
+		log.Fatalf("DST: failed to serve: %v", err)
 	}
 }

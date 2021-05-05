@@ -3,6 +3,7 @@
   "DQPServerAddr": ":50006",
   "DstServerAddr": ":50007",
   "SQPServerAddr": ":50005",
-  "BufferSize": 16,
-  "Routing" : "SF"
+  "BufferSize": 25,
+  "StAndFwBufferSize": 1600,
+  "Routing" : "S&F"
 }

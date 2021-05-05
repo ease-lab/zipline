@@ -23,6 +23,8 @@ type Config struct {
 	DstServerAddr string
 	SQPServerAddr string
 	BufferSize int
+	StAndFwBufferSize int
+	Routing string
 }
 
 type downXDTServer struct {
