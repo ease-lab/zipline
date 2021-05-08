@@ -15,7 +15,7 @@ import (
 	log "github.com/sirupsen/logrus"
 )
 
-var sample_size = flag.Int("sample", 10, "sample_size")
+var sampleSize = flag.Int("sample", 10, "sample_size")
 var URL = flag.String("URL", "bla", "Function URL")
 
 func init(){
@@ -49,9 +49,9 @@ func TestSdk_InvokeWithXDT(t *testing.T) {
 	log.Printf("completed XDT in %s", elapsed)
 }
 
-func TestBenchmark_gRPC(t *testing.T) {
+func TestBenchmark_XDT(t *testing.T) {
 
-	if *sample_size < 10 {
+	if *sampleSize < 10 {
 		log.Fatal("invalid sample size. Acceptable input is integers >= 10")
 	}
 
@@ -73,7 +73,7 @@ func TestBenchmark_gRPC(t *testing.T) {
 
 	chunkSizeInBytes := sdk.LoadedConfig.ChunkSizeInBytes
 
-	bench_payload := func(payloadSize int, chunkSizeInBytes int, sample_size int, URL string, payloadData []byte) []float64 {
+	benchPayload := func(payloadSize int, chunkSizeInBytes int, sample_size int, URL string, payloadData []byte) []float64 {
 		var latencies []float64
 		payloadToSend := sdk.Payload{
 			FunctionName: "HelloXDT",
@@ -84,8 +84,8 @@ func TestBenchmark_gRPC(t *testing.T) {
 		for i := 0; i < sample_size; i += 1 {
 			start := time.Now()
 			sdk.InvokeWithXDT(URL, payloadToSend, chunkSizeInBytes)
-			latency_in_us := time.Since(start).Microseconds()
-			latencies = append(latencies, float64(latency_in_us))
+			latencyInUs := time.Since(start).Microseconds()
+			latencies = append(latencies, float64(latencyInUs))
 		}
 		sort.Float64s(latencies)
 		return latencies
@@ -94,11 +94,11 @@ func TestBenchmark_gRPC(t *testing.T) {
 	for _, payloadSize := range payloadSizes {
 		payloadSizeInBytes := payloadSize * 1024
 		log.Printf("checking for %dKiB", payloadSize)
-		latencies := bench_payload(payloadSizeInBytes, chunkSizeInBytes, *sample_size, *URL, payloadData)
+		latencies := benchPayload(payloadSizeInBytes, chunkSizeInBytes, *sampleSize, *URL, payloadData)
 		plotter.PlotLatenciesCDF("./cdf_"+strconv.Itoa(payloadSize)+"KiB.png", latencies, payloadSize)
 		latencyMap[payloadSize] = latencies
 	}
 
 	plotter.PlotPercentile(latencyMap)
-	plotter.PlotBW((latencyMap))
+	plotter.PlotBW(latencyMap)
 }

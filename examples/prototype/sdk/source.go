@@ -54,7 +54,7 @@ func fnInvocationCall(URL string, serialisedPayload []byte) {
 	c := fnInvocation.NewInvocationClient(conn)
 
 	log.Infof("SDK: Fn invocation start")
-	_, err = c.RouteInvocation(context.Background(), &fnInvocation.InvocationRequest{XdtJson: serialisedPayload})
+	_, err = c.RouteInvocation(context.Background(), &fnInvocation.InvocationRequest{XDTJSON: serialisedPayload})
 	if err == nil {
 		log.Infof("SDK: Fn invocation successful")
 	}

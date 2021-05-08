@@ -69,20 +69,20 @@ func PlotPercentile(sortedLatencyMap map[int][]float64) {
 	percentiles := []int{50}
 
 	for _, percentile := range percentiles {
-		point_labels := []string{}
+		var pointLabels []string
 		latenciesToPlot := make(plotter.XYs, len(sortedLatencyMap))
 		i := 0
-		for payloadSize, sorted_latency := range sortedLatencyMap {
+		for payloadSize, sortedLatency := range sortedLatencyMap {
 			latenciesToPlot[i].X = float64(payloadSize)
 			// log.Printf("inserting %dth of sorted, which is %f", int(percentile*len(sorted_latency)/100), sorted_latency[int(percentile*len(sorted_latency)/100)])
-			latenciesToPlot[i].Y = sorted_latency[int(percentile*len(sorted_latency)/100)] / 1000.0
-			point_labels = append(point_labels, fmt.Sprintf("%.2f", latenciesToPlot[i].Y))
+			latenciesToPlot[i].Y = sortedLatency[int(percentile*len(sortedLatency)/100)] / 1000.0
+			pointLabels = append(pointLabels, fmt.Sprintf("%.2f", latenciesToPlot[i].Y))
 			i += 1
 		}
 
 		labels, err := plotter.NewLabels(plotter.XYLabels{
 			XYs:    latenciesToPlot,
-			Labels: point_labels,
+			Labels: pointLabels,
 		},
 		)
 		if err != nil {
@@ -132,20 +132,20 @@ func PlotBW(sortedLatencyMap map[int][]float64) {
 	//sortedLatencies = sortedLatencies[:maxIndexKept]
 
 	latenciesToPlot := make(plotter.XYs, len(sortedLatencyMap))
-	point_labels := []string{}
+	var pointLabels []string
 	i := 0
 
-	for payloadSize, sorted_latency := range sortedLatencyMap {
+	for payloadSize, sortedLatency := range sortedLatencyMap {
 		latenciesToPlot[i].X = float64(payloadSize)
 		// log.Printf("inserting %dth of sorted, which is %f", int(percentile*len(sorted_latency)/100), sorted_latency[int(percentile*len(sorted_latency)/100)])
-		latenciesToPlot[i].Y = float64(payloadSize) * 1024 / (sorted_latency[int(50*len(sorted_latency)/100)])
-		point_labels = append(point_labels, fmt.Sprintf("%.2f", latenciesToPlot[i].Y))
+		latenciesToPlot[i].Y = float64(payloadSize) * 1024 / (sortedLatency[int(50*len(sortedLatency)/100)])
+		pointLabels = append(pointLabels, fmt.Sprintf("%.2f", latenciesToPlot[i].Y))
 		i += 1
 	}
 
 	labels, err := plotter.NewLabels(plotter.XYLabels{
 		XYs:    latenciesToPlot,
-		Labels: point_labels,
+		Labels: pointLabels,
 	},
 	)
 	if err != nil {

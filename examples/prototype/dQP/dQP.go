@@ -83,10 +83,10 @@ func (s downXDTServer) XDTDataServe(in *downXDT.DataRequest, srv downXDT.XDTtoFn
 // gRPC server to route the function call from SrcFn to the DstFn
 func (s fnInvocationServer) RouteInvocation(ctx context.Context, in *fnInvocation.InvocationRequest) (*fnInvocation.Empty, error) {
 
-	log.Infof("dQP: received serialised json: %s", in.XdtJson)
+	log.Infof("dQP: received serialised json: %s", in.XDTJSON)
 
 	var xdtPayload payload
-	if err := json.Unmarshal(in.XdtJson, &xdtPayload); err != nil {
+	if err := json.Unmarshal(in.XDTJSON, &xdtPayload); err != nil {
 		log.Error(err)
 	}
 
@@ -110,7 +110,7 @@ func (s fnInvocationServer) RouteInvocation(ctx context.Context, in *fnInvocatio
 	defer conn.Close()
 
 	c := downXDT.NewXDTtoFnClient(conn)
-	_, err = c.XDTFnCall(context.Background(), &downXDT.InvocationRequest{XdtJson: in.XdtJson})
+	_, err = c.XDTFnCall(context.Background(), &downXDT.InvocationRequest{XdtJson: in.XDTJSON})
 	if err != nil {
 		log.Infof("dQP: Fn invocation route unsuccessful")
 	}

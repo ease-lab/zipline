@@ -10,7 +10,7 @@ service Invocation {
 }
 
 message InvocationRequest {
-    bytes xdt_json = 1;
+    bytes XDTJSON = 1;
     // data will be patched later by destination QP
 }
 
