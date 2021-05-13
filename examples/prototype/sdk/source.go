@@ -3,6 +3,7 @@ package sdk
 import (
 	"context"
 	"encoding/json"
+	"google.golang.org/grpc/metadata"
 	"strconv"
 	"time"
 
@@ -26,6 +27,12 @@ func InvokeWithXDT(URL string, xdtPayload Payload, chunkSizeInBytes int) {
 	key := strconv.Itoa(int(now.UnixNano()))
 	log.Infof("XDT invoke called with payload size %d", len(xdtPayload.Data))
 
+	md := metadata.Pairs(
+		"timestamp", time.Now().Format(time.StampNano),
+		"transaction-id", key,
+	)
+	ctx := metadata.NewOutgoingContext(context.Background(), md)
+
 	payloadData := xdtPayload.Data
 	log.Info(payloadData[0:9],payloadData[len(payloadData)-9:])
 	xdtPayload.Data = []byte("")
@@ -36,17 +43,17 @@ func InvokeWithXDT(URL string, xdtPayload Payload, chunkSizeInBytes int) {
 
 	if LoadedConfig.Routing == "S&F" {
 		log.Info("SDK: using store & forward routing")
-		PushData(key, payloadData, chunkSizeInBytes)
+		PushData(ctx, key, payloadData, chunkSizeInBytes)
 	}else if  LoadedConfig.Routing == "CT" {
 		log.Info("SDK: using cut through routing")
-		go PushData(key, payloadData, chunkSizeInBytes)
+		go PushData(ctx, key, payloadData, chunkSizeInBytes)
 	}
 
-	fnInvocationCall(URL, serialisedPayload)
+	fnInvocationCall(ctx, URL, serialisedPayload)
 }
 
 // make fn invocation call to dQP with xdt payload
-func fnInvocationCall(URL string, serialisedPayload []byte) {
+func fnInvocationCall(ctx context.Context, URL string, serialisedPayload []byte) {
 
 	serverAddr := LoadedConfig.DQPServerAddr
 	conn, err := grpc.Dial(serverAddr, grpc.WithInsecure(),
@@ -60,14 +67,14 @@ func fnInvocationCall(URL string, serialisedPayload []byte) {
 	c := fnInvocation.NewInvocationClient(conn)
 
 	log.Infof("SDK: Fn invocation start")
-	_, err = c.RouteInvocation(context.Background(), &fnInvocation.InvocationRequest{XDTJSON: serialisedPayload})
+	_, err = c.RouteInvocation(ctx, &fnInvocation.InvocationRequest{XDTJSON: serialisedPayload})
 	if err == nil {
 		log.Infof("SDK: Fn invocation successful")
 	}
 }
 
 // PushData to source QP
-func PushData(key string, payload []byte, chunkSizeInBytes int) {
+func PushData(ctx context.Context, key string, payload []byte, chunkSizeInBytes int) {
 
 	serverAddr := LoadedConfig.SQPServerAddr
 	conn, err := grpc.Dial(serverAddr, grpc.WithInsecure(),
@@ -80,7 +87,7 @@ func PushData(key string, payload []byte, chunkSizeInBytes int) {
 	client := upXDT.NewStreamDataClient(conn)
 	payloadSize := len(payload)
 	log.Infof("Transfering %d bytes to sQP", payloadSize)
-	stream, err := client.SendData(context.Background())
+	stream, err := client.SendData(ctx)
 	if err != nil {
 		log.Fatalf("open stream error %v", err)
 	}
@@ -93,13 +100,13 @@ func PushData(key string, payload []byte, chunkSizeInBytes int) {
 	for currentByte := 0; currentByte < payloadSize; currentByte += chunkSizeInBytes {
 
 		if currentByte+chunkSizeInBytes > payloadSize {
-			req := upXDT.Request{Chunk: payload[currentByte:payloadSize], Key: key, ChunkTotal: int64(chunkTotal)}
+			req := upXDT.Request{Chunk: payload[currentByte:payloadSize], Key: key, TotalChunks: int64(chunkTotal)}
 			if err := stream.Send(&req); err != nil {
 				log.Fatalf("send error %v", err)
 			}
 			log.Tracef("finishing request number : %d", currentByte)
 		} else {
-			req := upXDT.Request{Chunk: payload[currentByte : currentByte+chunkSizeInBytes], Key: key, ChunkTotal: int64(chunkTotal)}
+			req := upXDT.Request{Chunk: payload[currentByte : currentByte+chunkSizeInBytes], Key: key, TotalChunks: int64(chunkTotal)}
 			if err := stream.Send(&req); err != nil {
 				log.Fatalf("send error %v", err)
 			}

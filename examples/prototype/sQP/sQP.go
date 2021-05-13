@@ -55,8 +55,8 @@ func (s upXDTServer) SendData(srv upXDT.StreamData_SendDataServer) error {
 			}else {
 				log.Errorf("sQP: Invalid route type. Check config.json")
 			}
-			log.Infof("sQP: chunkTotal = %d",chunk.ChunkTotal)
-			dataQueueSize.Store(key,chunk.ChunkTotal)
+			log.Infof("sQP: chunkTotal = %d",chunk.TotalChunks)
+			dataQueueSize.Store(key,chunk.TotalChunks)
 		}
 		log.Infof("sQP: Enquing chunk number %d",chunkCount)
 		channel <- chunk.Chunk
@@ -111,9 +111,6 @@ func (s crossXDTServer) ServeData(in *crossXDT.Request, srv crossXDT.StreamData_
 
 // StartServer starts the SrcQP server
 func StartServer(serverAddr string) {
-
-	//shutdown := sdk.InitTracer()
-	//defer shutdown()
 
 	lis, err := net.Listen("tcp", serverAddr)
 	if err != nil {

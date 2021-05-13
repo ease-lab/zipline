@@ -37,7 +37,7 @@ type payload struct {
 
 
 // XDTDataServe is a gRPC server to serve data to the DstFn
-func (s downXDTServer) XDTDataServe(in *downXDT.DataRequest, srv downXDT.XDTtoFn_XDTDataServeServer) error {
+func (s downXDTServer) XDTDataServe( in *downXDT.DataRequest, srv downXDT.XDTtoFn_XDTDataServeServer) error {
 
 	log.Infof("dQP: data being fetched by DstFn using key : %s", in.Key)
 
@@ -96,10 +96,10 @@ func (s fnInvocationServer) RouteInvocation(ctx context.Context, in *fnInvocatio
 
 	if sdk.LoadedConfig.Routing == "CT" {
 		log.Infof("dQP: CT: pulling data from sQP")
-		go PullDataFromSrcQP(xdtPayload.Key, chunkSizeInBytes)
+		go PullDataFromSrcQP(ctx, xdtPayload.Key, chunkSizeInBytes)
 	}else if sdk.LoadedConfig.Routing == "S&F"{
 		log.Infof("dQP: S&F: pulling data from sQP")
-		PullDataFromSrcQP(xdtPayload.Key, chunkSizeInBytes)
+		PullDataFromSrcQP(ctx, xdtPayload.Key, chunkSizeInBytes)
 	}
 
 	// route the invocation call to destination fn
@@ -113,7 +113,7 @@ func (s fnInvocationServer) RouteInvocation(ctx context.Context, in *fnInvocatio
 	defer conn.Close()
 
 	c := downXDT.NewXDTtoFnClient(conn)
-	_, err = c.XDTFnCall(context.Background(), &downXDT.InvocationRequest{XdtJson: in.XDTJSON})
+	_, err = c.XDTFnCall(ctx, &downXDT.InvocationRequest{XDTJSON: in.XDTJSON})
 	if err != nil {
 		log.Infof("dQP: Fn invocation route unsuccessful")
 	}
@@ -122,7 +122,7 @@ func (s fnInvocationServer) RouteInvocation(ctx context.Context, in *fnInvocatio
 }
 
 // PullDataFromSrcQP pulls data from src QP to dst QP
-func PullDataFromSrcQP(key string, chunkSizeInBytes int) {
+func PullDataFromSrcQP(ctx context.Context, key string, chunkSizeInBytes int) {
 
 	serverAddr := sdk.LoadedConfig.SQPServerAddr
 	conn, err := grpc.Dial(serverAddr, grpc.WithInsecure(),
@@ -134,7 +134,6 @@ func PullDataFromSrcQP(key string, chunkSizeInBytes int) {
 
 	//ctx,cancel := context.WithTimeout(context.Background(), time.Second)
 	//defer cancel()
-	ctx := context.Background()
 	client := crossXDT.NewStreamDataClient(conn)
 	in := &crossXDT.Request{Key: key, ChunkSize: int64(chunkSizeInBytes)}
 	stream, err := client.ServeData(ctx, in)

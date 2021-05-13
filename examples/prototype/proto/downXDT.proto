@@ -12,7 +12,7 @@ service XDTtoFn {
 }
 
 message InvocationRequest {
-    bytes xdt_json = 1;
+    bytes XDTJSON = 1;
 }
 
 message Empty {
@@ -21,10 +21,10 @@ message Empty {
 
 message Data {
     bytes chunk = 1;
-    int64 chunkTotal = 3;
+    int64 TotalChunks = 3;
 }
 
 message DataRequest {
     string key = 1;
-    int64 chunk_size = 2;
+    int64 ChunkSize = 2;
 }

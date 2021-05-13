@@ -23,6 +23,10 @@ func init(){
 	log.SetFormatter(&log.TextFormatter{TimestampFormat: "2006-01-02 15:04:05.000000", FullTimestamp: true})
 }
 
+var handler = func(data []byte) {
+	log.Printf("destination handler received data of size %d", len(data))
+}
+
 func TestSdk_InvokeWithXDT(t *testing.T) {
 	//create random blob
 	payloadData := make([]byte, 10*1024*1024) // 10MiB
@@ -31,7 +35,7 @@ func TestSdk_InvokeWithXDT(t *testing.T) {
 	// start server at sQP
 	go sqp.StartServer(sdk.LoadedConfig.SQPServerAddr)
 	go dqp.StartServer(sdk.LoadedConfig.DQPServerAddr)
-	go sdk.StartDstServer(sdk.LoadedConfig.DstServerAddr)
+	go sdk.StartDstServer(sdk.LoadedConfig.DstServerAddr,handler)
 
 	chunkSizeInBytes := sdk.LoadedConfig.ChunkSizeInBytes
 
@@ -61,7 +65,7 @@ func TestBenchmark_XDT(t *testing.T) {
 
 	go sqp.StartServer(sdk.LoadedConfig.SQPServerAddr)
 	go dqp.StartServer(sdk.LoadedConfig.DQPServerAddr)
-	go sdk.StartDstServer(sdk.LoadedConfig.DstServerAddr)
+	go sdk.StartDstServer(sdk.LoadedConfig.DstServerAddr,handler)
 
 	payloadSizes := []int{10, 100, 1000, 10000, 100000}
 

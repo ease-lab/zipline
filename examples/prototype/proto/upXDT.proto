@@ -12,7 +12,7 @@ service StreamData {
 message Request {
   bytes chunk = 1;
   string key = 2;
-  int64 chunkTotal = 3;
+  int64 TotalChunks = 3;
 }
 
 message Empty {

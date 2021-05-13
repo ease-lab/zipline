@@ -19,13 +19,15 @@ import (
 var dataQueue sync.Map
 var dataQueueSize sync.Map
 
+var DestinationHandler func([]byte)
+
 // XDTFnCall is to be called by dQP to invoke DstFn
 func (s downXDTServer) XDTFnCall(ctx context.Context, in *downXDT.InvocationRequest) (*downXDT.Empty, error) {
 
-	log.Infof("DST: received invocation call %s", in.XdtJson)
+	log.Infof("DST: received invocation call %s", in.XDTJSON)
 
 	var xdtPayload Payload
-	if err := json.Unmarshal(in.XdtJson, &xdtPayload); err != nil {
+	if err := json.Unmarshal(in.XDTJSON, &xdtPayload); err != nil {
 		log.Fatal(err)
 	}
 
@@ -34,12 +36,13 @@ func (s downXDTServer) XDTFnCall(ctx context.Context, in *downXDT.InvocationRequ
 	chunkSizeInBytes := LoadedConfig.ChunkSizeInBytes
 
 	// fetch data from dQP
-	FetchFromDQP(key, chunkSizeInBytes)
+	FetchFromDQP(ctx, key, chunkSizeInBytes)
+	//call destination function
 	return &downXDT.Empty{}, nil
 }
 
 // FetchFromDQP fetches data from dQP to DstFn
-func FetchFromDQP(key string, chunkSizeInBytes int) (time.Duration, int) {
+func FetchFromDQP(ctx context.Context, key string, chunkSizeInBytes int) (time.Duration, int) {
 	serverAddr := LoadedConfig.DQPServerAddr
 	conn, err := grpc.Dial(serverAddr, grpc.WithInsecure(),
 		grpc.WithUnaryInterceptor(otelgrpc.UnaryClientInterceptor()),
@@ -51,7 +54,7 @@ func FetchFromDQP(key string, chunkSizeInBytes int) (time.Duration, int) {
 
 	client := downXDT.NewXDTtoFnClient(conn)
 	in := &downXDT.DataRequest{Key: key, ChunkSize: int64(chunkSizeInBytes)}
-	stream, err := client.XDTDataServe(context.Background(), in)
+	stream, err := client.XDTDataServe(ctx, in)
 	if err != nil {
 		log.Fatalf("DST: open stream error %v", err)
 	}
@@ -74,8 +77,8 @@ func FetchFromDQP(key string, chunkSizeInBytes int) (time.Duration, int) {
 			log.Infof("DST: creating a new channel")
 			channel = make(chan []byte, 1600)
 			dataQueue.Store(key, channel)
-			log.Infof("DST: chunkTotal = %d",chunk.ChunkTotal)
-			dataQueueSize.Store(key,chunk.ChunkTotal)
+			log.Infof("DST: TotalChunks = %d",chunk.TotalChunks)
+			dataQueueSize.Store(key,chunk.TotalChunks)
 		}
 		log.Infof("DST: Enquing chunk number %d",chunkCount)
 		channel <- chunk.Chunk
@@ -85,13 +88,14 @@ func FetchFromDQP(key string, chunkSizeInBytes int) (time.Duration, int) {
 }
 
 // StartDstServer starts DstQP server
-func StartDstServer(serverAddr string) {
+func StartDstServer(serverAddr string, handler func([]byte)) {
+
+	DestinationHandler = handler
 
 	lis, err := net.Listen("tcp", serverAddr)
 	if err != nil {
 		log.Fatalf("DST: failed to listen: %v", err)
 	}
-
 	server := grpc.NewServer(grpc.UnaryInterceptor(otelgrpc.UnaryServerInterceptor()),
 		grpc.StreamInterceptor(otelgrpc.StreamServerInterceptor()))
 	downXDT.RegisterXDTtoFnServer(server, downXDTServer{})
