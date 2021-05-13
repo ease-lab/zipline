@@ -2,11 +2,11 @@ package sqp
 
 import (
 	sdk "github.com/ease-lab/vhive_stealth/examples/prototype/sdk"
+	"go.opentelemetry.io/contrib/instrumentation/google.golang.org/grpc/otelgrpc"
 	"io"
 	"sync"
 
 	log "github.com/sirupsen/logrus"
-	//"math"
 	"net"
 
 	crossXDT "github.com/ease-lab/vhive_stealth/examples/prototype/proto/crossXDT"
@@ -26,7 +26,7 @@ type upXDTServer struct {
 	upXDT.UnimplementedStreamDataServer
 }
 
-// to be called by SrcFn to push data to sQP
+// SendData is called by SrcFn to push data to sQP
 func (s upXDTServer) SendData(srv upXDT.StreamData_SendDataServer) error {
 	chunkCount := 0
 	var key string
@@ -65,7 +65,7 @@ func (s upXDTServer) SendData(srv upXDT.StreamData_SendDataServer) error {
 	return nil
 }
 
-// gRPC server to serve the available data to the dQP
+// ServeData is the gRPC server to serve the available data to the dQP
 func (s crossXDTServer) ServeData(in *crossXDT.Request, srv crossXDT.StreamData_ServeDataServer) error {
 
 	log.Infof("sQP: DQP is fetching key: %s", in.Key)
@@ -109,15 +109,19 @@ func (s crossXDTServer) ServeData(in *crossXDT.Request, srv crossXDT.StreamData_
 	return nil
 }
 
-// start SrcQP server
+// StartServer starts the SrcQP server
 func StartServer(serverAddr string) {
+
+	//shutdown := sdk.InitTracer()
+	//defer shutdown()
 
 	lis, err := net.Listen("tcp", serverAddr)
 	if err != nil {
 		log.Fatalf("sQP: failed to listen: %v", err)
 	}
 
-	server := grpc.NewServer()
+	server := grpc.NewServer(grpc.UnaryInterceptor(otelgrpc.UnaryServerInterceptor()),
+		grpc.StreamInterceptor(otelgrpc.StreamServerInterceptor()))
 	upXDT.RegisterStreamDataServer(server, upXDTServer{})
 	crossXDT.RegisterStreamDataServer(server, crossXDTServer{})
 

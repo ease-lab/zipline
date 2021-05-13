@@ -24,6 +24,6 @@ require (
 	github.com/ease-lab/vhive_stealth/examples/prototype/proto/fnInvocation v0.0.0-00010101000000-000000000000
 	github.com/ease-lab/vhive_stealth/examples/prototype/sdk v0.0.0-00010101000000-000000000000
 	github.com/sirupsen/logrus v1.8.1
-	gonum.org/v1/gonum v0.9.1 // indirect
-	google.golang.org/grpc v1.36.0
+	go.opentelemetry.io/contrib/instrumentation/google.golang.org/grpc/otelgrpc v0.20.0
+	google.golang.org/grpc v1.37.0
 )

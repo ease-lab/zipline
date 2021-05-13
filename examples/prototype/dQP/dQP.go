@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	log "github.com/sirupsen/logrus"
+	"go.opentelemetry.io/contrib/instrumentation/google.golang.org/grpc/otelgrpc"
 	"io"
 	"net"
 	"sync"
@@ -35,7 +36,7 @@ type payload struct {
 
 
 
-// gRPC server to serve data to the DstFn
+// XDTDataServe is a gRPC server to serve data to the DstFn
 func (s downXDTServer) XDTDataServe(in *downXDT.DataRequest, srv downXDT.XDTtoFn_XDTDataServeServer) error {
 
 	log.Infof("dQP: data being fetched by DstFn using key : %s", in.Key)
@@ -80,7 +81,7 @@ func (s downXDTServer) XDTDataServe(in *downXDT.DataRequest, srv downXDT.XDTtoFn
 	return nil
 }
 
-// gRPC server to route the function call from SrcFn to the DstFn
+// RouteInvocation is a gRPC server to route the function call from SrcFn to the DstFn
 func (s fnInvocationServer) RouteInvocation(ctx context.Context, in *fnInvocation.InvocationRequest) (*fnInvocation.Empty, error) {
 
 	log.Infof("dQP: received serialised json: %s", in.XDTJSON)
@@ -103,7 +104,9 @@ func (s fnInvocationServer) RouteInvocation(ctx context.Context, in *fnInvocatio
 
 	// route the invocation call to destination fn
 	serverAddr := sdk.LoadedConfig.DstServerAddr
-	conn, err := grpc.Dial(serverAddr, grpc.WithInsecure())
+	conn, err := grpc.Dial(serverAddr, grpc.WithInsecure(),
+		grpc.WithUnaryInterceptor(otelgrpc.UnaryClientInterceptor()),
+		grpc.WithStreamInterceptor(otelgrpc.StreamClientInterceptor()))
 	if err != nil {
 		log.Errorf("did not connect: %v", err)
 	}
@@ -118,11 +121,13 @@ func (s fnInvocationServer) RouteInvocation(ctx context.Context, in *fnInvocatio
 	return &fnInvocation.Empty{}, nil
 }
 
-// pull data from src QP to dst QP
+// PullDataFromSrcQP pulls data from src QP to dst QP
 func PullDataFromSrcQP(key string, chunkSizeInBytes int) {
 
 	serverAddr := sdk.LoadedConfig.SQPServerAddr
-	conn, err := grpc.Dial(serverAddr, grpc.WithInsecure())
+	conn, err := grpc.Dial(serverAddr, grpc.WithInsecure(),
+		grpc.WithUnaryInterceptor(otelgrpc.UnaryClientInterceptor()),
+		grpc.WithStreamInterceptor(otelgrpc.StreamClientInterceptor()))
 	if err != nil {
 		log.Errorf("dQP: can not connect with server %v", err)
 	}
@@ -172,7 +177,7 @@ func PullDataFromSrcQP(key string, chunkSizeInBytes int) {
 	}
 }
 
-// start DstQP server
+// StartServer starts DstQP server
 func StartServer(serverAddr string) {
 
 	lis, err := net.Listen("tcp", serverAddr)
@@ -180,7 +185,8 @@ func StartServer(serverAddr string) {
 		log.Fatalf("dQP: failed to listen: %v", err)
 	}
 
-	server := grpc.NewServer()
+	server := grpc.NewServer(grpc.UnaryInterceptor(otelgrpc.UnaryServerInterceptor()),
+		grpc.StreamInterceptor(otelgrpc.StreamServerInterceptor()))
 	downXDT.RegisterXDTtoFnServer(server, downXDTServer{})
 	fnInvocation.RegisterInvocationServer(server, fnInvocationServer{})
 

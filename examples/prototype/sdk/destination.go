@@ -3,6 +3,7 @@ package sdk
 import (
 	"context"
 	"encoding/json"
+	"go.opentelemetry.io/contrib/instrumentation/google.golang.org/grpc/otelgrpc"
 	"io"
 	"net"
 	"sync"
@@ -18,7 +19,7 @@ import (
 var dataQueue sync.Map
 var dataQueueSize sync.Map
 
-// to be called by dQP to invoke DstFn
+// XDTFnCall is to be called by dQP to invoke DstFn
 func (s downXDTServer) XDTFnCall(ctx context.Context, in *downXDT.InvocationRequest) (*downXDT.Empty, error) {
 
 	log.Infof("DST: received invocation call %s", in.XdtJson)
@@ -37,10 +38,12 @@ func (s downXDTServer) XDTFnCall(ctx context.Context, in *downXDT.InvocationRequ
 	return &downXDT.Empty{}, nil
 }
 
-// fetch data from dQP to DstFn
+// FetchFromDQP fetches data from dQP to DstFn
 func FetchFromDQP(key string, chunkSizeInBytes int) (time.Duration, int) {
 	serverAddr := LoadedConfig.DQPServerAddr
-	conn, err := grpc.Dial(serverAddr, grpc.WithInsecure())
+	conn, err := grpc.Dial(serverAddr, grpc.WithInsecure(),
+		grpc.WithUnaryInterceptor(otelgrpc.UnaryClientInterceptor()),
+		grpc.WithStreamInterceptor(otelgrpc.StreamClientInterceptor()))
 	if err != nil {
 		log.Fatalf("DST: can not connect with server %v", err)
 	}
@@ -81,7 +84,7 @@ func FetchFromDQP(key string, chunkSizeInBytes int) (time.Duration, int) {
 
 }
 
-// start DstQP server
+// StartDstServer starts DstQP server
 func StartDstServer(serverAddr string) {
 
 	lis, err := net.Listen("tcp", serverAddr)
@@ -89,7 +92,8 @@ func StartDstServer(serverAddr string) {
 		log.Fatalf("DST: failed to listen: %v", err)
 	}
 
-	server := grpc.NewServer()
+	server := grpc.NewServer(grpc.UnaryInterceptor(otelgrpc.UnaryServerInterceptor()),
+		grpc.StreamInterceptor(otelgrpc.StreamServerInterceptor()))
 	downXDT.RegisterXDTtoFnServer(server, downXDTServer{})
 
 	log.Println("DST: start server")

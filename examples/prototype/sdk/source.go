@@ -10,12 +10,16 @@ import (
 
 	fnInvocation "github.com/ease-lab/vhive_stealth/examples/prototype/proto/fnInvocation"
 	upXDT "github.com/ease-lab/vhive_stealth/examples/prototype/proto/upXDT"
+	"go.opentelemetry.io/contrib/instrumentation/google.golang.org/grpc/otelgrpc"
 
 	"google.golang.org/grpc"
 )
 
-// Invoke the RPC call with XDT
+// InvokeWithXDT invokes the RPC call with XDT
 func InvokeWithXDT(URL string, xdtPayload Payload, chunkSizeInBytes int) {
+
+	shutdown := InitTracer()
+	defer shutdown()
 
 	log.Infof("SDK: XDT invoke start")
 	now := time.Now()
@@ -45,7 +49,9 @@ func InvokeWithXDT(URL string, xdtPayload Payload, chunkSizeInBytes int) {
 func fnInvocationCall(URL string, serialisedPayload []byte) {
 
 	serverAddr := LoadedConfig.DQPServerAddr
-	conn, err := grpc.Dial(serverAddr, grpc.WithInsecure())
+	conn, err := grpc.Dial(serverAddr, grpc.WithInsecure(),
+		grpc.WithUnaryInterceptor(otelgrpc.UnaryClientInterceptor()),
+		grpc.WithStreamInterceptor(otelgrpc.StreamClientInterceptor()))
 	if err != nil {
 		log.Fatalf("did not connect: %v", err)
 	}
@@ -60,11 +66,13 @@ func fnInvocationCall(URL string, serialisedPayload []byte) {
 	}
 }
 
-// push data to source QP
+// PushData to source QP
 func PushData(key string, payload []byte, chunkSizeInBytes int) {
 
 	serverAddr := LoadedConfig.SQPServerAddr
-	conn, err := grpc.Dial(serverAddr, grpc.WithInsecure())
+	conn, err := grpc.Dial(serverAddr, grpc.WithInsecure(),
+		grpc.WithUnaryInterceptor(otelgrpc.UnaryClientInterceptor()),
+		grpc.WithStreamInterceptor(otelgrpc.StreamClientInterceptor()))
 	if err != nil {
 		log.Fatalf("can not connect with server %v", err)
 	}
