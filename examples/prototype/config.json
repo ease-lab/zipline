@@ -5,5 +5,6 @@
   "SQPServerAddr": ":50005",
   "BufferSize": 25,
   "StAndFwBufferSize": 1600,
-  "Routing" : "S&F"
+  "Routing" : "S&F",
+  "TracingEnabled" : false
 }

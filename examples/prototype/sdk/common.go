@@ -32,6 +32,7 @@ type Config struct {
 	BufferSize int
 	StAndFwBufferSize int
 	Routing string
+	TracingEnabled bool
 }
 
 type downXDTServer struct {

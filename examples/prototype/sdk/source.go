@@ -19,8 +19,10 @@ import (
 // InvokeWithXDT invokes the RPC call with XDT
 func InvokeWithXDT(URL string, xdtPayload Payload, chunkSizeInBytes int) {
 
-	shutdown := InitTracer()
-	defer shutdown()
+	if LoadedConfig.TracingEnabled {
+		shutdown := InitTracer()
+		defer shutdown()
+	}
 
 	log.Infof("SDK: XDT invoke start")
 	now := time.Now()
