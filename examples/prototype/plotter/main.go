@@ -1,3 +1,25 @@
+// MIT License
+//
+// Copyright (c) 2021 Shyam Jesalpura and EASE lab
+//
+// Permission is hereby granted, free of charge, to any person obtaining a copy
+// of this software and associated documentation files (the "Software"), to deal
+// in the Software without restriction, including without limitation the rights
+// to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+// copies of the Software, and to permit persons to whom the Software is
+// furnished to do so, subject to the following conditions:
+//
+// The above copyright notice and this permission notice shall be included in all
+// copies or substantial portions of the Software.
+//
+// THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+// IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+// FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+// AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+// LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+// OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+// SOFTWARE.
+
 package plotter
 
 import (
@@ -74,8 +96,7 @@ func PlotPercentile(sortedLatencyMap map[int][]float64) {
 		i := 0
 		for payloadSize, sortedLatency := range sortedLatencyMap {
 			latenciesToPlot[i].X = float64(payloadSize)
-			// log.Printf("inserting %dth of sorted, which is %f", int(percentile*len(sorted_latency)/100), sorted_latency[int(percentile*len(sorted_latency)/100)])
-			latenciesToPlot[i].Y = sortedLatency[int(percentile*len(sortedLatency)/100)] / 1000.0
+			latenciesToPlot[i].Y = sortedLatency[percentile*len(sortedLatency)/100] / 1000.0
 			pointLabels = append(pointLabels, fmt.Sprintf("%.2f", latenciesToPlot[i].Y))
 			i += 1
 		}
@@ -94,20 +115,8 @@ func PlotPercentile(sortedLatencyMap map[int][]float64) {
 			log.Errorf("Could not add line points to CDF plot: %s", err.Error())
 		}
 
-		// lpLine, lpPoints, err := plotter.NewLinePoints(latenciesToPlot)
-		// if err != nil {
-		// 	panic(err)
-		// }
-		// lpLine.Color = color.RGBA{G: uint8(percentile * 255 / 100), A: 255}
-		// lpPoints.Shape = draw.PyramidGlyph{}
-		// lpPoints.Color = color.RGBA{R: 255, A: 255}
-
-		// Add the plotters to the plot, with a legend
-		// entry for each
-		// plotInstance.Add(lpLine, lpPoints)
 		plotInstance.Add(labels)
 
-		// plotInstance.Legend.Add(strconv.Itoa(percentile)+" Percentile", lpLine, lpPoints)
 	}
 
 	// Save the plot to a PNG file.
@@ -137,8 +146,7 @@ func PlotBW(sortedLatencyMap map[int][]float64) {
 
 	for payloadSize, sortedLatency := range sortedLatencyMap {
 		latenciesToPlot[i].X = float64(payloadSize)
-		// log.Printf("inserting %dth of sorted, which is %f", int(percentile*len(sorted_latency)/100), sorted_latency[int(percentile*len(sorted_latency)/100)])
-		latenciesToPlot[i].Y = float64(payloadSize) * 1024 / (sortedLatency[int(50*len(sortedLatency)/100)])
+		latenciesToPlot[i].Y = float64(payloadSize) * 1024 / (sortedLatency[50*len(sortedLatency)/100])
 		pointLabels = append(pointLabels, fmt.Sprintf("%.2f", latenciesToPlot[i].Y))
 		i += 1
 	}
@@ -151,11 +159,6 @@ func PlotBW(sortedLatencyMap map[int][]float64) {
 	if err != nil {
 		log.Fatalf("could not creates labels plotter: %+v", err)
 	}
-
-	// err := plotutil.AddLinePoints(plotInstance, strconv.Itoa(percentile)+" Percentile", latenciesToPlot)
-	// if err != nil {
-	// 	log.Errorf("[sub-experiment %dMB] Could not add line points to CDF plot: %s", percentile, err.Error())
-	// }
 
 	lpLine, lpPoints, err := plotter.NewLinePoints(latenciesToPlot)
 	if err != nil {

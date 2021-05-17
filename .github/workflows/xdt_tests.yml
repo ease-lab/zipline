@@ -2,11 +2,11 @@ name: XDT tests
 
 on:
   push:
-    branches: [ main ]
+    branches: [ main_xdt ]
     paths:
       - 'examples/prototype/**'
   pull_request:
-    branches: [ main ]
+    branches: [ main_xdt ]
     paths:
       - 'examples/prototype/**'
   workflow_dispatch:
@@ -27,10 +27,45 @@ jobs:
     - name: Set up Go 1.x
       uses: actions/setup-go@v2
       with:
-        go-version: 1.14
-
+        go-version: 1.16
     - name: Check out code into the Go module directory
       uses: actions/checkout@v2
-
     - name: Run test
       run: cd examples/prototype && make ${{ matrix.test-type }}-test
+  
+  CodeLint:
+    name: Test Code quality
+    runs-on: ubuntu-18.04
+    steps:
+      - name: Check out code into the Go module directory
+        uses: actions/checkout@v2
+      - name: Check sdk code
+        uses: golangci/golangci-lint-action@v2
+        with:
+          working-directory: examples/prototype/sdk
+          args: --timeout 5m
+      - name: Check dQP code
+          uses: golangci/golangci-lint-action@v2
+          with:
+            working-directory: examples/prototype/dQP
+            args: --timeout 5m
+      - name: Check plotter code
+          uses: golangci/golangci-lint-action@v2
+          with:
+            working-directory: examples/prototype/plotter
+            args: --timeout 5m
+      - name: Check sQP code
+          uses: golangci/golangci-lint-action@v2
+          with:
+            working-directory: examples/prototype/sQP
+            args: --timeout 5m
+      - name: Check user-functions/fx code
+          uses: golangci/golangci-lint-action@v2
+          with:
+            working-directory: examples/prototype/user-functions/fx
+            args: --timeout 5m
+      - name: Check user-functions/gx code
+          uses: golangci/golangci-lint-action@v2
+          with:
+            working-directory: examples/prototype/user-functions/gx
+            args: --timeout 5m

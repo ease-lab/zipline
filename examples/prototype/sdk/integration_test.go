@@ -1,3 +1,25 @@
+// MIT License
+//
+// Copyright (c) 2021 Shyam Jesalpura and EASE lab
+//
+// Permission is hereby granted, free of charge, to any person obtaining a copy
+// of this software and associated documentation files (the "Software"), to deal
+// in the Software without restriction, including without limitation the rights
+// to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+// copies of the Software, and to permit persons to whom the Software is
+// furnished to do so, subject to the following conditions:
+//
+// The above copyright notice and this permission notice shall be included in all
+// copies or substantial portions of the Software.
+//
+// THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+// IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+// FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+// AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+// LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+// OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+// SOFTWARE.
+
 package sdk
 
 import (
@@ -8,15 +30,15 @@ import (
 	"testing"
 	"time"
 
-	plotter "github.com/ease-lab/vhive_stealth/examples/gRPC_stream/plotter"
-	dqp "github.com/ease-lab/vhive_stealth/examples/prototype/dqp"
-	sdk "github.com/ease-lab/vhive_stealth/examples/prototype/sdk"
-	sqp "github.com/ease-lab/vhive_stealth/examples/prototype/sqp"
+	"github.com/ease-lab/vhive_stealth/examples/gRPC_stream/plotter"
+	"github.com/ease-lab/vhive_stealth/examples/prototype/dqp"
+	"github.com/ease-lab/vhive_stealth/examples/prototype/sdk"
+	"github.com/ease-lab/vhive_stealth/examples/prototype/sqp"
 	log "github.com/sirupsen/logrus"
 )
 
-var sampleSize = flag.Int("sample", 10, "sample_size")
-var URL = flag.String("URL", "bla", "Function URL")
+var sampleSize = flag.Int("sample", 10, "sampleSize")
+var URL = flag.String("url", "helloworld.default.192.168.1.240.nip.io", "Function URL")
 
 func init(){
 	log.SetLevel(log.DebugLevel)
@@ -24,18 +46,22 @@ func init(){
 }
 
 var handler = func(data []byte) {
-	log.Printf("destination handler received data of size %d", len(data))
+	log.Infof("destination handler received data of size %d", len(data))
 }
 
 func TestSdk_InvokeWithXDT(t *testing.T) {
-	//create random blob
+
 	payloadData := make([]byte, 10*1024*1024) // 10MiB
-	rand.Read(payloadData)
+	if _,err := rand.Read(payloadData);err != nil {
+		log.Fatal(err)
+	}
 
 	// start server at sQP
 	go sqp.StartServer(sdk.LoadedConfig.SQPServerAddr)
 	go dqp.StartServer(sdk.LoadedConfig.DQPServerAddr)
 	go sdk.StartDstServer(sdk.LoadedConfig.DstServerAddr,handler)
+
+	time.Sleep(time.Second*2)
 
 	chunkSizeInBytes := sdk.LoadedConfig.ChunkSizeInBytes
 
@@ -47,10 +73,11 @@ func TestSdk_InvokeWithXDT(t *testing.T) {
 
 	start := time.Now()
 	log.Infof("starting integ test")
-	sdk.InvokeWithXDT("", payloadToSend, chunkSizeInBytes)
+	url := sdk.LoadedConfig.LBAddr
+	sdk.InvokeWithXDT(url, payloadToSend, chunkSizeInBytes)
 	elapsed := time.Since(start)
 
-	log.Printf("completed XDT in %s", elapsed)
+	log.Infof("completed XDT in %s", elapsed)
 }
 
 func TestBenchmark_XDT(t *testing.T) {
@@ -58,10 +85,6 @@ func TestBenchmark_XDT(t *testing.T) {
 	if *sampleSize < 10 {
 		log.Fatal("invalid sample size. Acceptable input is integers >= 10")
 	}
-
-	// if *URL == "" {
-	// 	log.Fatal("please enter destination url")
-	// }
 
 	go sqp.StartServer(sdk.LoadedConfig.SQPServerAddr)
 	go dqp.StartServer(sdk.LoadedConfig.DQPServerAddr)
@@ -72,12 +95,13 @@ func TestBenchmark_XDT(t *testing.T) {
 	latencyMap := make(map[int][]float64)
 
 	payloadData := make([]byte, 101*1024*1024) // 10MiB
-	//create random payload
-	rand.Read(payloadData)
-
+	if _,err := rand.Read(payloadData);err != nil {
+		log.Fatal(err)
+	}
 	chunkSizeInBytes := sdk.LoadedConfig.ChunkSizeInBytes
+	url := sdk.LoadedConfig.LBAddr
 
-	benchPayload := func(payloadSize int, chunkSizeInBytes int, sample_size int, URL string, payloadData []byte) []float64 {
+	benchPayload := func(payloadSize int, chunkSizeInBytes int, sampleSize int, URL string, payloadData []byte) []float64 {
 		var latencies []float64
 		payloadToSend := sdk.Payload{
 			FunctionName: "HelloXDT",
@@ -85,9 +109,9 @@ func TestBenchmark_XDT(t *testing.T) {
 			Key:          "",
 		}
 
-		for i := 0; i < sample_size; i += 1 {
+		for i := 0; i < sampleSize; i += 1 {
 			start := time.Now()
-			sdk.InvokeWithXDT(URL, payloadToSend, chunkSizeInBytes)
+			sdk.InvokeWithXDT(url, payloadToSend, chunkSizeInBytes)
 			latencyInUs := time.Since(start).Microseconds()
 			latencies = append(latencies, float64(latencyInUs))
 		}
@@ -97,7 +121,7 @@ func TestBenchmark_XDT(t *testing.T) {
 
 	for _, payloadSize := range payloadSizes {
 		payloadSizeInBytes := payloadSize * 1024
-		log.Printf("checking for %dKiB", payloadSize)
+		log.Infof("checking for %dKiB", payloadSize)
 		latencies := benchPayload(payloadSizeInBytes, chunkSizeInBytes, *sampleSize, *URL, payloadData)
 		plotter.PlotLatenciesCDF("./cdf_"+strconv.Itoa(payloadSize)+"KiB.png", latencies, payloadSize)
 		latencyMap[payloadSize] = latencies

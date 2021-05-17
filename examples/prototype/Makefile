@@ -22,32 +22,22 @@
 
 all: local
 
-.PHONY: proto_gen
-proto_gen:
+.PHONY: proto_gen proto_install
+
+PROTO_FILES:=crossXDT fnInvocation downXDT upXDT
+
+proto_install:
 	GO111MODULE="on" go get google.golang.org/protobuf/cmd/protoc-gen-go \
-        google.golang.org/grpc/cmd/protoc-gen-go-grpc
+            google.golang.org/grpc/cmd/protoc-gen-go-grpc
+proto_gen: $(PROTO_FILES)
 
-	GO111MODULE="on" PATH="$$PATH:$$(go env GOPATH)/bin" protoc proto/crossXDT.proto \
+$(PROTO_FILES):
+	GO111MODULE="on" PATH="$$PATH:$$(go env GOPATH)/bin" protoc proto/$@.proto \
 	    --proto_path=./proto \
-	    --go_out=./proto/crossXDT --go-grpc_out=./proto/crossXDT \
+	    --go_out=./proto/$@ --go-grpc_out=./proto/$@ \
 	    --go_opt=paths=source_relative --go-grpc_opt=paths=source_relative
 
-	GO111MODULE="on" PATH="$$PATH:$$(go env GOPATH)/bin" protoc proto/fnInvocation.proto \
-	    --proto_path=./proto \
-	    --go_out=./proto/fnInvocation --go-grpc_out=./proto/fnInvocation \
-	    --go_opt=paths=source_relative --go-grpc_opt=paths=source_relative
-
-	GO111MODULE="on" PATH="$$PATH:$$(go env GOPATH)/bin" protoc proto/downXDT.proto \
-	    --proto_path=./proto \
-	    --go_out=./proto/downXDT --go-grpc_out=./proto/downXDT \
-	    --go_opt=paths=source_relative --go-grpc_opt=paths=source_relative
-
-	GO111MODULE="on" PATH="$$PATH:$$(go env GOPATH)/bin" protoc proto/upXDT.proto \
-	    --proto_path=./proto \
-	    --go_out=./proto/upXDT --go-grpc_out=./proto/upXDT \
-	    --go_opt=paths=source_relative --go-grpc_opt=paths=source_relative
-
-local: proto_gen build_local
+local: proto_install proto_gen build_local
 
 build_local:
 	mkdir -p bins

@@ -1,3 +1,25 @@
+// MIT License
+//
+// Copyright (c) 2021 Shyam Jesalpura and EASE lab
+//
+// Permission is hereby granted, free of charge, to any person obtaining a copy
+// of this software and associated documentation files (the "Software"), to deal
+// in the Software without restriction, including without limitation the rights
+// to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+// copies of the Software, and to permit persons to whom the Software is
+// furnished to do so, subject to the following conditions:
+//
+// The above copyright notice and this permission notice shall be included in all
+// copies or substantial portions of the Software.
+//
+// THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+// IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+// FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+// AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+// LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+// OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+// SOFTWARE.
+
 package dqp
 
 import (
@@ -9,15 +31,17 @@ import (
 	"net"
 	"sync"
 
-	crossXDT "github.com/ease-lab/vhive_stealth/examples/prototype/proto/crossXDT"
-	downXDT "github.com/ease-lab/vhive_stealth/examples/prototype/proto/downXDT"
-	fnInvocation "github.com/ease-lab/vhive_stealth/examples/prototype/proto/fnInvocation"
-	sdk "github.com/ease-lab/vhive_stealth/examples/prototype/sdk"
+	"github.com/ease-lab/vhive_stealth/examples/prototype/proto/crossXDT"
+	"github.com/ease-lab/vhive_stealth/examples/prototype/proto/downXDT"
+	"github.com/ease-lab/vhive_stealth/examples/prototype/proto/fnInvocation"
+	"github.com/ease-lab/vhive_stealth/examples/prototype/sdk"
 
 	"google.golang.org/grpc"
 )
 
+// dataQueue stores a chan []bytes per payload addressed by transaction ID
 var dataQueue sync.Map
+// dataQueueSize stores a total number of chunks per payload addressed by transaction ID
 var dataQueueSize sync.Map
 
 type fnInvocationServer struct {
@@ -78,7 +102,6 @@ func (s downXDTServer) XDTDataServe( in *downXDT.DataRequest, srv downXDT.XDTtoF
 			}
 		}
 	}
-	return nil
 }
 
 // RouteInvocation is a gRPC server to route the function call from SrcFn to the DstFn
@@ -110,7 +133,12 @@ func (s fnInvocationServer) RouteInvocation(ctx context.Context, in *fnInvocatio
 	if err != nil {
 		log.Errorf("did not connect: %v", err)
 	}
-	defer conn.Close()
+	defer func (){
+		err = conn.Close()
+		if err != nil {
+			log.Errorf("dQP: Error closing the connection to Dest")
+		}
+	}()
 
 	c := downXDT.NewXDTtoFnClient(conn)
 	_, err = c.XDTFnCall(ctx, &downXDT.InvocationRequest{XDTJSON: in.XDTJSON})
@@ -132,8 +160,6 @@ func PullDataFromSrcQP(ctx context.Context, key string, chunkSizeInBytes int) {
 		log.Errorf("dQP: can not connect with server %v", err)
 	}
 
-	//ctx,cancel := context.WithTimeout(context.Background(), time.Second)
-	//defer cancel()
 	client := crossXDT.NewStreamDataClient(conn)
 	in := &crossXDT.Request{Key: key, ChunkSize: int64(chunkSizeInBytes)}
 	stream, err := client.ServeData(ctx, in)
@@ -147,7 +173,6 @@ func PullDataFromSrcQP(ctx context.Context, key string, chunkSizeInBytes int) {
 		chunk, err := stream.Recv()
 		if err == io.EOF {
 			log.Tracef("dQP: %d chunks received at Dst",chunkCount)
-			//log.Trace(dataQueue[key+";0"][0:9],dataQueue[key+";"+strconv.Itoa(chunkCount-1)][len(dataQueue[key+";"+strconv.Itoa(chunkCount-1)])-9:])
 			if sdk.LoadedConfig.Routing == "S&F" {
 				dataQueue.Store(key, channel)
 			}

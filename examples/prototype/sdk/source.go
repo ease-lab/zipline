@@ -1,3 +1,25 @@
+// MIT License
+//
+// Copyright (c) 2021 Shyam Jesalpura and EASE lab
+//
+// Permission is hereby granted, free of charge, to any person obtaining a copy
+// of this software and associated documentation files (the "Software"), to deal
+// in the Software without restriction, including without limitation the rights
+// to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+// copies of the Software, and to permit persons to whom the Software is
+// furnished to do so, subject to the following conditions:
+//
+// The above copyright notice and this permission notice shall be included in all
+// copies or substantial portions of the Software.
+//
+// THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+// IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+// FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+// AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+// LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+// OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+// SOFTWARE.
+
 package sdk
 
 import (
@@ -9,8 +31,8 @@ import (
 
 	log "github.com/sirupsen/logrus"
 
-	fnInvocation "github.com/ease-lab/vhive_stealth/examples/prototype/proto/fnInvocation"
-	upXDT "github.com/ease-lab/vhive_stealth/examples/prototype/proto/upXDT"
+	"github.com/ease-lab/vhive_stealth/examples/prototype/proto/fnInvocation"
+	"github.com/ease-lab/vhive_stealth/examples/prototype/proto/upXDT"
 	"go.opentelemetry.io/contrib/instrumentation/google.golang.org/grpc/otelgrpc"
 
 	"google.golang.org/grpc"
@@ -54,17 +76,21 @@ func InvokeWithXDT(URL string, xdtPayload Payload, chunkSizeInBytes int) {
 	fnInvocationCall(ctx, URL, serialisedPayload)
 }
 
-// make fn invocation call to dQP with xdt payload
+// fnInvocationCall makes fn invocation call to dQP with xdt payload
 func fnInvocationCall(ctx context.Context, URL string, serialisedPayload []byte) {
 
-	serverAddr := LoadedConfig.DQPServerAddr
-	conn, err := grpc.Dial(serverAddr, grpc.WithInsecure(),
+	conn, err := grpc.Dial(URL, grpc.WithInsecure(),
 		grpc.WithUnaryInterceptor(otelgrpc.UnaryClientInterceptor()),
 		grpc.WithStreamInterceptor(otelgrpc.StreamClientInterceptor()))
 	if err != nil {
 		log.Fatalf("did not connect: %v", err)
 	}
-	defer conn.Close()
+	defer func (){
+		err = conn.Close()
+		if err != nil {
+			log.Errorf("dQP: Error closing the connection to Dest")
+		}
+	}()
 
 	c := fnInvocation.NewInvocationClient(conn)
 

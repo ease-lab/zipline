@@ -1,7 +1,29 @@
+// MIT License
+//
+// Copyright (c) 2021 Shyam Jesalpura and EASE lab
+//
+// Permission is hereby granted, free of charge, to any person obtaining a copy
+// of this software and associated documentation files (the "Software"), to deal
+// in the Software without restriction, including without limitation the rights
+// to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+// copies of the Software, and to permit persons to whom the Software is
+// furnished to do so, subject to the following conditions:
+//
+// The above copyright notice and this permission notice shall be included in all
+// copies or substantial portions of the Software.
+//
+// THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+// IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+// FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+// AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+// LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+// OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+// SOFTWARE.
+
 package sqp
 
 import (
-	sdk "github.com/ease-lab/vhive_stealth/examples/prototype/sdk"
+	"github.com/ease-lab/vhive_stealth/examples/prototype/sdk"
 	"go.opentelemetry.io/contrib/instrumentation/google.golang.org/grpc/otelgrpc"
 	"io"
 	"sync"
@@ -9,13 +31,15 @@ import (
 	log "github.com/sirupsen/logrus"
 	"net"
 
-	crossXDT "github.com/ease-lab/vhive_stealth/examples/prototype/proto/crossXDT"
-	upXDT "github.com/ease-lab/vhive_stealth/examples/prototype/proto/upXDT"
+	"github.com/ease-lab/vhive_stealth/examples/prototype/proto/crossXDT"
+	"github.com/ease-lab/vhive_stealth/examples/prototype/proto/upXDT"
 
 	"google.golang.org/grpc"
 )
 
+// dataQueue stores a chan []bytes per payload addressed by transaction ID
 var dataQueue sync.Map
+// dataQueueSize stores a total number of chunks per payload addressed by transaction ID
 var dataQueueSize sync.Map
 
 type crossXDTServer struct {
@@ -62,7 +86,6 @@ func (s upXDTServer) SendData(srv upXDT.StreamData_SendDataServer) error {
 		channel <- chunk.Chunk
 		chunkCount += 1
 	}
-	return nil
 }
 
 // ServeData is the gRPC server to serve the available data to the dQP
@@ -73,6 +96,8 @@ func (s crossXDTServer) ServeData(in *crossXDT.Request, srv crossXDT.StreamData_
 	chunkCount := 0
 	var channel chan []byte
 	var chunkTotal int64
+
+	// Check whether the first packet has been received at sQP or not
 	for {
 		if tmp,ok := dataQueueSize.Load(in.Key); ok {
 			chunkTotal = tmp.(int64)
@@ -80,6 +105,7 @@ func (s crossXDTServer) ServeData(in *crossXDT.Request, srv crossXDT.StreamData_
 			break
 		}
 	}
+	// Check whether the channel has been created by the receiving function
 	for {
 		if tmp,ok := dataQueue.Load(in.Key); ok {
 			log.Tracef("sQP: found channel for key %s",in.Key)
@@ -87,7 +113,7 @@ func (s crossXDTServer) ServeData(in *crossXDT.Request, srv crossXDT.StreamData_
 			break
 		}
 	}
-
+	// Send packets from the channel one by one
 	for {
 		select {
 		case chunk := <-channel:
@@ -106,7 +132,6 @@ func (s crossXDTServer) ServeData(in *crossXDT.Request, srv crossXDT.StreamData_
 			}
 		}
 	}
-	return nil
 }
 
 // StartServer starts the SrcQP server
