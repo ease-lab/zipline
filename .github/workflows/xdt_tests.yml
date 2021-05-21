@@ -40,32 +40,33 @@ jobs:
       - name: Check out code into the Go module directory
         uses: actions/checkout@v2
       - name: Check sdk code
+        if: ${{ always() }}
         uses: golangci/golangci-lint-action@v2
         with:
           working-directory: examples/prototype/sdk
           args: --timeout 5m
       - name: Check dQP code
-          uses: golangci/golangci-lint-action@v2
-          with:
-            working-directory: examples/prototype/dQP
-            args: --timeout 5m
+        if: ${{ always() }}
+        env:
+          DIR: examples/prototype/dQP
+        run: cd $DIR && golangci-lint run --out-format=github-actions --path-prefix=$DIR --timeout 5m
       - name: Check plotter code
-          uses: golangci/golangci-lint-action@v2
-          with:
-            working-directory: examples/prototype/plotter
-            args: --timeout 5m
+        if: ${{ always() }}
+        env:
+          DIR: examples/prototype/plotter
+        run: cd $DIR && golangci-lint run --out-format=github-actions --path-prefix=$DIR --timeout 5m
       - name: Check sQP code
-          uses: golangci/golangci-lint-action@v2
-          with:
-            working-directory: examples/prototype/sQP
-            args: --timeout 5m
+        if: ${{ always() }}
+        env:
+          DIR: examples/prototype/sQP
+        run: cd $DIR && golangci-lint run --out-format=github-actions --path-prefix=$DIR --timeout 5m
       - name: Check user-functions/fx code
-          uses: golangci/golangci-lint-action@v2
-          with:
-            working-directory: examples/prototype/user-functions/fx
-            args: --timeout 5m
+        if: ${{ always() }}
+        env:
+          DIR: examples/prototype/user-functions/fx
+        run: cd $DIR && golangci-lint run --out-format=github-actions --path-prefix=$DIR --timeout 5m
       - name: Check user-functions/gx code
-          uses: golangci/golangci-lint-action@v2
-          with:
-            working-directory: examples/prototype/user-functions/gx
-            args: --timeout 5m
+        if: ${{ always() }}
+        env:
+          DIR: examples/prototype/user-functions/gx
+        run: cd $DIR && golangci-lint run --out-format=github-actions --path-prefix=$DIR --timeout 5m

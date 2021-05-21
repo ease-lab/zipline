@@ -40,7 +40,7 @@ import (
 var sampleSize = flag.Int("sample", 10, "sampleSize")
 var URL = flag.String("url", "helloworld.default.192.168.1.240.nip.io", "Function URL")
 
-func init(){
+func init() {
 	log.SetLevel(log.DebugLevel)
 	log.SetFormatter(&log.TextFormatter{TimestampFormat: "2006-01-02 15:04:05.000000", FullTimestamp: true})
 }
@@ -52,16 +52,16 @@ var handler = func(data []byte) {
 func TestSdk_InvokeWithXDT(t *testing.T) {
 
 	payloadData := make([]byte, 10*1024*1024) // 10MiB
-	if _,err := rand.Read(payloadData);err != nil {
+	if _, err := rand.Read(payloadData); err != nil {
 		log.Fatal(err)
 	}
 
 	// start server at sQP
 	go sqp.StartServer(sdk.LoadedConfig.SQPServerAddr)
 	go dqp.StartServer(sdk.LoadedConfig.DQPServerAddr)
-	go sdk.StartDstServer(sdk.LoadedConfig.DstServerAddr,handler)
+	go sdk.StartDstServer(sdk.LoadedConfig.DstServerAddr, handler)
 
-	time.Sleep(time.Second*2)
+	time.Sleep(time.Second * 2)
 
 	chunkSizeInBytes := sdk.LoadedConfig.ChunkSizeInBytes
 
@@ -88,14 +88,14 @@ func TestBenchmark_XDT(t *testing.T) {
 
 	go sqp.StartServer(sdk.LoadedConfig.SQPServerAddr)
 	go dqp.StartServer(sdk.LoadedConfig.DQPServerAddr)
-	go sdk.StartDstServer(sdk.LoadedConfig.DstServerAddr,handler)
+	go sdk.StartDstServer(sdk.LoadedConfig.DstServerAddr, handler)
 
 	payloadSizes := []int{10, 100, 1000, 10000, 100000}
 
 	latencyMap := make(map[int][]float64)
 
 	payloadData := make([]byte, 101*1024*1024) // 10MiB
-	if _,err := rand.Read(payloadData);err != nil {
+	if _, err := rand.Read(payloadData); err != nil {
 		log.Fatal(err)
 	}
 	chunkSizeInBytes := sdk.LoadedConfig.ChunkSizeInBytes

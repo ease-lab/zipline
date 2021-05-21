@@ -40,6 +40,7 @@ import (
 
 // dataQueue stores a chan []bytes per payload addressed by transaction ID
 var dataQueue sync.Map
+
 // dataQueueSize stores a total number of chunks per payload addressed by transaction ID
 var dataQueueSize sync.Map
 
@@ -89,7 +90,7 @@ func FetchFromDQP(ctx context.Context, key string, chunkSizeInBytes int) (time.D
 		chunk, err := stream.Recv()
 		if err == io.EOF {
 			elapsed := time.Since(start)
-			log.Infof("DST: Received %d chunks at DstFn with first/last bytes as:",chunkCount)
+			log.Infof("DST: Received %d chunks at DstFn with first/last bytes as:", chunkCount)
 			//log.Trace(dataQueue[key+";0"][0:9],dataQueue[key+";"+strconv.Itoa(chunkCount-1)][len(dataQueue[key+";"+strconv.Itoa(chunkCount-1)])-9:])
 			return elapsed, chunkCount
 		}
@@ -97,14 +98,14 @@ func FetchFromDQP(ctx context.Context, key string, chunkSizeInBytes int) (time.D
 			log.Fatalf("DST: receive error: %v", err)
 		}
 		log.Tracef("DST: Received chunk no. %d", chunkCount)
-		if _,ok := dataQueue.Load(key); !ok {
+		if _, ok := dataQueue.Load(key); !ok {
 			log.Infof("DST: creating a new channel")
 			channel = make(chan []byte, 1600)
 			dataQueue.Store(key, channel)
-			log.Infof("DST: TotalChunks = %d",chunk.TotalChunks)
-			dataQueueSize.Store(key,chunk.TotalChunks)
+			log.Infof("DST: TotalChunks = %d", chunk.TotalChunks)
+			dataQueueSize.Store(key, chunk.TotalChunks)
 		}
-		log.Infof("DST: Enquing chunk number %d",chunkCount)
+		log.Infof("DST: Enquing chunk number %d", chunkCount)
 		channel <- chunk.Chunk
 		chunkCount += 1
 	}

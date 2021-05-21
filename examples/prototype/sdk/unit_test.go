@@ -35,7 +35,7 @@ import (
 	log "github.com/sirupsen/logrus"
 )
 
-func init(){
+func init() {
 	log.SetLevel(log.DebugLevel)
 	log.SetFormatter(&log.TextFormatter{TimestampFormat: "2006-01-02 15:04:05.000000", FullTimestamp: true})
 }
@@ -48,7 +48,7 @@ func TestSDK_to_sQP_data_transfer(t *testing.T) {
 	key := strconv.Itoa(int(now.UnixNano()))
 	payloadData := make([]byte, 10*1024*1024) // 10MiB
 
-	if _,err := rand.Read(payloadData);err != nil {
+	if _, err := rand.Read(payloadData); err != nil {
 		log.Fatal(err)
 	}
 	chunkSizeInBytes := sdk.LoadedConfig.ChunkSizeInBytes
@@ -62,12 +62,13 @@ func TestSDK_to_sQP_data_transfer(t *testing.T) {
 func TestSQP_to_dQP_data_transfer(t *testing.T) {
 
 	go sqp.StartServer(sdk.LoadedConfig.SQPServerAddr)
+	go dqp.StartServer(sdk.LoadedConfig.DQPServerAddr)
 
 	now := time.Now()
 	key := strconv.Itoa(int(now.UnixNano()))
 	payloadData := make([]byte, 10*1024*1024) // 10MiB
 	//create random blob
-	if _,err := rand.Read(payloadData);err != nil {
+	if _, err := rand.Read(payloadData); err != nil {
 		log.Fatal(err)
 	}
 	chunkSizeInBytes := sdk.LoadedConfig.ChunkSizeInBytes
@@ -93,7 +94,7 @@ func TestDQP_to_DstFn_data_transfer(t *testing.T) {
 	key := strconv.Itoa(int(now.UnixNano()))
 	payloadData := make([]byte, 10*1024*1024) // 10MiB
 	//create random blob
-	if _,err := rand.Read(payloadData);err != nil {
+	if _, err := rand.Read(payloadData); err != nil {
 		log.Fatal(err)
 	}
 	chunkSizeInBytes := sdk.LoadedConfig.ChunkSizeInBytes

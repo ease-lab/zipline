@@ -20,7 +20,7 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 
-package fx
+package main
 
 import (
 	"crypto/rand"
@@ -31,27 +31,24 @@ import (
 	"github.com/ease-lab/vhive_stealth/examples/prototype/sdk"
 )
 
-type payload struct {
-	FunctionName string
-	Data         []byte
-	Key          string
-	isXDT        bool
-}
-
 func main() {
 	payloadData := make([]byte, 10*1024*1024) // 10MiB
-	rand.Read(payloadData)
+	if _, err := rand.Read(payloadData); err != nil {
+		log.Fatal(err)
+	}
 
 	chunkSizeInBytes := sdk.LoadedConfig.ChunkSizeInBytes
 
-	payloadToSend := &sdk.Payload{
+	payloadToSend := sdk.Payload{
 		FunctionName: "HelloXDT",
 		Data:         payloadData,
 		Key:          "",
 	}
 
 	start := time.Now()
-	sdk.InvokeWithXDT("", *payloadToSend, chunkSizeInBytes)
+	log.Infof("starting XDT call")
+	url := sdk.LoadedConfig.LBAddr
+	sdk.InvokeWithXDT(url, payloadToSend, chunkSizeInBytes)
 	elapsed := time.Since(start)
 
 	log.Infof("completed XDT in %s", elapsed)

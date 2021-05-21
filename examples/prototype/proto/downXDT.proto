@@ -29,12 +29,12 @@ package downXDT;
 
 
 service XDTtoFn {
-    rpc XDTFnCall (InvocationRequest) returns (Empty) {}
-    rpc XDTDataServe (DataRequest) returns (stream Data) {} 
+  rpc XDTFnCall (InvocationRequest) returns (Empty) {}
+  rpc XDTDataServe (DataRequest) returns (stream Data) {}
 }
 
 message InvocationRequest {
-    bytes XDTJSON = 1;
+  bytes XDTJSON = 1;
 }
 
 message Empty {
@@ -42,11 +42,11 @@ message Empty {
 }
 
 message Data {
-    bytes chunk = 1;
-    int64 TotalChunks = 3;
+  bytes chunk = 1;
+  int64 TotalChunks = 3;
 }
 
 message DataRequest {
-    string key = 1;
-    int64 ChunkSize = 2;
+  string key = 1;
+  int64 ChunkSize = 2;
 }

@@ -28,12 +28,12 @@ option go_package = "github.com/ease-lab/vhive_stealth/examples/prototype/proto/
 package fnInvocation;
 
 service Invocation {
-    rpc RouteInvocation (InvocationRequest) returns (Empty) {}
+  rpc RouteInvocation (InvocationRequest) returns (Empty) {}
 
 }
 
 message InvocationRequest {
-    bytes XDTJSON = 1;
+  bytes XDTJSON = 1;
 
 }
 

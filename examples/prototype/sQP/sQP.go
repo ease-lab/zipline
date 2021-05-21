@@ -37,10 +37,8 @@ import (
 	"google.golang.org/grpc"
 )
 
-// dataQueue stores a chan []bytes per payload addressed by transaction ID
-var dataQueue sync.Map
-// dataQueueSize stores a total number of chunks per payload addressed by transaction ID
-var dataQueueSize sync.Map
+// bufferPool is responsible for managing bounded buffers of channels to store data
+var bufferPool sdk.BufferPool
 
 type crossXDTServer struct {
 	crossXDT.UnimplementedStreamDataServer
@@ -54,35 +52,37 @@ type upXDTServer struct {
 func (s upXDTServer) SendData(srv upXDT.StreamData_SendDataServer) error {
 	chunkCount := 0
 	var key string
+	var onlyOnce sync.Once
 	var channel chan []byte
+	var totalChunks int64
 	for {
 		chunk, err := srv.Recv()
 		if err == io.EOF {
-			log.Infof("sQP: %d chunks received",chunkCount)
+			log.Infof("sQP: %d chunks received", chunkCount)
 			if sdk.LoadedConfig.Routing == "S&F" {
-				dataQueue.Store(key, channel)
+				bufferPool.StoreChannel(key, totalChunks, channel)
 			}
 			return srv.SendAndClose(&upXDT.Empty{})
 		}
 		if err != nil {
 			log.Fatalf("sQP: receive error: %v", err)
 		}
-		key = chunk.Key
 		log.Tracef("sQP: Key received: %s in chunk %d", key, chunkCount)
-		if _,ok := dataQueueSize.Load(key); !ok {
-			log.Infof("sQP: creating a new channel")
+		onlyOnce.Do(func() {
+			key = chunk.Key
+			totalChunks = chunk.TotalChunks
+			log.Infof("sQP: requesting a new channel")
 			if sdk.LoadedConfig.Routing == "CT" {
-				channel = make(chan []byte, sdk.LoadedConfig.BufferSize)
-				dataQueue.Store(key, channel)
-			}else if sdk.LoadedConfig.Routing == "S&F" {
-				channel = make(chan []byte, sdk.LoadedConfig.StAndFwBufferSize)
-			}else {
+				channel = bufferPool.CreateChannel()
+				bufferPool.StoreChannel(key, totalChunks, channel)
+			} else if sdk.LoadedConfig.Routing == "S&F" {
+				channel = bufferPool.CreateChannel()
+			} else {
 				log.Errorf("sQP: Invalid route type. Check config.json")
 			}
-			log.Infof("sQP: chunkTotal = %d",chunk.TotalChunks)
-			dataQueueSize.Store(key,chunk.TotalChunks)
-		}
-		log.Infof("sQP: Enquing chunk number %d",chunkCount)
+			log.Infof("sQP: chunkTotal = %d", totalChunks)
+		})
+		log.Infof("sQP: Enquing chunk number %d", chunkCount)
 		channel <- chunk.Chunk
 		chunkCount += 1
 	}
@@ -99,17 +99,8 @@ func (s crossXDTServer) ServeData(in *crossXDT.Request, srv crossXDT.StreamData_
 
 	// Check whether the first packet has been received at sQP or not
 	for {
-		if tmp,ok := dataQueueSize.Load(in.Key); ok {
-			chunkTotal = tmp.(int64)
-			log.Tracef("sQP: found chunkTotal %d for key %s",chunkTotal,in.Key)
-			break
-		}
-	}
-	// Check whether the channel has been created by the receiving function
-	for {
-		if tmp,ok := dataQueue.Load(in.Key); ok {
-			log.Tracef("sQP: found channel for key %s",in.Key)
-			channel = tmp.(chan []byte)
+		if channel, chunkTotal = bufferPool.GetChannel(in.Key); channel != nil {
+			log.Tracef("sQP: found chunkTotal %d for key %s", chunkTotal, in.Key)
 			break
 		}
 	}
@@ -117,7 +108,7 @@ func (s crossXDTServer) ServeData(in *crossXDT.Request, srv crossXDT.StreamData_
 	for {
 		select {
 		case chunk := <-channel:
-			resp := crossXDT.Response{Chunk: chunk, ChunkTotal: chunkTotal}
+			resp := crossXDT.Response{Chunk: chunk, TotalChunks: chunkTotal}
 			if err := srv.Send(&resp); err != nil {
 				log.Fatalf("sQP: send error %v", err)
 			}
@@ -125,9 +116,7 @@ func (s crossXDTServer) ServeData(in *crossXDT.Request, srv crossXDT.StreamData_
 			chunkCount += 1
 		default:
 			if chunkTotal == int64(chunkCount) {
-				dataQueue.Delete(in.Key)
-				dataQueueSize.Delete(in.Key)
-				close(channel)
+				bufferPool.FreeChannel(in.Key)
 				return nil
 			}
 		}
@@ -136,6 +125,8 @@ func (s crossXDTServer) ServeData(in *crossXDT.Request, srv crossXDT.StreamData_
 
 // StartServer starts the SrcQP server
 func StartServer(serverAddr string) {
+
+	bufferPool.Init()
 
 	lis, err := net.Listen("tcp", serverAddr)
 	if err != nil {
@@ -151,5 +142,4 @@ func StartServer(serverAddr string) {
 	if err := server.Serve(lis); err != nil {
 		log.Fatalf("sQP: failed to serve: %v", err)
 	}
-
 }

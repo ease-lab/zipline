@@ -31,6 +31,7 @@ import (
 	stockLogger "log"
 	"muzzammil.xyz/jsonc"
 	"os"
+	"sync"
 
 	log "github.com/sirupsen/logrus"
 
@@ -48,16 +49,16 @@ type Payload struct {
 }
 
 type Config struct {
-	ChunkSizeInBytes int
-	DQPServerAddr string
-	LBAddr string
-	DstServerAddr string
-	SQPServerAddr string
-	BufferSize int
-	NumberOfBuffers int
+	ChunkSizeInBytes  int
+	DQPServerAddr     string
+	LBAddr            string
+	DstServerAddr     string
+	SQPServerAddr     string
+	CTBufferSize      int
+	NumberOfBuffers   int
 	StAndFwBufferSize int
-	Routing string
-	TracingEnabled bool
+	Routing           string
+	TracingEnabled    bool
 }
 
 type downXDTServer struct {
@@ -72,7 +73,7 @@ func LoadConfig(file string) Config {
 	if err != nil {
 		log.Fatal(err)
 	}
-	defer func (){
+	defer func() {
 		err = jsonFile.Close()
 		if err != nil {
 			log.Errorf("SDK: Error closing the config file")
@@ -125,5 +126,65 @@ func InitTracer() func() {
 	otel.SetTextMapPropagator(propagation.NewCompositeTextMapPropagator(propagation.TraceContext{}, propagation.Baggage{}))
 	return func() {
 		_ = tp.Shutdown(context.Background())
+	}
+}
+
+type BufferPool struct {
+	bufferChannels chan (chan []byte)
+	channelMap     sync.Map
+}
+
+type buffer struct {
+	channel     chan []byte
+	totalChunks int64
+}
+
+func (b *BufferPool) Init() {
+
+	b.bufferChannels = make(chan chan []byte, LoadedConfig.NumberOfBuffers)
+
+	var bufferSize int
+
+	if LoadedConfig.Routing == "CT" {
+		bufferSize = LoadedConfig.CTBufferSize
+	} else if LoadedConfig.Routing == "S&F" {
+		bufferSize = LoadedConfig.StAndFwBufferSize
+	} else {
+		log.Errorf("sdk: Invalid route type. Check config.json")
+	}
+
+	for i := 0; i < LoadedConfig.NumberOfBuffers; i++ {
+		tmpChannel := make(chan []byte, bufferSize)
+		b.bufferChannels <- tmpChannel
+	}
+}
+
+func (b *BufferPool) CreateChannel() chan []byte {
+	select {
+	case channel := <-b.bufferChannels:
+		return channel
+	default:
+		return nil
+	}
+}
+
+func (b *BufferPool) StoreChannel(key string, totalChunks int64, channel chan []byte) {
+	b.channelMap.Store(key, buffer{channel, totalChunks})
+}
+
+func (b *BufferPool) GetChannel(key string) (chan []byte, int64) {
+	if tmpChanel, ok := b.channelMap.Load(key); ok {
+		return tmpChanel.(buffer).channel, tmpChanel.(buffer).totalChunks
+	} else {
+		return nil, -1
+	}
+}
+
+func (b *BufferPool) FreeChannel(key string) {
+	if tmpChanel, ok := b.channelMap.Load(key); ok {
+		b.channelMap.Delete(key)
+		b.bufferChannels <- tmpChanel.(buffer).channel
+	} else {
+		log.Fatalf("sQP: %s key not found in buffer pool for deletion", key)
 	}
 }

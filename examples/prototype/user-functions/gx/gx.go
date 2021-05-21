@@ -20,7 +20,7 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 
-package gx
+package main
 
 import (
 	log "github.com/sirupsen/logrus"
@@ -28,19 +28,10 @@ import (
 	"github.com/ease-lab/vhive_stealth/examples/prototype/sdk"
 )
 
-type payload struct {
-	FunctionName string
-	Data         []byte
-	Key          string
-}
-
 var handler = func(data []byte) {
 	log.Infof("destination handler received data of size %d", len(data))
 }
 
-var config = sdk.LoadConfig("../../config.json")
-
 func main() {
-	sdk.StartDstServer(sdk.LoadedConfig.DstServerAddr,handler)
+	sdk.StartDstServer(sdk.LoadedConfig.DstServerAddr, handler)
 }
-

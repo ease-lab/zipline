@@ -1,12 +1,12 @@
 {
-    "ChunkSizeInBytes": 65536,
-    "DQPServerAddr": ":50006",
-    "LBAddr": ":50006",
-    "DstServerAddr": ":50007",
-    "SQPServerAddr": ":50005",
-    "NumberOfBuffers": 5,
-    "BufferSize": 25,
-    "StAndFwBufferSize": 1600,
-    "Routing" : "S&F",
-    "TracingEnabled" : false
+  "ChunkSizeInBytes": 65536,
+  "DQPServerAddr": ":50006",
+  "LBAddr": ":50006",
+  "DstServerAddr": ":50007",
+  "SQPServerAddr": ":50005",
+  "NumberOfBuffers": 1,
+  "CTBufferSize": 25,
+  "StAndFwBufferSize": 1600,
+  "Routing": "S&F",
+  "TracingEnabled": false
 }

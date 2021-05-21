@@ -1,4 +1,4 @@
-module fx
+module main
 
 go 1.16
 

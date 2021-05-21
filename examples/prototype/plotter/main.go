@@ -43,12 +43,6 @@ func PlotLatenciesCDF(plotPath string, sortedLatencies []float64, payloadSize in
 	plotInstance.Y.Label.Text = "Portion of requests"
 	plotInstance.X.Label.Text = "Latency (ms)"
 
-	// Uncomment below for hard X limit
-	//var maxIndexKept int
-	//for maxIndexKept = 0; maxIndexKept < len(sortedLatencies) && sortedLatencies[maxIndexKept] <= plotInstance.X.Max; maxIndexKept++ {
-	//}
-	//sortedLatencies = sortedLatencies[:maxIndexKept]
-
 	latenciesToPlot := make(plotter.XYs, len(sortedLatencies))
 	for i := 0; i < len(sortedLatencies); i++ {
 		latenciesToPlot[i].X = sortedLatencies[i] / 1000.0
@@ -74,19 +68,13 @@ func PlotLatenciesCDF(plotPath string, sortedLatencies []float64, payloadSize in
 func PlotPercentile(sortedLatencyMap map[int][]float64) {
 	plotInstance := plot.New()
 
-	plotInstance.Title.Text = fmt.Sprintf("Latency (50th percentile) as a function of payload size")
+	plotInstance.Title.Text = "Latency (50th percentile) as a function of payload size"
 	plotInstance.Y.Label.Text = "Latency (ms)"
 	plotInstance.Y.Scale = plot.LogScale{}
 	plotInstance.Y.Tick.Marker = plot.LogTicks{}
 	plotInstance.X.Label.Text = "Size of payload (KiB)"
 	plotInstance.X.Scale = plot.LogScale{}
 	plotInstance.X.Tick.Marker = plot.LogTicks{}
-
-	// Uncomment below for hard X limit
-	//var maxIndexKept int
-	//for maxIndexKept = 0; maxIndexKept < len(sortedLatencies) && sortedLatencies[maxIndexKept] <= plotInstance.X.Max; maxIndexKept++ {
-	//}
-	//sortedLatencies = sortedLatencies[:maxIndexKept]
 
 	percentiles := []int{50}
 
@@ -128,17 +116,11 @@ func PlotPercentile(sortedLatencyMap map[int][]float64) {
 func PlotBW(sortedLatencyMap map[int][]float64) {
 	plotInstance := plot.New()
 
-	plotInstance.Title.Text = fmt.Sprintf("Bandwidth as a function of a payload size")
+	plotInstance.Title.Text = "Bandwidth as a function of a payload size"
 	plotInstance.Y.Label.Text = "BW in MiB/s"
 	plotInstance.X.Label.Text = "Size of payload (KiB)"
 	plotInstance.X.Scale = plot.LogScale{}
 	plotInstance.X.Tick.Marker = plot.LogTicks{}
-
-	// Uncomment below for hard X limit
-	//var maxIndexKept int
-	//for maxIndexKept = 0; maxIndexKept < len(sortedLatencies) && sortedLatencies[maxIndexKept] <= plotInstance.X.Max; maxIndexKept++ {
-	//}
-	//sortedLatencies = sortedLatencies[:maxIndexKept]
 
 	latenciesToPlot := make(plotter.XYs, len(sortedLatencyMap))
 	var pointLabels []string

@@ -39,10 +39,8 @@ import (
 	"google.golang.org/grpc"
 )
 
-// dataQueue stores a chan []bytes per payload addressed by transaction ID
-var dataQueue sync.Map
-// dataQueueSize stores a total number of chunks per payload addressed by transaction ID
-var dataQueueSize sync.Map
+// bufferPool is responsible for managing bounded buffers of channels to store data
+var bufferPool sdk.BufferPool
 
 type fnInvocationServer struct {
 	fnInvocation.UnimplementedInvocationServer
@@ -58,28 +56,18 @@ type payload struct {
 	Key          string
 }
 
-
-
 // XDTDataServe is a gRPC server to serve data to the DstFn
-func (s downXDTServer) XDTDataServe( in *downXDT.DataRequest, srv downXDT.XDTtoFn_XDTDataServeServer) error {
+func (s downXDTServer) XDTDataServe(in *downXDT.DataRequest, srv downXDT.XDTtoFn_XDTDataServeServer) error {
 
 	log.Infof("dQP: data being fetched by DstFn using key : %s", in.Key)
 
 	chunkCount := 0
 	var channel chan []byte
 	var chunkTotal int64
+	// Check whether the first packet has been received at dQP or not
 	for {
-		log.Tracef("dQP: finding channel for key %s",in.Key)
-		if tmp,ok := dataQueue.Load(in.Key); ok {
-			log.Tracef("dQP: found channel for key %s",in.Key)
-			channel = tmp.(chan []byte)
-			break
-		}
-	}
-	for {
-		if tmp,ok := dataQueueSize.Load(in.Key); ok {
-			chunkTotal = tmp.(int64)
-			log.Tracef("dQP: found chunkTotal %d for key %s",chunkTotal,in.Key)
+		if channel, chunkTotal = bufferPool.GetChannel(in.Key); channel != nil {
+			log.Tracef("dQP: found chunkTotal %d for key %s at sQP", chunkTotal, in.Key)
 			break
 		}
 	}
@@ -87,17 +75,15 @@ func (s downXDTServer) XDTDataServe( in *downXDT.DataRequest, srv downXDT.XDTtoF
 	for {
 		select {
 		case chunk := <-channel:
-			resp := downXDT.Data{Chunk:chunk }
+			resp := downXDT.Data{Chunk: chunk}
 			if err := srv.Send(&resp); err != nil {
 				log.Fatalf("dQP: send error %v", err)
 			}
 			log.Tracef("dQP: Sending chunk : %d to DstFn", chunkCount)
-			chunkCount+=1
+			chunkCount += 1
 		default:
 			if chunkTotal == int64(chunkCount) {
-				dataQueue.Delete(in.Key)
-				dataQueueSize.Delete(in.Key)
-				close(channel)
+				bufferPool.FreeChannel(in.Key)
 				return nil
 			}
 		}
@@ -120,7 +106,7 @@ func (s fnInvocationServer) RouteInvocation(ctx context.Context, in *fnInvocatio
 	if sdk.LoadedConfig.Routing == "CT" {
 		log.Infof("dQP: CT: pulling data from sQP")
 		go PullDataFromSrcQP(ctx, xdtPayload.Key, chunkSizeInBytes)
-	}else if sdk.LoadedConfig.Routing == "S&F"{
+	} else if sdk.LoadedConfig.Routing == "S&F" {
 		log.Infof("dQP: S&F: pulling data from sQP")
 		PullDataFromSrcQP(ctx, xdtPayload.Key, chunkSizeInBytes)
 	}
@@ -133,7 +119,7 @@ func (s fnInvocationServer) RouteInvocation(ctx context.Context, in *fnInvocatio
 	if err != nil {
 		log.Errorf("did not connect: %v", err)
 	}
-	defer func (){
+	defer func() {
 		err = conn.Close()
 		if err != nil {
 			log.Errorf("dQP: Error closing the connection to Dest")
@@ -168,13 +154,15 @@ func PullDataFromSrcQP(ctx context.Context, key string, chunkSizeInBytes int) {
 	}
 
 	chunkCount := 0
+	var onlyOnce sync.Once
 	var channel chan []byte
+	var totalChunks int64
 	for {
 		chunk, err := stream.Recv()
 		if err == io.EOF {
-			log.Tracef("dQP: %d chunks received at Dst",chunkCount)
+			log.Tracef("dQP: %d chunks received at Dst", chunkCount)
 			if sdk.LoadedConfig.Routing == "S&F" {
-				dataQueue.Store(key, channel)
+				bufferPool.StoreChannel(key, totalChunks, channel)
 			}
 			return
 		}
@@ -182,20 +170,20 @@ func PullDataFromSrcQP(ctx context.Context, key string, chunkSizeInBytes int) {
 			log.Errorf("dQP: receive error: %v", err)
 		}
 		log.Tracef("dQP: Received chunk no. %d", chunkCount)
-		if _,ok := dataQueueSize.Load(key); !ok {
-			log.Infof("dQP: creating a new channel")
+		onlyOnce.Do(func() {
+			totalChunks = chunk.TotalChunks
+			log.Infof("dQP: requesting a new channel")
 			if sdk.LoadedConfig.Routing == "CT" {
-				channel = make(chan []byte, sdk.LoadedConfig.BufferSize)
-				dataQueue.Store(key, channel)
-			}else if sdk.LoadedConfig.Routing == "S&F" {
-				channel = make(chan []byte, sdk.LoadedConfig.StAndFwBufferSize)
-			}else {
+				channel = bufferPool.CreateChannel()
+				bufferPool.StoreChannel(key, chunk.TotalChunks, channel)
+			} else if sdk.LoadedConfig.Routing == "S&F" {
+				channel = bufferPool.CreateChannel()
+			} else {
 				log.Errorf("dQP: Invalid route type. Check config.json")
 			}
-			log.Infof("dQP: chunkTotal = %d",chunk.ChunkTotal)
-			dataQueueSize.Store(key,chunk.ChunkTotal)
-		}
-		log.Infof("dQP: Enquing chunk number %d",chunkCount)
+			log.Infof("dQP: chunkTotal = %d", chunk.TotalChunks)
+		})
+		log.Infof("dQP: Enquing chunk number %d", chunkCount)
 		channel <- chunk.Chunk
 		chunkCount += 1
 	}
@@ -203,6 +191,8 @@ func PullDataFromSrcQP(ctx context.Context, key string, chunkSizeInBytes int) {
 
 // StartServer starts DstQP server
 func StartServer(serverAddr string) {
+
+	bufferPool.Init()
 
 	lis, err := net.Listen("tcp", serverAddr)
 	if err != nil {
@@ -218,5 +208,4 @@ func StartServer(serverAddr string) {
 	if err := server.Serve(lis); err != nil {
 		log.Fatalf("dQP: failed to serve: %v", err)
 	}
-
 }
