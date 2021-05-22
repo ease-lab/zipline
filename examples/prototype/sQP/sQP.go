@@ -23,7 +23,7 @@
 package sqp
 
 import (
-	"github.com/ease-lab/vhive_stealth/examples/prototype/sdk"
+	"XDTprototype/sdk"
 	"go.opentelemetry.io/contrib/instrumentation/google.golang.org/grpc/otelgrpc"
 	"io"
 	"sync"
@@ -31,8 +31,8 @@ import (
 	log "github.com/sirupsen/logrus"
 	"net"
 
-	"github.com/ease-lab/vhive_stealth/examples/prototype/proto/crossXDT"
-	"github.com/ease-lab/vhive_stealth/examples/prototype/proto/upXDT"
+	"XDTprototype/proto/crossXDT"
+	"XDTprototype/proto/upXDT"
 
 	"google.golang.org/grpc"
 )
@@ -59,7 +59,7 @@ func (s upXDTServer) SendData(srv upXDT.StreamData_SendDataServer) error {
 		chunk, err := srv.Recv()
 		if err == io.EOF {
 			log.Infof("sQP: %d chunks received", chunkCount)
-			if sdk.LoadedConfig.Routing == "S&F" {
+			if sdk.LoadedConfig.Routing == sdk.STORE_FORWARD {
 				bufferPool.StoreChannel(key, totalChunks, channel)
 			}
 			return srv.SendAndClose(&upXDT.Empty{})
@@ -72,10 +72,10 @@ func (s upXDTServer) SendData(srv upXDT.StreamData_SendDataServer) error {
 			key = chunk.Key
 			totalChunks = chunk.TotalChunks
 			log.Infof("sQP: requesting a new channel")
-			if sdk.LoadedConfig.Routing == "CT" {
+			if sdk.LoadedConfig.Routing == sdk.CUT_THROUGH {
 				channel = bufferPool.CreateChannel()
 				bufferPool.StoreChannel(key, totalChunks, channel)
-			} else if sdk.LoadedConfig.Routing == "S&F" {
+			} else if sdk.LoadedConfig.Routing == sdk.STORE_FORWARD {
 				channel = bufferPool.CreateChannel()
 			} else {
 				log.Errorf("sQP: Invalid route type. Check config.json")
@@ -91,7 +91,7 @@ func (s upXDTServer) SendData(srv upXDT.StreamData_SendDataServer) error {
 // ServeData is the gRPC server to serve the available data to the dQP
 func (s crossXDTServer) ServeData(in *crossXDT.Request, srv crossXDT.StreamData_ServeDataServer) error {
 
-	log.Infof("sQP: DQP is fetching key: %s", in.Key)
+	log.Infof("sQP: dQP is fetching key: %s", in.Key)
 
 	chunkCount := 0
 	var channel chan []byte

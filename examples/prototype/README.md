@@ -21,5 +21,5 @@ make integ-test
 - NumberOfBuffers: Number of buffer channels to create
 - BufferSize: Number of chunks to buffer inside sQP and dQP
 - StAndFwBufferSize:  Total size of buffer in store and forward routing
-- Routing : Routing type [S&F, CT]
+- Routing : Routing type [Store&Forward, CutThrough]
 - TracingEnabled : Enable tracing using open-telemetry [true,false]

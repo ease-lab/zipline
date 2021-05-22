@@ -29,9 +29,9 @@ import (
 	"testing"
 	"time"
 
-	"github.com/ease-lab/vhive_stealth/examples/prototype/dqp"
-	"github.com/ease-lab/vhive_stealth/examples/prototype/sdk"
-	"github.com/ease-lab/vhive_stealth/examples/prototype/sqp"
+	"XDTprototype/dqp"
+	"XDTprototype/sdk"
+	"XDTprototype/sqp"
 	log "github.com/sirupsen/logrus"
 )
 

@@ -31,10 +31,10 @@ import (
 	"net"
 	"sync"
 
-	"github.com/ease-lab/vhive_stealth/examples/prototype/proto/crossXDT"
-	"github.com/ease-lab/vhive_stealth/examples/prototype/proto/downXDT"
-	"github.com/ease-lab/vhive_stealth/examples/prototype/proto/fnInvocation"
-	"github.com/ease-lab/vhive_stealth/examples/prototype/sdk"
+	"XDTprototype/proto/crossXDT"
+	"XDTprototype/proto/downXDT"
+	"XDTprototype/proto/fnInvocation"
+	"XDTprototype/sdk"
 
 	"google.golang.org/grpc"
 )
@@ -103,11 +103,11 @@ func (s fnInvocationServer) RouteInvocation(ctx context.Context, in *fnInvocatio
 	log.Infof("dQP: fetching data from sQP using key : %s", xdtPayload.Key)
 	chunkSizeInBytes := sdk.LoadedConfig.ChunkSizeInBytes
 
-	if sdk.LoadedConfig.Routing == "CT" {
-		log.Infof("dQP: CT: pulling data from sQP")
+	if sdk.LoadedConfig.Routing == sdk.CUT_THROUGH {
+		log.Infof("dQP: [cut-through]: pulling data from sQP")
 		go PullDataFromSrcQP(ctx, xdtPayload.Key, chunkSizeInBytes)
-	} else if sdk.LoadedConfig.Routing == "S&F" {
-		log.Infof("dQP: S&F: pulling data from sQP")
+	} else if sdk.LoadedConfig.Routing == sdk.STORE_FORWARD {
+		log.Infof("dQP: [Store & Forward]: pulling data from sQP")
 		PullDataFromSrcQP(ctx, xdtPayload.Key, chunkSizeInBytes)
 	}
 
@@ -161,7 +161,7 @@ func PullDataFromSrcQP(ctx context.Context, key string, chunkSizeInBytes int) {
 		chunk, err := stream.Recv()
 		if err == io.EOF {
 			log.Tracef("dQP: %d chunks received at Dst", chunkCount)
-			if sdk.LoadedConfig.Routing == "S&F" {
+			if sdk.LoadedConfig.Routing == sdk.STORE_FORWARD {
 				bufferPool.StoreChannel(key, totalChunks, channel)
 			}
 			return
@@ -173,10 +173,10 @@ func PullDataFromSrcQP(ctx context.Context, key string, chunkSizeInBytes int) {
 		onlyOnce.Do(func() {
 			totalChunks = chunk.TotalChunks
 			log.Infof("dQP: requesting a new channel")
-			if sdk.LoadedConfig.Routing == "CT" {
+			if sdk.LoadedConfig.Routing == sdk.CUT_THROUGH {
 				channel = bufferPool.CreateChannel()
 				bufferPool.StoreChannel(key, chunk.TotalChunks, channel)
-			} else if sdk.LoadedConfig.Routing == "S&F" {
+			} else if sdk.LoadedConfig.Routing == sdk.STORE_FORWARD {
 				channel = bufferPool.CreateChannel()
 			} else {
 				log.Errorf("dQP: Invalid route type. Check config.json")

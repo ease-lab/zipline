@@ -33,7 +33,7 @@ import (
 
 	log "github.com/sirupsen/logrus"
 
-	"github.com/ease-lab/vhive_stealth/examples/prototype/proto/downXDT"
+	"XDTprototype/proto/downXDT"
 
 	"google.golang.org/grpc"
 )
@@ -43,6 +43,10 @@ var dataQueue sync.Map
 
 // dataQueueSize stores a total number of chunks per payload addressed by transaction ID
 var dataQueueSize sync.Map
+
+type downXDTServer struct {
+	downXDT.UnimplementedXDTtoFnServer
+}
 
 var DestinationHandler func([]byte)
 
@@ -100,7 +104,7 @@ func FetchFromDQP(ctx context.Context, key string, chunkSizeInBytes int) (time.D
 		log.Tracef("DST: Received chunk no. %d", chunkCount)
 		if _, ok := dataQueue.Load(key); !ok {
 			log.Infof("DST: creating a new channel")
-			channel = make(chan []byte, 1600)
+			channel = make(chan []byte, LoadedConfig.StAndFwBufferSize)
 			dataQueue.Store(key, channel)
 			log.Infof("DST: TotalChunks = %d", chunk.TotalChunks)
 			dataQueueSize.Store(key, chunk.TotalChunks)

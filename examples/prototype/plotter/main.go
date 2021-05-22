@@ -36,7 +36,11 @@ import (
 	"gonum.org/v1/plot/vg/draw"
 )
 
-func PlotLatenciesCDF(plotPath string, sortedLatencies []float64, payloadSize int) {
+const (
+	plotLocationPrefix = "./"
+)
+
+func PlotLatenciesCDF(sortedLatencies []float64, payloadSize int) {
 	plotInstance := plot.New()
 
 	plotInstance.Title.Text = fmt.Sprintf("Latency CDF for %dKiB requests", payloadSize)
@@ -60,7 +64,7 @@ func PlotLatenciesCDF(plotPath string, sortedLatencies []float64, payloadSize in
 	}
 
 	// Save the plot to a PNG file.
-	if err := plotInstance.Save(5*vg.Inch, 5*vg.Inch, plotPath); err != nil {
+	if err := plotInstance.Save(5*vg.Inch, 5*vg.Inch, plotLocationPrefix+"cdf_"+strconv.Itoa(payloadSize)+"KiB.png"); err != nil {
 		log.Errorf("[sub-experiment %dKiB] Could not save CDF plot: %s", payloadSize, err.Error())
 	}
 }
@@ -108,7 +112,7 @@ func PlotPercentile(sortedLatencyMap map[int][]float64) {
 	}
 
 	// Save the plot to a PNG file.
-	if err := plotInstance.Save(5*vg.Inch, 5*vg.Inch, "percentile_plot.png"); err != nil {
+	if err := plotInstance.Save(5*vg.Inch, 5*vg.Inch, plotLocationPrefix+"percentile_plot.png"); err != nil {
 		log.Errorf("Could not save percentile plot: %s", err.Error())
 	}
 }
@@ -155,7 +159,7 @@ func PlotBW(sortedLatencyMap map[int][]float64) {
 	plotInstance.Add(lpLine, lpPoints, labels)
 
 	// Save the plot to a PNG file.
-	if err := plotInstance.Save(5*vg.Inch, 5*vg.Inch, "BW_plot.png"); err != nil {
+	if err := plotInstance.Save(5*vg.Inch, 5*vg.Inch, plotLocationPrefix+"BW_plot.png"); err != nil {
 		log.Errorf("Could not save BW plot: %s", err.Error())
 	}
 }

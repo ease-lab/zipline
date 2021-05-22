@@ -20,23 +20,64 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 
-// Push data to the source QP
-syntax = "proto3";
+package sdk
 
-option go_package = "XDTprototype/proto/upXDT";
+import (
+	"encoding/json"
+	log "github.com/sirupsen/logrus"
+	"io/ioutil"
+	"os"
+)
 
-package upXDT;
-
-service StreamData {
-  rpc SendData (stream Request) returns (Empty) {}
+type Payload struct {
+	FunctionName string
+	Data         []byte
+	Key          string
+	IsXDT        bool
 }
 
-message Request {
-  bytes chunk = 1;
-  string key = 2;
-  int64 TotalChunks = 3;
+type Config struct {
+	ChunkSizeInBytes  int
+	DQPServerAddr     string
+	LBAddr            string
+	DstServerAddr     string
+	SQPServerAddr     string
+	CTBufferSize      int
+	NumberOfBuffers   int
+	StAndFwBufferSize int
+	Routing           string
+	TracingEnabled    bool
 }
 
-message Empty {
+const (
+	STORE_FORWARD = "Store&Forward"
+	CUT_THROUGH   = "CutThrough"
+)
 
+var LoadedConfig = LoadConfig("../config.json")
+
+func LoadConfig(file string) Config {
+	log.Debugf("Opening JSON file with config: %s\n", file)
+	jsonFile, err := os.Open(file)
+	if err != nil {
+		log.Fatal(err)
+	}
+	defer func() {
+		err = jsonFile.Close()
+		if err != nil {
+			log.Errorf("SDK: Error closing the config file")
+		}
+	}()
+
+	jsonByteValue, err := ioutil.ReadAll(jsonFile)
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	var config Config
+	if err = json.Unmarshal(jsonByteValue, &config); err != nil {
+		log.Fatal(err)
+	}
+
+	return config
 }

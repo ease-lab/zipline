@@ -26,14 +26,13 @@ import (
 	"crypto/rand"
 	"flag"
 	"sort"
-	"strconv"
 	"testing"
 	"time"
 
-	"github.com/ease-lab/vhive_stealth/examples/gRPC_stream/plotter"
-	"github.com/ease-lab/vhive_stealth/examples/prototype/dqp"
-	"github.com/ease-lab/vhive_stealth/examples/prototype/sdk"
-	"github.com/ease-lab/vhive_stealth/examples/prototype/sqp"
+	"XDTgRPC_stream/plotter"
+	"XDTprototype/dqp"
+	"XDTprototype/sdk"
+	"XDTprototype/sqp"
 	log "github.com/sirupsen/logrus"
 )
 
@@ -123,7 +122,7 @@ func TestBenchmark_XDT(t *testing.T) {
 		payloadSizeInBytes := payloadSize * 1024
 		log.Infof("checking for %dKiB", payloadSize)
 		latencies := benchPayload(payloadSizeInBytes, chunkSizeInBytes, *sampleSize, *URL, payloadData)
-		plotter.PlotLatenciesCDF("./cdf_"+strconv.Itoa(payloadSize)+"KiB.png", latencies, payloadSize)
+		plotter.PlotLatenciesCDF(latencies, payloadSize)
 		latencyMap[payloadSize] = latencies
 	}
 

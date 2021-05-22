@@ -23,7 +23,7 @@
 // control path request
 syntax = "proto3";
 
-option go_package = "github.com/ease-lab/vhive_stealth/examples/prototype/proto/fnInvocation";
+option go_package = "XDTprototype/proto/fnInvocation";
 
 package fnInvocation;
 

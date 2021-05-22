@@ -25,7 +25,7 @@ package main
 import (
 	log "github.com/sirupsen/logrus"
 
-	"github.com/ease-lab/vhive_stealth/examples/prototype/sdk"
+	"XDTprototype/sdk"
 )
 
 var handler = func(data []byte) {

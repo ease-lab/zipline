@@ -25,6 +25,7 @@ all: local
 .PHONY: proto_gen proto_install
 
 PROTO_FILES:=crossXDT fnInvocation downXDT upXDT
+ROUTING_MODES:=Store&Forward CutThrough
 
 proto_install:
 	GO111MODULE="on" go get google.golang.org/protobuf/cmd/protoc-gen-go \
@@ -49,12 +50,19 @@ build_local:
 
 clean:
 	rm -rf bins
-	
+
 unit-test:
+	sed -i '/Routing/c\  "Routing": "Store&Forward",' ./config.json
 	cd sdk && go test unit_test.go -run TestSDK_to_sQP_data_transfer -race -v
 	cd sdk && go test unit_test.go -run TestSQP_to_dQP_data_transfer -race -v
 	cd sdk && go test unit_test.go -run TestDQP_to_DstFn_data_transfer -race -v
 
-integ-test:
+integ-test_CT:
+	sed -i '/Routing/c\  "Routing": "CutThrough",' ./config.json
 	cd sdk && go test ./integration_test.go -run TestSdk_InvokeWithXDT -race -v
 
+integ-test_SF:
+	sed -i '/Routing/c\  "Routing": "Store&Forward",' ./config.json
+	cd sdk && go test ./integration_test.go -run TestSdk_InvokeWithXDT -race -v
+
+integ-test: integ-test_CT integ-test_SF

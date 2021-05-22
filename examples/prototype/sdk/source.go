@@ -31,8 +31,8 @@ import (
 
 	log "github.com/sirupsen/logrus"
 
-	"github.com/ease-lab/vhive_stealth/examples/prototype/proto/fnInvocation"
-	"github.com/ease-lab/vhive_stealth/examples/prototype/proto/upXDT"
+	"XDTprototype/proto/fnInvocation"
+	"XDTprototype/proto/upXDT"
 	"go.opentelemetry.io/contrib/instrumentation/google.golang.org/grpc/otelgrpc"
 
 	"google.golang.org/grpc"
@@ -65,10 +65,10 @@ func InvokeWithXDT(URL string, xdtPayload Payload, chunkSizeInBytes int) {
 
 	serialisedPayload, _ := json.Marshal(xdtPayload)
 
-	if LoadedConfig.Routing == "S&F" {
+	if LoadedConfig.Routing == STORE_FORWARD {
 		log.Info("SDK: using store & forward routing")
 		PushData(ctx, key, payloadData, chunkSizeInBytes)
-	} else if LoadedConfig.Routing == "CT" {
+	} else if LoadedConfig.Routing == CUT_THROUGH {
 		log.Info("SDK: using cut through routing")
 		go PushData(ctx, key, payloadData, chunkSizeInBytes)
 	}
