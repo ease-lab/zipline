@@ -29,7 +29,7 @@ import (
 )
 
 var handler = func(data []byte) {
-	log.Infof("destination handler received data of size %d", len(data))
+	log.Infof("gx: destination handler received data of size %d", len(data))
 }
 
 func main() {

@@ -38,11 +38,11 @@ import (
 func init() {
 	log.SetLevel(log.DebugLevel)
 	log.SetFormatter(&log.TextFormatter{TimestampFormat: "2006-01-02 15:04:05.000000", FullTimestamp: true})
+	go sqp.StartServer(sdk.LoadedConfig.SQPServerAddr)
+	go dqp.StartServer(sdk.LoadedConfig.DQPServerAddr)
 }
 
 func TestSDK_to_sQP_data_transfer(t *testing.T) {
-
-	go sqp.StartServer(sdk.LoadedConfig.SQPServerAddr)
 
 	now := time.Now()
 	key := strconv.Itoa(int(now.UnixNano()))
@@ -60,9 +60,6 @@ func TestSDK_to_sQP_data_transfer(t *testing.T) {
 }
 
 func TestSQP_to_dQP_data_transfer(t *testing.T) {
-
-	go sqp.StartServer(sdk.LoadedConfig.SQPServerAddr)
-	go dqp.StartServer(sdk.LoadedConfig.DQPServerAddr)
 
 	now := time.Now()
 	key := strconv.Itoa(int(now.UnixNano()))
@@ -87,9 +84,6 @@ func TestSQP_to_dQP_data_transfer(t *testing.T) {
 
 func TestDQP_to_DstFn_data_transfer(t *testing.T) {
 
-	go sqp.StartServer(sdk.LoadedConfig.SQPServerAddr)
-	go dqp.StartServer(sdk.LoadedConfig.DQPServerAddr)
-
 	now := time.Now()
 	key := strconv.Itoa(int(now.UnixNano()))
 	payloadData := make([]byte, 10*1024*1024) // 10MiB
@@ -111,8 +105,10 @@ func TestDQP_to_DstFn_data_transfer(t *testing.T) {
 
 	log.Infof("transferred packet from sQP to dQP in %s", duration)
 
-	duration, payloadCount := sdk.FetchFromDQP(context.Background(), key, chunkSizeInBytes)
+	start = time.Now()
+	payloadBytes := sdk.FetchFromDQP(context.Background(), key, chunkSizeInBytes)
+	duration = time.Since(start)
 
-	log.Infof("transferred %d chunks from dQP to DstFn in %s", payloadCount, duration)
+	log.Infof("transferred %d bytes from dQP to DstFn in %s", len(payloadBytes), duration)
 
 }

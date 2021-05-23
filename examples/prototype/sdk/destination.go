@@ -25,24 +25,16 @@ package sdk
 import (
 	"context"
 	"encoding/json"
+	log "github.com/sirupsen/logrus"
 	"go.opentelemetry.io/contrib/instrumentation/google.golang.org/grpc/otelgrpc"
 	"io"
 	"net"
 	"sync"
-	"time"
-
-	log "github.com/sirupsen/logrus"
 
 	"XDTprototype/proto/downXDT"
 
 	"google.golang.org/grpc"
 )
-
-// dataQueue stores a chan []bytes per payload addressed by transaction ID
-var dataQueue sync.Map
-
-// dataQueueSize stores a total number of chunks per payload addressed by transaction ID
-var dataQueueSize sync.Map
 
 type downXDTServer struct {
 	downXDT.UnimplementedXDTtoFnServer
@@ -65,13 +57,14 @@ func (s downXDTServer) XDTFnCall(ctx context.Context, in *downXDT.InvocationRequ
 	chunkSizeInBytes := LoadedConfig.ChunkSizeInBytes
 
 	// fetch data from dQP
-	FetchFromDQP(ctx, key, chunkSizeInBytes)
+	payloadBytes := FetchFromDQP(ctx, key, chunkSizeInBytes)
 	//call destination function
+	DestinationHandler(payloadBytes)
 	return &downXDT.Empty{}, nil
 }
 
 // FetchFromDQP fetches data from dQP to DstFn
-func FetchFromDQP(ctx context.Context, key string, chunkSizeInBytes int) (time.Duration, int) {
+func FetchFromDQP(ctx context.Context, key string, chunkSizeInBytes int) []byte {
 	serverAddr := LoadedConfig.DQPServerAddr
 	conn, err := grpc.Dial(serverAddr, grpc.WithInsecure(),
 		grpc.WithUnaryInterceptor(otelgrpc.UnaryClientInterceptor()),
@@ -79,7 +72,6 @@ func FetchFromDQP(ctx context.Context, key string, chunkSizeInBytes int) (time.D
 	if err != nil {
 		log.Fatalf("DST: can not connect with server %v", err)
 	}
-	start := time.Now()
 
 	client := downXDT.NewXDTtoFnClient(conn)
 	in := &downXDT.DataRequest{Key: key, ChunkSize: int64(chunkSizeInBytes)}
@@ -89,28 +81,30 @@ func FetchFromDQP(ctx context.Context, key string, chunkSizeInBytes int) (time.D
 	}
 
 	chunkCount := 0
-	var channel chan []byte
+	byteCount := 0
+	var onlyOnce sync.Once
+	var totalChunks int64
+	var payloadBytes []byte
 	for {
 		chunk, err := stream.Recv()
 		if err == io.EOF {
-			elapsed := time.Since(start)
 			log.Infof("DST: Received %d chunks at DstFn with first/last bytes as:", chunkCount)
-			//log.Trace(dataQueue[key+";0"][0:9],dataQueue[key+";"+strconv.Itoa(chunkCount-1)][len(dataQueue[key+";"+strconv.Itoa(chunkCount-1)])-9:])
-			return elapsed, chunkCount
+			log.Trace(payloadBytes[0:9], payloadBytes[byteCount-9:byteCount])
+			return payloadBytes[:byteCount]
 		}
 		if err != nil {
 			log.Fatalf("DST: receive error: %v", err)
 		}
 		log.Tracef("DST: Received chunk no. %d", chunkCount)
-		if _, ok := dataQueue.Load(key); !ok {
-			log.Infof("DST: creating a new channel")
-			channel = make(chan []byte, LoadedConfig.StAndFwBufferSize)
-			dataQueue.Store(key, channel)
-			log.Infof("DST: TotalChunks = %d", chunk.TotalChunks)
-			dataQueueSize.Store(key, chunk.TotalChunks)
-		}
-		log.Infof("DST: Enquing chunk number %d", chunkCount)
-		channel <- chunk.Chunk
+		onlyOnce.Do(func() {
+			totalChunks = chunk.TotalChunks
+			log.Infof("DST: creating a new buffer")
+			payloadBytes = make([]byte, LoadedConfig.StAndFwBufferSize*LoadedConfig.ChunkSizeInBytes)
+			log.Infof("sQP: chunkTotal = %d", totalChunks)
+		})
+		log.Infof("DST: appending chunk number %d", chunkCount)
+		copy(payloadBytes[byteCount:], chunk.Chunk)
+		byteCount += len(chunk.Chunk)
 		chunkCount += 1
 	}
 

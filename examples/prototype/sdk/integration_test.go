@@ -45,7 +45,7 @@ func init() {
 }
 
 var handler = func(data []byte) {
-	log.Infof("destination handler received data of size %d", len(data))
+	log.Infof("integ-test destination handler received data of size %d", len(data))
 }
 
 func TestSdk_InvokeWithXDT(t *testing.T) {

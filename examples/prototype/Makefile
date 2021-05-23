@@ -53,16 +53,14 @@ clean:
 
 unit-test:
 	sed -i '/Routing/c\  "Routing": "Store&Forward",' ./config.json
-	cd sdk && go test unit_test.go -run TestSDK_to_sQP_data_transfer -race -v
-	cd sdk && go test unit_test.go -run TestSQP_to_dQP_data_transfer -race -v
-	cd sdk && go test unit_test.go -run TestDQP_to_DstFn_data_transfer -race -v
+	cd sdk && go test unit_test.go -race -v -cover
 
 integ-test_CT:
 	sed -i '/Routing/c\  "Routing": "CutThrough",' ./config.json
-	cd sdk && go test ./integration_test.go -run TestSdk_InvokeWithXDT -race -v
+	cd sdk && go test ./integration_test.go -run TestSdk_InvokeWithXDT -race -v -cover
 
 integ-test_SF:
 	sed -i '/Routing/c\  "Routing": "Store&Forward",' ./config.json
-	cd sdk && go test ./integration_test.go -run TestSdk_InvokeWithXDT -race -v
+	cd sdk && go test ./integration_test.go -run TestSdk_InvokeWithXDT -race -v -cover
 
 integ-test: integ-test_CT integ-test_SF

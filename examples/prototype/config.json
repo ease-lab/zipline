@@ -4,7 +4,7 @@
   "LBAddr": ":50006",
   "DstServerAddr": ":50007",
   "SQPServerAddr": ":50005",
-  "NumberOfBuffers": 1,
+  "NumberOfBuffers": 2,
   "CTBufferSize": 25,
   "StAndFwBufferSize": 1600,
   "Routing": "Store&Forward",
