@@ -36,7 +36,7 @@ import (
 )
 
 func init() {
-	log.SetLevel(log.DebugLevel)
+	log.SetLevel(log.InfoLevel)
 	log.SetFormatter(&log.TextFormatter{TimestampFormat: "2006-01-02 15:04:05.000000", FullTimestamp: true})
 	go sqp.StartServer(sdk.LoadedConfig.SQPServerAddr)
 	go dqp.StartServer(sdk.LoadedConfig.DQPServerAddr)
@@ -54,7 +54,10 @@ func TestSDK_to_sQP_data_transfer(t *testing.T) {
 	chunkSizeInBytes := sdk.LoadedConfig.ChunkSizeInBytes
 
 	start := time.Now()
-	sdk.PushData(context.Background(), key, payloadData, chunkSizeInBytes)
+
+	if err := sdk.PushData(context.Background(), key, payloadData, chunkSizeInBytes); err != nil {
+		log.Fatalf("TestSDK_to_sQP_data_transfer failed %v", err)
+	}
 	duration := time.Since(start)
 	log.Infof("sent %d bytes in %s", len(payloadData), duration)
 }
@@ -71,7 +74,9 @@ func TestSQP_to_dQP_data_transfer(t *testing.T) {
 	chunkSizeInBytes := sdk.LoadedConfig.ChunkSizeInBytes
 
 	start := time.Now()
-	sdk.PushData(context.Background(), key, payloadData, chunkSizeInBytes)
+	if err := sdk.PushData(context.Background(), key, payloadData, chunkSizeInBytes); err != nil {
+		log.Fatalf("TestSQP_to_dQP_data_transfer failed %v", err)
+	}
 	duration := time.Since(start)
 	log.Infof("sent %d bytes in %s", len(payloadData), duration)
 
@@ -94,7 +99,9 @@ func TestDQP_to_DstFn_data_transfer(t *testing.T) {
 	chunkSizeInBytes := sdk.LoadedConfig.ChunkSizeInBytes
 
 	start := time.Now()
-	sdk.PushData(context.Background(), key, payloadData, chunkSizeInBytes)
+	if err := sdk.PushData(context.Background(), key, payloadData, chunkSizeInBytes); err != nil {
+		log.Fatalf("TestDQP_to_DstFn_data_transfer failed %v", err)
+	}
 	duration := time.Since(start)
 
 	log.Infof("transferred %d bytes from SrcFn to sQP in %s", len(payloadData), duration)
@@ -106,7 +113,10 @@ func TestDQP_to_DstFn_data_transfer(t *testing.T) {
 	log.Infof("transferred packet from sQP to dQP in %s", duration)
 
 	start = time.Now()
-	payloadBytes := sdk.FetchFromDQP(context.Background(), key, chunkSizeInBytes)
+	payloadBytes, err := sdk.FetchFromDQP(context.Background(), key, chunkSizeInBytes)
+	if err != nil {
+		log.Fatalf("FetchFromDQP failed %v", err)
+	}
 	duration = time.Since(start)
 
 	log.Infof("transferred %d bytes from dQP to DstFn in %s", len(payloadBytes), duration)

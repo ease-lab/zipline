@@ -20,5 +20,6 @@ require (
 	XDTprototype/sdk v0.0.0-00010101000000-000000000000
 	github.com/sirupsen/logrus v1.8.1
 	go.opentelemetry.io/contrib/instrumentation/google.golang.org/grpc/otelgrpc v0.20.0
+	golang.org/x/sync v0.0.0-20190423024810-112230192c58
 	google.golang.org/grpc v1.37.0
 )

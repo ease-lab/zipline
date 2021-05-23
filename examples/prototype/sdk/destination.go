@@ -49,7 +49,8 @@ func (s downXDTServer) XDTFnCall(ctx context.Context, in *downXDT.InvocationRequ
 
 	var xdtPayload Payload
 	if err := json.Unmarshal(in.XDTJSON, &xdtPayload); err != nil {
-		log.Fatal(err)
+		log.Error(err)
+		return &downXDT.Empty{}, err
 	}
 
 	key := xdtPayload.Key
@@ -57,27 +58,34 @@ func (s downXDTServer) XDTFnCall(ctx context.Context, in *downXDT.InvocationRequ
 	chunkSizeInBytes := LoadedConfig.ChunkSizeInBytes
 
 	// fetch data from dQP
-	payloadBytes := FetchFromDQP(ctx, key, chunkSizeInBytes)
+	payloadBytes, err := FetchFromDQP(ctx, key, chunkSizeInBytes)
+	if err != nil {
+		log.Errorf("DST: FetchFromDQP failed %v", err)
+		return &downXDT.Empty{}, err
+	}
+
 	//call destination function
 	DestinationHandler(payloadBytes)
 	return &downXDT.Empty{}, nil
 }
 
 // FetchFromDQP fetches data from dQP to DstFn
-func FetchFromDQP(ctx context.Context, key string, chunkSizeInBytes int) []byte {
+func FetchFromDQP(ctx context.Context, key string, chunkSizeInBytes int) ([]byte, error) {
 	serverAddr := LoadedConfig.DQPServerAddr
 	conn, err := grpc.Dial(serverAddr, grpc.WithInsecure(),
 		grpc.WithUnaryInterceptor(otelgrpc.UnaryClientInterceptor()),
 		grpc.WithStreamInterceptor(otelgrpc.StreamClientInterceptor()))
 	if err != nil {
-		log.Fatalf("DST: can not connect with server %v", err)
+		log.Errorf("DST: can not connect with server %v", err)
+		return []byte{}, err
 	}
 
 	client := downXDT.NewXDTtoFnClient(conn)
 	in := &downXDT.DataRequest{Key: key, ChunkSize: int64(chunkSizeInBytes)}
 	stream, err := client.XDTDataServe(ctx, in)
 	if err != nil {
-		log.Fatalf("DST: open stream error %v", err)
+		log.Errorf("DST: open stream error %v", err)
+		return []byte{}, err
 	}
 
 	chunkCount := 0
@@ -89,25 +97,25 @@ func FetchFromDQP(ctx context.Context, key string, chunkSizeInBytes int) []byte 
 		chunk, err := stream.Recv()
 		if err == io.EOF {
 			log.Infof("DST: Received %d chunks at DstFn with first/last bytes as:", chunkCount)
-			log.Trace(payloadBytes[0:9], payloadBytes[byteCount-9:byteCount])
-			return payloadBytes[:byteCount]
+			log.Info(payloadBytes[0:9], payloadBytes[byteCount-9:byteCount])
+			return payloadBytes[:byteCount], nil
 		}
 		if err != nil {
-			log.Fatalf("DST: receive error: %v", err)
+			log.Errorf("DST: receive error: %v", err)
+			return []byte{}, err
 		}
-		log.Tracef("DST: Received chunk no. %d", chunkCount)
+		log.Debugf("DST: Received chunk no. %d", chunkCount)
 		onlyOnce.Do(func() {
 			totalChunks = chunk.TotalChunks
 			log.Infof("DST: creating a new buffer")
 			payloadBytes = make([]byte, LoadedConfig.StAndFwBufferSize*LoadedConfig.ChunkSizeInBytes)
 			log.Infof("sQP: chunkTotal = %d", totalChunks)
 		})
-		log.Infof("DST: appending chunk number %d", chunkCount)
+		log.Debugf("DST: appending chunk number %d", chunkCount)
 		copy(payloadBytes[byteCount:], chunk.Chunk)
 		byteCount += len(chunk.Chunk)
 		chunkCount += 1
 	}
-
 }
 
 // StartDstServer starts DstQP server
@@ -123,7 +131,7 @@ func StartDstServer(serverAddr string, handler func([]byte)) {
 		grpc.StreamInterceptor(otelgrpc.StreamServerInterceptor()))
 	downXDT.RegisterXDTtoFnServer(server, downXDTServer{})
 
-	log.Println("DST: start server")
+	log.Infoln("DST: start server")
 	if err := server.Serve(lis); err != nil {
 		log.Fatalf("DST: failed to serve: %v", err)
 	}

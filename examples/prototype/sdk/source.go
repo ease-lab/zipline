@@ -25,6 +25,7 @@ package sdk
 import (
 	"context"
 	"encoding/json"
+	"golang.org/x/sync/errgroup"
 	"google.golang.org/grpc/metadata"
 	"strconv"
 	"time"
@@ -39,7 +40,7 @@ import (
 )
 
 // InvokeWithXDT invokes the RPC call with XDT
-func InvokeWithXDT(URL string, xdtPayload Payload, chunkSizeInBytes int) {
+func InvokeWithXDT(URL string, xdtPayload Payload, chunkSizeInBytes int) error {
 
 	if LoadedConfig.TracingEnabled {
 		shutdown := InitTracer()
@@ -63,53 +64,83 @@ func InvokeWithXDT(URL string, xdtPayload Payload, chunkSizeInBytes int) {
 	xdtPayload.Key = key
 	xdtPayload.IsXDT = true
 
-	serialisedPayload, _ := json.Marshal(xdtPayload)
+	serialisedPayload, err := json.Marshal(xdtPayload)
+	if err != nil {
+		return err
+	}
+
+	errGroup, _ := errgroup.WithContext(ctx)
 
 	if LoadedConfig.Routing == STORE_FORWARD {
 		log.Info("SDK: using store & forward routing")
-		PushData(ctx, key, payloadData, chunkSizeInBytes)
+		err := PushData(ctx, key, payloadData, chunkSizeInBytes)
+		if err != nil {
+			log.Errorf("SDK: [Store & Forward] Push data failed")
+			return err
+		}
 	} else if LoadedConfig.Routing == CUT_THROUGH {
 		log.Info("SDK: using cut through routing")
-		go PushData(ctx, key, payloadData, chunkSizeInBytes)
+		errGroup.Go(func() error {
+			err := PushData(ctx, key, payloadData, chunkSizeInBytes)
+			if err != nil {
+				log.Errorf("SDK: [cut-through] Push data failed")
+				return err
+			}
+			return nil
+		})
 	}
 
-	fnInvocationCall(ctx, URL, serialisedPayload)
+	if err := fnInvocationCall(ctx, URL, serialisedPayload); err != nil {
+		log.Errorf("SDK: InvokeWithXDT: fnInvocationCall failed")
+		return err
+	}
+	// Wait for completion and return the first error (if any)
+	return errGroup.Wait()
 }
 
 // fnInvocationCall makes fn invocation call to dQP with xdt payload
-func fnInvocationCall(ctx context.Context, URL string, serialisedPayload []byte) {
+func fnInvocationCall(ctx context.Context, URL string, serialisedPayload []byte) error {
 
 	conn, err := grpc.Dial(URL, grpc.WithInsecure(),
 		grpc.WithUnaryInterceptor(otelgrpc.UnaryClientInterceptor()),
 		grpc.WithStreamInterceptor(otelgrpc.StreamClientInterceptor()))
 	if err != nil {
-		log.Fatalf("did not connect: %v", err)
+		log.Errorf("did not connect: %v", err)
+		return err
 	}
-	defer func() {
-		err = conn.Close()
-		if err != nil {
-			log.Errorf("dQP: Error closing the connection to Dest")
-		}
-	}()
+	errGroup, _ := errgroup.WithContext(ctx)
 
 	c := fnInvocation.NewInvocationClient(conn)
 
 	log.Infof("SDK: Fn invocation start")
 	_, err = c.RouteInvocation(ctx, &fnInvocation.InvocationRequest{XDTJSON: serialisedPayload})
-	if err == nil {
-		log.Infof("SDK: Fn invocation successful")
+	if err != nil {
+		log.Errorf("SDK: Fn invocation failed")
+		return err
 	}
+	log.Infof("SDK: Fn invocation successful")
+
+	errGroup.Go(func() error {
+		err = conn.Close()
+		if err != nil {
+			log.Errorf("dQP: Error closing the connection to Dest")
+			return err
+		}
+		return nil
+	})
+	return errGroup.Wait()
 }
 
 // PushData to source QP
-func PushData(ctx context.Context, key string, payload []byte, chunkSizeInBytes int) {
+func PushData(ctx context.Context, key string, payload []byte, chunkSizeInBytes int) error {
 
 	serverAddr := LoadedConfig.SQPServerAddr
 	conn, err := grpc.Dial(serverAddr, grpc.WithInsecure(),
 		grpc.WithUnaryInterceptor(otelgrpc.UnaryClientInterceptor()),
 		grpc.WithStreamInterceptor(otelgrpc.StreamClientInterceptor()))
 	if err != nil {
-		log.Fatalf("can not connect with server %v", err)
+		log.Errorf("can not connect with server %v", err)
+		return err
 	}
 
 	client := upXDT.NewStreamDataClient(conn)
@@ -117,7 +148,8 @@ func PushData(ctx context.Context, key string, payload []byte, chunkSizeInBytes 
 	log.Infof("Transfering %d bytes to sQP", payloadSize)
 	stream, err := client.SendData(ctx)
 	if err != nil {
-		log.Fatalf("open stream error %v", err)
+		log.Errorf("open stream error %v", err)
+		return err
 	}
 
 	chunkTotal := len(payload) / chunkSizeInBytes
@@ -130,20 +162,25 @@ func PushData(ctx context.Context, key string, payload []byte, chunkSizeInBytes 
 		if currentByte+chunkSizeInBytes > payloadSize {
 			req := upXDT.Request{Chunk: payload[currentByte:payloadSize], Key: key, TotalChunks: int64(chunkTotal)}
 			if err := stream.Send(&req); err != nil {
-				log.Fatalf("send error %v", err)
+				log.Errorf("send error %v", err)
+				return err
 			}
-			log.Tracef("finishing request number : %d", currentByte)
+			log.Debugf("finishing request number : %d", currentByte)
 		} else {
 			req := upXDT.Request{Chunk: payload[currentByte : currentByte+chunkSizeInBytes], Key: key, TotalChunks: int64(chunkTotal)}
 			if err := stream.Send(&req); err != nil {
-				log.Fatalf("send error %v", err)
+				log.Errorf("send error %v", err)
+				return err
+
 			}
-			log.Tracef("finishing request number : %d", currentByte)
+			log.Debugf("finishing request number : %d", currentByte)
 		}
 
 	}
 	_, err = stream.CloseAndRecv()
 	if err != nil {
-		log.Fatalf("%v.CloseAndRecv() got error %v, want %v", stream, err, nil)
+		log.Errorf("%v.CloseAndRecv() got error %v, want %v", stream, err, nil)
+		return err
 	}
+	return nil
 }

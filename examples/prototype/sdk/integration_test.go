@@ -40,7 +40,7 @@ var sampleSize = flag.Int("sample", 10, "sampleSize")
 var URL = flag.String("url", "helloworld.default.192.168.1.240.nip.io", "Function URL")
 
 func init() {
-	log.SetLevel(log.DebugLevel)
+	log.SetLevel(log.InfoLevel)
 	log.SetFormatter(&log.TextFormatter{TimestampFormat: "2006-01-02 15:04:05.000000", FullTimestamp: true})
 }
 
@@ -73,7 +73,9 @@ func TestSdk_InvokeWithXDT(t *testing.T) {
 	start := time.Now()
 	log.Infof("starting integ test")
 	url := sdk.LoadedConfig.LBAddr
-	sdk.InvokeWithXDT(url, payloadToSend, chunkSizeInBytes)
+	if err := sdk.InvokeWithXDT(url, payloadToSend, chunkSizeInBytes); err != nil {
+		log.Fatalf("TestSdk_InvokeWithXDT failed %v", err)
+	}
 	elapsed := time.Since(start)
 
 	log.Infof("completed XDT in %s", elapsed)
@@ -110,7 +112,9 @@ func TestBenchmark_XDT(t *testing.T) {
 
 		for i := 0; i < sampleSize; i += 1 {
 			start := time.Now()
-			sdk.InvokeWithXDT(url, payloadToSend, chunkSizeInBytes)
+			if err := sdk.InvokeWithXDT(url, payloadToSend, chunkSizeInBytes); err != nil {
+				log.Fatalf("TestBenchmark_XDT failed %v", err)
+			}
 			latencyInUs := time.Since(start).Microseconds()
 			latencies = append(latencies, float64(latencyInUs))
 		}

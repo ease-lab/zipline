@@ -48,7 +48,9 @@ func main() {
 	start := time.Now()
 	log.Infof("starting XDT call")
 	url := sdk.LoadedConfig.LBAddr
-	sdk.InvokeWithXDT(url, payloadToSend, chunkSizeInBytes)
+	if err := sdk.InvokeWithXDT(url, payloadToSend, chunkSizeInBytes); err != nil {
+		log.Fatalf("TestSQP_to_dQP_data_transfer failed %v", err)
+	}
 	elapsed := time.Since(start)
 
 	log.Infof("completed XDT in %s", elapsed)

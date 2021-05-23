@@ -27,6 +27,7 @@ import (
 	"encoding/json"
 	log "github.com/sirupsen/logrus"
 	"go.opentelemetry.io/contrib/instrumentation/google.golang.org/grpc/otelgrpc"
+	"golang.org/x/sync/errgroup"
 	"io"
 	"net"
 	"sync"
@@ -67,7 +68,7 @@ func (s downXDTServer) XDTDataServe(in *downXDT.DataRequest, srv downXDT.XDTtoFn
 	// Check whether the first packet has been received at dQP or not
 	for {
 		if channel, chunkTotal = bufferPool.GetChannel(in.Key); channel != nil {
-			log.Tracef("dQP: found chunkTotal %d for key %s at sQP", chunkTotal, in.Key)
+			log.Infof("dQP: found chunkTotal %d for key %s at sQP", chunkTotal, in.Key)
 			break
 		}
 	}
@@ -77,9 +78,10 @@ func (s downXDTServer) XDTDataServe(in *downXDT.DataRequest, srv downXDT.XDTtoFn
 		case chunk := <-channel:
 			resp := downXDT.Data{Chunk: chunk}
 			if err := srv.Send(&resp); err != nil {
-				log.Fatalf("dQP: send error %v", err)
+				log.Errorf("dQP: send error %v", err)
+				return err
 			}
-			log.Tracef("dQP: Sending chunk : %d to DstFn", chunkCount)
+			log.Debugf("dQP: Sending chunk : %d to DstFn", chunkCount)
 			chunkCount += 1
 		default:
 			if chunkTotal == int64(chunkCount) {
@@ -98,10 +100,11 @@ func (s fnInvocationServer) RouteInvocation(ctx context.Context, in *fnInvocatio
 	var xdtPayload payload
 	if err := json.Unmarshal(in.XDTJSON, &xdtPayload); err != nil {
 		log.Error(err)
+		return &fnInvocation.Empty{}, err
 	}
 
-	log.Infof("dQP: fetching data from sQP using key : %s", xdtPayload.Key)
 	chunkSizeInBytes := sdk.LoadedConfig.ChunkSizeInBytes
+	log.Infof("dQP: fetched data from sQP using key : %s", xdtPayload.Key)
 
 	if sdk.LoadedConfig.Routing == sdk.CUT_THROUGH {
 		log.Infof("dQP: [cut-through]: pulling data from sQP")
@@ -118,21 +121,28 @@ func (s fnInvocationServer) RouteInvocation(ctx context.Context, in *fnInvocatio
 		grpc.WithStreamInterceptor(otelgrpc.StreamClientInterceptor()))
 	if err != nil {
 		log.Errorf("did not connect: %v", err)
+		return &fnInvocation.Empty{}, err
 	}
-	defer func() {
-		err = conn.Close()
-		if err != nil {
-			log.Errorf("dQP: Error closing the connection to Dest")
-		}
-	}()
 
 	c := downXDT.NewXDTtoFnClient(conn)
 	_, err = c.XDTFnCall(ctx, &downXDT.InvocationRequest{XDTJSON: in.XDTJSON})
 	if err != nil {
-		log.Infof("dQP: Fn invocation route unsuccessful")
+		log.Errorf("dQP: Fn invocation route unsuccessful")
+		return &fnInvocation.Empty{}, err
 	}
 	log.Infof("dQP: Fn invocation route successful")
-	return &fnInvocation.Empty{}, nil
+
+	errGroup, _ := errgroup.WithContext(ctx)
+	errGroup.Go(func() error {
+		err = conn.Close()
+		if err != nil {
+			log.Errorf("dQP: Error closing the connection to Dest")
+			return err
+		}
+		return nil
+	})
+
+	return &fnInvocation.Empty{}, errGroup.Wait()
 }
 
 // PullDataFromSrcQP pulls data from src QP to dst QP
@@ -160,7 +170,7 @@ func PullDataFromSrcQP(ctx context.Context, key string, chunkSizeInBytes int) {
 	for {
 		chunk, err := stream.Recv()
 		if err == io.EOF {
-			log.Tracef("dQP: %d chunks received at Dst", chunkCount)
+			log.Infof("dQP: %d chunks received at Dst", chunkCount)
 			if sdk.LoadedConfig.Routing == sdk.STORE_FORWARD {
 				bufferPool.StoreChannel(key, totalChunks, channel)
 			}
@@ -169,7 +179,7 @@ func PullDataFromSrcQP(ctx context.Context, key string, chunkSizeInBytes int) {
 		if err != nil {
 			log.Errorf("dQP: receive error: %v", err)
 		}
-		log.Tracef("dQP: Received chunk no. %d", chunkCount)
+		log.Debugf("dQP: Received chunk no. %d", chunkCount)
 		onlyOnce.Do(func() {
 			totalChunks = chunk.TotalChunks
 			log.Infof("dQP: requesting a new channel")
@@ -183,7 +193,7 @@ func PullDataFromSrcQP(ctx context.Context, key string, chunkSizeInBytes int) {
 			}
 			log.Infof("dQP: chunkTotal = %d", chunk.TotalChunks)
 		})
-		log.Infof("dQP: Enquing chunk number %d", chunkCount)
+		log.Debugf("dQP: Enquing chunk number %d", chunkCount)
 		channel <- chunk.Chunk
 		chunkCount += 1
 	}
@@ -204,7 +214,7 @@ func StartServer(serverAddr string) {
 	downXDT.RegisterXDTtoFnServer(server, downXDTServer{})
 	fnInvocation.RegisterInvocationServer(server, fnInvocationServer{})
 
-	log.Println("dQP: start server")
+	log.Infoln("dQP: start server")
 	if err := server.Serve(lis); err != nil {
 		log.Fatalf("dQP: failed to serve: %v", err)
 	}

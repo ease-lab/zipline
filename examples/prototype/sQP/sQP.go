@@ -65,9 +65,10 @@ func (s upXDTServer) SendData(srv upXDT.StreamData_SendDataServer) error {
 			return srv.SendAndClose(&upXDT.Empty{})
 		}
 		if err != nil {
-			log.Fatalf("sQP: receive error: %v", err)
+			log.Errorf("sQP: receive error: %v", err)
+			return err
 		}
-		log.Tracef("sQP: Key received: %s in chunk %d", key, chunkCount)
+		log.Debugf("sQP: Key received: %s in chunk %d", key, chunkCount)
 		onlyOnce.Do(func() {
 			key = chunk.Key
 			totalChunks = chunk.TotalChunks
@@ -82,7 +83,7 @@ func (s upXDTServer) SendData(srv upXDT.StreamData_SendDataServer) error {
 			}
 			log.Infof("sQP: chunkTotal = %d", totalChunks)
 		})
-		log.Infof("sQP: Enquing chunk number %d", chunkCount)
+		log.Debugf("sQP: Enquing chunk number %d", chunkCount)
 		channel <- chunk.Chunk
 		chunkCount += 1
 	}
@@ -100,7 +101,7 @@ func (s crossXDTServer) ServeData(in *crossXDT.Request, srv crossXDT.StreamData_
 	// Check whether the first packet has been received at sQP or not
 	for {
 		if channel, chunkTotal = bufferPool.GetChannel(in.Key); channel != nil {
-			log.Tracef("sQP: found chunkTotal %d for key %s", chunkTotal, in.Key)
+			log.Infof("sQP: found chunkTotal %d for key %s", chunkTotal, in.Key)
 			break
 		}
 	}
@@ -112,7 +113,7 @@ func (s crossXDTServer) ServeData(in *crossXDT.Request, srv crossXDT.StreamData_
 			if err := srv.Send(&resp); err != nil {
 				log.Fatalf("sQP: send error %v", err)
 			}
-			log.Infof("sQP: pushing chunk no. %d to dQP", chunkCount)
+			log.Debugf("sQP: pushing chunk no. %d to dQP", chunkCount)
 			chunkCount += 1
 		default:
 			if chunkTotal == int64(chunkCount) {
@@ -138,7 +139,7 @@ func StartServer(serverAddr string) {
 	upXDT.RegisterStreamDataServer(server, upXDTServer{})
 	crossXDT.RegisterStreamDataServer(server, crossXDTServer{})
 
-	log.Println("sQP: start server")
+	log.Infoln("sQP: start server")
 	if err := server.Serve(lis); err != nil {
 		log.Fatalf("sQP: failed to serve: %v", err)
 	}

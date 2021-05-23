@@ -48,7 +48,7 @@ func (b *BufferPool) Init() {
 	} else if LoadedConfig.Routing == STORE_FORWARD {
 		bufferSize = LoadedConfig.StAndFwBufferSize
 	} else {
-		log.Errorf("sdk: Invalid route type. Check config.json")
+		log.Fatalf("sdk: Invalid route type. Check config.json")
 	}
 
 	for i := 0; i < LoadedConfig.NumberOfBuffers; i++ {

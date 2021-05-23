@@ -21,12 +21,11 @@ require (
 	XDTprototype/proto/upXDT v0.0.0-00010101000000-000000000000
 	XDTprototype/sdk v0.0.0-00010101000000-000000000000
 	XDTprototype/sqp v0.0.0-00010101000000-000000000000
-	github.com/hjson/hjson-go v3.1.0+incompatible
 	github.com/sirupsen/logrus v1.8.1
 	go.opentelemetry.io/contrib/instrumentation/google.golang.org/grpc/otelgrpc v0.20.0
 	go.opentelemetry.io/otel v0.20.0
 	go.opentelemetry.io/otel/exporters/trace/zipkin v0.20.0
 	go.opentelemetry.io/otel/sdk v0.20.0
+	golang.org/x/sync v0.0.0-20190423024810-112230192c58
 	google.golang.org/grpc v1.37.0
-	muzzammil.xyz/jsonc v0.0.0-20201229145248-615b0916ca38 // indirect
 )
