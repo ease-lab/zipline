@@ -5,10 +5,12 @@ on:
     branches: [ main_xdt ]
     paths:
       - 'examples/prototype/**'
+      - '.github/workflows/xdt_tests.yml'
   pull_request:
     branches: [ main_xdt ]
     paths:
       - 'examples/prototype/**'
+      - '.github/workflows/xdt_tests.yml'
   workflow_dispatch:
 
 env:
@@ -70,3 +72,24 @@ jobs:
         env:
           DIR: examples/prototype/user-functions/gx
         run: cd $DIR && golangci-lint run --out-format=github-actions --path-prefix=$DIR --timeout 5m
+  Benchmark:
+    name: Benchmark XDT
+    runs-on: ubuntu-18.04
+    steps:
+      - name: Set up Go 1.x
+        uses: actions/setup-go@v2
+        with:
+          go-version: 1.16
+      - name: Check out code into the Go module directory
+        uses: actions/checkout@v2
+      - name: Run benchmarks
+        run: |
+          sed -i '/Routing/c\  "Routing": "CutThrough",' examples/prototype/config.json
+          cd examples/prototype/sdk && go test ./integration_test.go -run TestBenchmark_XDT -v
+      - name: Archive log artifacts
+        if: ${{ always() }}
+        uses: actions/upload-artifact@v2
+        with:
+          name: XDT benchmarks
+          path: |
+            examples/prototype/sdk/*.png

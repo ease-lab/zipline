@@ -76,7 +76,7 @@ func (s downXDTServer) XDTDataServe(in *downXDT.DataRequest, srv downXDT.XDTtoFn
 	for {
 		select {
 		case chunk := <-channel:
-			resp := downXDT.Data{Chunk: chunk}
+			resp := downXDT.Data{Chunk: chunk, TotalChunks: chunkTotal}
 			if err := srv.Send(&resp); err != nil {
 				log.Errorf("dQP: send error %v", err)
 				return err
