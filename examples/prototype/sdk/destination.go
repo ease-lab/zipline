@@ -109,7 +109,7 @@ func FetchFromDQP(ctx context.Context, key string, chunkSizeInBytes int) ([]byte
 			totalChunks = chunk.TotalChunks
 			log.Infof("DST: creating a new buffer")
 			payloadBytes = make([]byte, LoadedConfig.StAndFwBufferSize*LoadedConfig.ChunkSizeInBytes)
-			log.Infof("sQP: chunkTotal = %d", totalChunks)
+			log.Infof("DST: chunkTotal = %d", totalChunks)
 		})
 		log.Debugf("DST: appending chunk number %d", chunkCount)
 		copy(payloadBytes[byteCount:], chunk.Chunk)

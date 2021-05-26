@@ -55,6 +55,11 @@ func TestSdk_InvokeWithXDT(t *testing.T) {
 		log.Fatal(err)
 	}
 
+	if sdk.LoadedConfig.TracingEnabled {
+		shutdown := sdk.InitTracer()
+		defer shutdown()
+	}
+
 	// start server at sQP
 	go sqp.StartServer(sdk.LoadedConfig.SQPServerAddr)
 	go dqp.StartServer(sdk.LoadedConfig.DQPServerAddr)
