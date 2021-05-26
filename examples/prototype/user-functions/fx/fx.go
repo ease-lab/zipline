@@ -23,7 +23,9 @@
 package main
 
 import (
+	"context"
 	"crypto/rand"
+	"google.golang.org/grpc/metadata"
 	"time"
 
 	log "github.com/sirupsen/logrus"
@@ -48,7 +50,12 @@ func main() {
 	start := time.Now()
 	log.Infof("starting XDT call")
 	url := sdk.LoadedConfig.LBAddr
-	if err := sdk.InvokeWithXDT(url, payloadToSend, chunkSizeInBytes); err != nil {
+	md := metadata.Pairs(
+		"timestamp", time.Now().Format(time.StampNano),
+		"Routing", sdk.LoadedConfig.Routing,
+	)
+	ctx := metadata.NewOutgoingContext(context.Background(), md)
+	if err := sdk.InvokeWithXDT(ctx, url, payloadToSend, chunkSizeInBytes); err != nil {
 		log.Fatalf("TestSQP_to_dQP_data_transfer failed %v", err)
 	}
 	elapsed := time.Since(start)

@@ -16,4 +16,5 @@ replace (
 require (
 	XDTprototype/sdk v0.0.0-00010101000000-000000000000
 	github.com/sirupsen/logrus v1.8.1
+	google.golang.org/grpc v1.37.0
 )

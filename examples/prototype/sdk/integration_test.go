@@ -23,8 +23,10 @@
 package sdk
 
 import (
+	"context"
 	"crypto/rand"
 	"flag"
+	"google.golang.org/grpc/metadata"
 	"sort"
 	"testing"
 	"time"
@@ -78,7 +80,12 @@ func TestSdk_InvokeWithXDT(t *testing.T) {
 	start := time.Now()
 	log.Infof("starting integ test")
 	url := sdk.LoadedConfig.LBAddr
-	if err := sdk.InvokeWithXDT(url, payloadToSend, chunkSizeInBytes); err != nil {
+	md := metadata.Pairs(
+		"timestamp", time.Now().Format(time.StampNano),
+		"Routing", sdk.LoadedConfig.Routing,
+	)
+	ctx := metadata.NewOutgoingContext(context.Background(), md)
+	if err := sdk.InvokeWithXDT(ctx, url, payloadToSend, chunkSizeInBytes); err != nil {
 		log.Fatalf("TestSdk_InvokeWithXDT failed %v", err)
 	}
 	elapsed := time.Since(start)
@@ -117,7 +124,12 @@ func TestBenchmark_XDT(t *testing.T) {
 
 		for i := 0; i < sampleSize; i += 1 {
 			start := time.Now()
-			if err := sdk.InvokeWithXDT(url, payloadToSend, chunkSizeInBytes); err != nil {
+			md := metadata.Pairs(
+				"timestamp", time.Now().Format(time.StampNano),
+				"Routing", sdk.LoadedConfig.Routing,
+			)
+			ctx := metadata.NewOutgoingContext(context.Background(), md)
+			if err := sdk.InvokeWithXDT(ctx, url, payloadToSend, chunkSizeInBytes); err != nil {
 				log.Fatalf("TestBenchmark_XDT failed %v", err)
 			}
 			latencyInUs := time.Since(start).Microseconds()

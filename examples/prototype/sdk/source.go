@@ -26,7 +26,6 @@ import (
 	"context"
 	"encoding/json"
 	"golang.org/x/sync/errgroup"
-	"google.golang.org/grpc/metadata"
 	"strconv"
 	"time"
 
@@ -40,18 +39,12 @@ import (
 )
 
 // InvokeWithXDT invokes the RPC call with XDT
-func InvokeWithXDT(URL string, xdtPayload Payload, chunkSizeInBytes int) error {
+func InvokeWithXDT(ctx context.Context, URL string, xdtPayload Payload, chunkSizeInBytes int) error {
 
 	log.Infof("SDK: XDT invoke start")
 	now := time.Now()
 	key := strconv.Itoa(int(now.UnixNano()))
 	log.Infof("XDT invoke called with payload size %d", len(xdtPayload.Data))
-
-	md := metadata.Pairs(
-		"timestamp", time.Now().Format(time.StampNano),
-		"transaction-id", key,
-	)
-	ctx := metadata.NewOutgoingContext(context.Background(), md)
 
 	payloadData := xdtPayload.Data
 	log.Info(payloadData[0:9], payloadData[len(payloadData)-9:])
