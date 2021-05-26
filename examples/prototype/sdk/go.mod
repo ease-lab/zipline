@@ -11,6 +11,7 @@ replace (
 	XDTprototype/proto/upXDT => ../proto/upXDT
 	XDTprototype/sdk => ./
 	XDTprototype/sqp => ../sQP
+	XDTprototype/tracing => ../tracing
 	XDTprototype/transport => ../transport
 )
 
@@ -22,6 +23,7 @@ require (
 	XDTprototype/proto/upXDT v0.0.0-00010101000000-000000000000
 	XDTprototype/sdk v0.0.0-00010101000000-000000000000
 	XDTprototype/sqp v0.0.0-00010101000000-000000000000
+	XDTprototype/tracing v0.0.0-00010101000000-000000000000
 	XDTprototype/transport v0.0.0-00010101000000-000000000000
 	github.com/sirupsen/logrus v1.8.1
 	go.opentelemetry.io/contrib/instrumentation/google.golang.org/grpc/otelgrpc v0.20.0

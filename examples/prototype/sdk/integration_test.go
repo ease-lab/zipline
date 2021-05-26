@@ -26,7 +26,6 @@ import (
 	"context"
 	"crypto/rand"
 	"flag"
-	"google.golang.org/grpc/metadata"
 	"sort"
 	"testing"
 	"time"
@@ -35,7 +34,7 @@ import (
 	"XDTprototype/dqp"
 	"XDTprototype/sdk"
 	"XDTprototype/sqp"
-	"XDTprototype/transport"
+	"XDTprototype/tracing"
 	log "github.com/sirupsen/logrus"
 )
 
@@ -59,7 +58,7 @@ func TestSdk_InvokeWithXDT(t *testing.T) {
 	}
 
 	if sdk.LoadedConfig.TracingEnabled {
-		shutdown := transport.InitTracer()
+		shutdown := tracing.InitTracer()
 		defer shutdown()
 	}
 
@@ -81,11 +80,7 @@ func TestSdk_InvokeWithXDT(t *testing.T) {
 	start := time.Now()
 	log.Infof("starting integ test")
 	url := sdk.LoadedConfig.LBAddr
-	md := metadata.Pairs(
-		"timestamp", time.Now().Format(time.StampNano),
-		"Routing", sdk.LoadedConfig.Routing,
-	)
-	ctx := metadata.NewOutgoingContext(context.Background(), md)
+	ctx := context.Background()
 	if err := sdk.InvokeWithXDT(ctx, url, payloadToSend, chunkSizeInBytes); err != nil {
 		log.Fatalf("TestSdk_InvokeWithXDT failed %v", err)
 	}
@@ -125,11 +120,7 @@ func TestBenchmark_XDT(t *testing.T) {
 
 		for i := 0; i < sampleSize; i += 1 {
 			start := time.Now()
-			md := metadata.Pairs(
-				"timestamp", time.Now().Format(time.StampNano),
-				"Routing", sdk.LoadedConfig.Routing,
-			)
-			ctx := metadata.NewOutgoingContext(context.Background(), md)
+			ctx := context.Background()
 			if err := sdk.InvokeWithXDT(ctx, url, payloadToSend, chunkSizeInBytes); err != nil {
 				log.Fatalf("TestBenchmark_XDT failed %v", err)
 			}

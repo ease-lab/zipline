@@ -12,6 +12,7 @@ replace (
 	XDTprototype/sdk => ../sdk
 	XDTprototype/sqp => ../sQP
 	XDTprototype/transport => ../transport
+	XDTprototype/tracing => ../tracing
 )
 
 require (
