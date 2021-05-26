@@ -20,7 +20,7 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 
-package sdk
+package transport
 
 import (
 	log "github.com/sirupsen/logrus"
@@ -48,7 +48,7 @@ func (b *BufferPool) Init() {
 	} else if LoadedConfig.Routing == STORE_FORWARD {
 		bufferSize = LoadedConfig.StAndFwBufferSize
 	} else {
-		log.Fatalf("sdk: Invalid route type. Check config.json")
+		log.Fatalf("transport: Invalid route type. Check config.json")
 	}
 
 	for i := 0; i < LoadedConfig.NumberOfBuffers; i++ {

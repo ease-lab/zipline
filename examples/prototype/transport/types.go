@@ -20,46 +20,57 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 
-package main
+package transport
 
 import (
-	"XDTprototype/transport"
-	"context"
-	"crypto/rand"
-	"google.golang.org/grpc/metadata"
-	"time"
-
+	"encoding/json"
 	log "github.com/sirupsen/logrus"
-
-	"XDTprototype/sdk"
+	"io/ioutil"
+	"os"
 )
 
-func main() {
-	payloadData := make([]byte, 10*1024*1024) // 10MiB
-	if _, err := rand.Read(payloadData); err != nil {
+type Config struct {
+	ChunkSizeInBytes  int
+	DQPServerAddr     string
+	LBAddr            string
+	DstServerAddr     string
+	SQPServerAddr     string
+	CTBufferSize      int
+	NumberOfBuffers   int
+	StAndFwBufferSize int
+	Routing           string
+	TracingEnabled    bool
+}
+
+const (
+	STORE_FORWARD = "Store&Forward"
+	CUT_THROUGH   = "CutThrough"
+)
+
+var LoadedConfig = LoadConfig("../config.json")
+
+func LoadConfig(file string) Config {
+	log.Debugf("Opening JSON file with config: %s\n", file)
+	jsonFile, err := os.Open(file)
+	if err != nil {
+		log.Fatal(err)
+	}
+	defer func() {
+		err = jsonFile.Close()
+		if err != nil {
+			log.Errorf("transport: Error closing the config file")
+		}
+	}()
+
+	jsonByteValue, err := ioutil.ReadAll(jsonFile)
+	if err != nil {
 		log.Fatal(err)
 	}
 
-	chunkSizeInBytes := transport.LoadedConfig.ChunkSizeInBytes
-
-	payloadToSend := sdk.Payload{
-		FunctionName: "HelloXDT",
-		Data:         payloadData,
-		Key:          "",
+	var config Config
+	if err = json.Unmarshal(jsonByteValue, &config); err != nil {
+		log.Fatal(err)
 	}
 
-	start := time.Now()
-	log.Infof("starting XDT call")
-	url := transport.LoadedConfig.LBAddr
-	md := metadata.Pairs(
-		"timestamp", time.Now().Format(time.StampNano),
-		"Routing", transport.LoadedConfig.Routing,
-	)
-	ctx := metadata.NewOutgoingContext(context.Background(), md)
-	if err := sdk.InvokeWithXDT(ctx, url, payloadToSend, chunkSizeInBytes); err != nil {
-		log.Fatalf("TestSQP_to_dQP_data_transfer failed %v", err)
-	}
-	elapsed := time.Since(start)
-
-	log.Infof("completed XDT in %s", elapsed)
+	return config
 }

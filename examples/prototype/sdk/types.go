@@ -65,7 +65,7 @@ func LoadConfig(file string) Config {
 	defer func() {
 		err = jsonFile.Close()
 		if err != nil {
-			log.Errorf("SDK: Error closing the config file")
+			log.Errorf("transport: Error closing the config file")
 		}
 	}()
 

@@ -35,6 +35,7 @@ import (
 	"XDTprototype/dqp"
 	"XDTprototype/sdk"
 	"XDTprototype/sqp"
+	"XDTprototype/transport"
 	log "github.com/sirupsen/logrus"
 )
 
@@ -58,7 +59,7 @@ func TestSdk_InvokeWithXDT(t *testing.T) {
 	}
 
 	if sdk.LoadedConfig.TracingEnabled {
-		shutdown := sdk.InitTracer()
+		shutdown := transport.InitTracer()
 		defer shutdown()
 	}
 

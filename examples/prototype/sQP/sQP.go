@@ -23,7 +23,7 @@
 package sqp
 
 import (
-	"XDTprototype/sdk"
+	"XDTprototype/transport"
 	"go.opentelemetry.io/contrib/instrumentation/google.golang.org/grpc/otelgrpc"
 	"io"
 	"sync"
@@ -38,7 +38,7 @@ import (
 )
 
 // bufferPool is responsible for managing bounded buffers of channels to store data
-var bufferPool sdk.BufferPool
+var bufferPool transport.BufferPool
 
 type crossXDTServer struct {
 	crossXDT.UnimplementedStreamDataServer
@@ -59,7 +59,7 @@ func (s upXDTServer) SendData(srv upXDT.StreamData_SendDataServer) error {
 		chunk, err := srv.Recv()
 		if err == io.EOF {
 			log.Infof("sQP: %d chunks received", chunkCount)
-			if sdk.LoadedConfig.Routing == sdk.STORE_FORWARD {
+			if transport.LoadedConfig.Routing == transport.STORE_FORWARD {
 				bufferPool.StoreChannel(key, totalChunks, channel)
 			}
 			return srv.SendAndClose(&upXDT.Empty{})
@@ -73,10 +73,10 @@ func (s upXDTServer) SendData(srv upXDT.StreamData_SendDataServer) error {
 			key = chunk.Key
 			totalChunks = chunk.TotalChunks
 			log.Infof("sQP: requesting a new channel")
-			if sdk.LoadedConfig.Routing == sdk.CUT_THROUGH {
+			if transport.LoadedConfig.Routing == transport.CUT_THROUGH {
 				channel = bufferPool.CreateChannel()
 				bufferPool.StoreChannel(key, totalChunks, channel)
-			} else if sdk.LoadedConfig.Routing == sdk.STORE_FORWARD {
+			} else if transport.LoadedConfig.Routing == transport.STORE_FORWARD {
 				channel = bufferPool.CreateChannel()
 			} else {
 				log.Errorf("sQP: Invalid route type. Check config.json")
