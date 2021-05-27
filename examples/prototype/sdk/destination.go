@@ -30,7 +30,9 @@ import (
 	"io"
 	"net"
 	"sync"
+	"time"
 
+	"XDTprototype/commonUtils"
 	"XDTprototype/proto/downXDT"
 
 	"google.golang.org/grpc"
@@ -49,13 +51,13 @@ func (s downXDTServer) XDTFnCall(ctx context.Context, in *downXDT.InvocationRequ
 
 	var xdtPayload Payload
 	if err := json.Unmarshal(in.XDTJSON, &xdtPayload); err != nil {
-		log.Error(err)
+		log.Error("DST: XDTFnCall", err)
 		return &downXDT.Empty{}, err
 	}
 
 	key := xdtPayload.Key
 
-	chunkSizeInBytes := LoadedConfig.ChunkSizeInBytes
+	chunkSizeInBytes := commonUtils.LoadedConfig.ChunkSizeInBytes
 
 	// fetch data from dQP
 	payloadBytes, err := FetchFromDQP(ctx, key, chunkSizeInBytes)
@@ -71,10 +73,13 @@ func (s downXDTServer) XDTFnCall(ctx context.Context, in *downXDT.InvocationRequ
 
 // FetchFromDQP fetches data from dQP to DstFn
 func FetchFromDQP(ctx context.Context, key string, chunkSizeInBytes int) ([]byte, error) {
-	serverAddr := LoadedConfig.DQPServerAddr
-	conn, err := grpc.Dial(serverAddr, grpc.WithInsecure(),
-		grpc.WithUnaryInterceptor(otelgrpc.UnaryClientInterceptor()),
-		grpc.WithStreamInterceptor(otelgrpc.StreamClientInterceptor()))
+
+	//  This timeout must be large enough for the request to complete
+	timeoutDuration := time.Duration(commonUtils.LoadedConfig.RPCTimeoutDurationInMiliSecs) * time.Millisecond
+	ctxx, cancel := context.WithTimeout(ctx, timeoutDuration)
+	defer cancel()
+
+	conn, err := grpc.DialContext(ctxx, commonUtils.LoadedConfig.DQPServerAddr, commonUtils.GetGopts()...)
 	if err != nil {
 		log.Errorf("DST: can not connect with server %v", err)
 		return []byte{}, err
@@ -108,7 +113,7 @@ func FetchFromDQP(ctx context.Context, key string, chunkSizeInBytes int) ([]byte
 		onlyOnce.Do(func() {
 			totalChunks = chunk.TotalChunks
 			log.Infof("DST: creating a new buffer")
-			payloadBytes = make([]byte, LoadedConfig.StAndFwBufferSize*LoadedConfig.ChunkSizeInBytes)
+			payloadBytes = make([]byte, commonUtils.LoadedConfig.StAndFwBufferSize*commonUtils.LoadedConfig.ChunkSizeInBytes)
 			log.Infof("DST: chunkTotal = %d", totalChunks)
 		})
 		log.Debugf("DST: appending chunk number %d", chunkCount)

@@ -23,6 +23,7 @@
 package transport
 
 import (
+	"XDTprototype/commonUtils"
 	log "github.com/sirupsen/logrus"
 	"sync"
 )
@@ -39,19 +40,19 @@ type buffer struct {
 
 func (b *BufferPool) Init() {
 
-	b.bufferChannels = make(chan chan []byte, LoadedConfig.NumberOfBuffers)
+	b.bufferChannels = make(chan chan []byte, commonUtils.LoadedConfig.NumberOfBuffers)
 
 	var bufferSize int
 
-	if LoadedConfig.Routing == CUT_THROUGH {
-		bufferSize = LoadedConfig.CTBufferSize
-	} else if LoadedConfig.Routing == STORE_FORWARD {
-		bufferSize = LoadedConfig.StAndFwBufferSize
+	if commonUtils.LoadedConfig.Routing == commonUtils.CUT_THROUGH {
+		bufferSize = commonUtils.LoadedConfig.CTBufferSize
+	} else if commonUtils.LoadedConfig.Routing == commonUtils.STORE_FORWARD {
+		bufferSize = commonUtils.LoadedConfig.StAndFwBufferSize
 	} else {
 		log.Fatalf("transport: Invalid route type. Check config.json")
 	}
 
-	for i := 0; i < LoadedConfig.NumberOfBuffers; i++ {
+	for i := 0; i < commonUtils.LoadedConfig.NumberOfBuffers; i++ {
 		tmpChannel := make(chan []byte, bufferSize)
 		b.bufferChannels <- tmpChannel
 	}

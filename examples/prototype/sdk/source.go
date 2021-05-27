@@ -23,6 +23,7 @@
 package sdk
 
 import (
+	"XDTprototype/commonUtils"
 	"context"
 	"encoding/json"
 	"golang.org/x/sync/errgroup"
@@ -33,8 +34,6 @@ import (
 
 	"XDTprototype/proto/fnInvocation"
 	"XDTprototype/proto/upXDT"
-	"go.opentelemetry.io/contrib/instrumentation/google.golang.org/grpc/otelgrpc"
-
 	"google.golang.org/grpc"
 )
 
@@ -59,14 +58,14 @@ func InvokeWithXDT(ctx context.Context, URL string, xdtPayload Payload, chunkSiz
 
 	errGroup, _ := errgroup.WithContext(ctx)
 
-	if LoadedConfig.Routing == STORE_FORWARD {
+	if commonUtils.LoadedConfig.Routing == commonUtils.STORE_FORWARD {
 		log.Info("SDK: using store & forward routing")
 		err := PushData(ctx, key, payloadData, chunkSizeInBytes)
 		if err != nil {
 			log.Errorf("SDK: [Store & Forward] Push data failed")
 			return err
 		}
-	} else if LoadedConfig.Routing == CUT_THROUGH {
+	} else if commonUtils.LoadedConfig.Routing == commonUtils.CUT_THROUGH {
 		log.Info("SDK: using cut through routing")
 		errGroup.Go(func() error {
 			err := PushData(ctx, key, payloadData, chunkSizeInBytes)
@@ -79,7 +78,7 @@ func InvokeWithXDT(ctx context.Context, URL string, xdtPayload Payload, chunkSiz
 	}
 
 	if err := fnInvocationCall(ctx, URL, serialisedPayload); err != nil {
-		log.Errorf("SDK: InvokeWithXDT: fnInvocationCall failed")
+		log.Errorf("SDK: InvokeWithXDT: fnInvocationCall failed: %v", err)
 		return err
 	}
 	// Wait for completion and return the first error (if any)
@@ -89,11 +88,14 @@ func InvokeWithXDT(ctx context.Context, URL string, xdtPayload Payload, chunkSiz
 // fnInvocationCall makes fn invocation call to dQP with xdt payload
 func fnInvocationCall(ctx context.Context, URL string, serialisedPayload []byte) error {
 
-	conn, err := grpc.Dial(URL, grpc.WithInsecure(),
-		grpc.WithUnaryInterceptor(otelgrpc.UnaryClientInterceptor()),
-		grpc.WithStreamInterceptor(otelgrpc.StreamClientInterceptor()))
+	//  This timeout must be large enough for the request to complete
+	timeoutDuration := time.Duration(commonUtils.LoadedConfig.RPCTimeoutDurationInMiliSecs) * time.Millisecond
+	ctxx, cancel := context.WithTimeout(ctx, timeoutDuration)
+	defer cancel()
+
+	conn, err := grpc.DialContext(ctxx, URL, commonUtils.GetGopts()...)
 	if err != nil {
-		log.Errorf("did not connect: %v", err)
+		log.Errorf("SDK: fnInvocationCall: did not connect: %v", err)
 		return err
 	}
 	errGroup, _ := errgroup.WithContext(ctx)
@@ -122,10 +124,11 @@ func fnInvocationCall(ctx context.Context, URL string, serialisedPayload []byte)
 // PushData to source QP
 func PushData(ctx context.Context, key string, payload []byte, chunkSizeInBytes int) error {
 
-	serverAddr := LoadedConfig.SQPServerAddr
-	conn, err := grpc.Dial(serverAddr, grpc.WithInsecure(),
-		grpc.WithUnaryInterceptor(otelgrpc.UnaryClientInterceptor()),
-		grpc.WithStreamInterceptor(otelgrpc.StreamClientInterceptor()))
+	//  This timeout must be large enough for the request to complete
+	ctxx, cancel := context.WithTimeout(ctx, 1*time.Second)
+	defer cancel()
+
+	conn, err := grpc.DialContext(ctxx, commonUtils.LoadedConfig.SQPServerAddr, commonUtils.GetGopts()...)
 	if err != nil {
 		log.Errorf("can not connect with server %v", err)
 		return err

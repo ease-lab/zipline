@@ -31,7 +31,9 @@ import (
 	"io"
 	"net"
 	"sync"
+	"time"
 
+	"XDTprototype/commonUtils"
 	"XDTprototype/proto/crossXDT"
 	"XDTprototype/proto/downXDT"
 	"XDTprototype/proto/fnInvocation"
@@ -98,28 +100,30 @@ func (s fnInvocationServer) RouteInvocation(ctx context.Context, in *fnInvocatio
 
 	var xdtPayload payload
 	if err := json.Unmarshal(in.XDTJSON, &xdtPayload); err != nil {
-		log.Error(err)
+		log.Error("dQP: RouteInvocation", err)
 		return &fnInvocation.Empty{}, err
 	}
 
-	chunkSizeInBytes := transport.LoadedConfig.ChunkSizeInBytes
+	chunkSizeInBytes := commonUtils.LoadedConfig.ChunkSizeInBytes
 	log.Infof("dQP: fetched data from sQP using key : %s", xdtPayload.Key)
 
-	if transport.LoadedConfig.Routing == transport.CUT_THROUGH {
+	if commonUtils.LoadedConfig.Routing == commonUtils.CUT_THROUGH {
 		log.Infof("dQP: [cut-through]: pulling data from sQP")
 		go PullDataFromSrcQP(ctx, xdtPayload.Key, chunkSizeInBytes)
-	} else if transport.LoadedConfig.Routing == transport.STORE_FORWARD {
+	} else if commonUtils.LoadedConfig.Routing == commonUtils.STORE_FORWARD {
 		log.Infof("dQP: [Store & Forward]: pulling data from sQP")
 		PullDataFromSrcQP(ctx, xdtPayload.Key, chunkSizeInBytes)
 	}
 
 	// route the invocation call to destination fn
-	serverAddr := transport.LoadedConfig.DstServerAddr
-	conn, err := grpc.Dial(serverAddr, grpc.WithInsecure(),
-		grpc.WithUnaryInterceptor(otelgrpc.UnaryClientInterceptor()),
-		grpc.WithStreamInterceptor(otelgrpc.StreamClientInterceptor()))
+	//  This timeout must be large enough for the request to complete
+	timeoutDuration := time.Duration(commonUtils.LoadedConfig.RPCTimeoutDurationInMiliSecs) * time.Millisecond
+	ctxx, cancel := context.WithTimeout(ctx, timeoutDuration)
+	defer cancel()
+
+	conn, err := grpc.DialContext(ctxx, commonUtils.LoadedConfig.DstServerAddr, commonUtils.GetGopts()...)
 	if err != nil {
-		log.Errorf("did not connect: %v", err)
+		log.Errorf("dQP: RouteInvocation: did not connect: %v", err)
 		return &fnInvocation.Empty{}, err
 	}
 
@@ -146,11 +150,12 @@ func (s fnInvocationServer) RouteInvocation(ctx context.Context, in *fnInvocatio
 
 // PullDataFromSrcQP pulls data from src QP to dst QP
 func PullDataFromSrcQP(ctx context.Context, key string, chunkSizeInBytes int) {
+	//  This timeout must be large enough for the request to complete
+	timeoutDuration := time.Duration(commonUtils.LoadedConfig.RPCTimeoutDurationInMiliSecs) * time.Millisecond
+	ctxx, cancel := context.WithTimeout(ctx, timeoutDuration)
+	defer cancel()
 
-	serverAddr := transport.LoadedConfig.SQPServerAddr
-	conn, err := grpc.Dial(serverAddr, grpc.WithInsecure(),
-		grpc.WithUnaryInterceptor(otelgrpc.UnaryClientInterceptor()),
-		grpc.WithStreamInterceptor(otelgrpc.StreamClientInterceptor()))
+	conn, err := grpc.DialContext(ctxx, commonUtils.LoadedConfig.SQPServerAddr, commonUtils.GetGopts()...)
 	if err != nil {
 		log.Errorf("dQP: can not connect with server %v", err)
 	}
@@ -170,7 +175,7 @@ func PullDataFromSrcQP(ctx context.Context, key string, chunkSizeInBytes int) {
 		chunk, err := stream.Recv()
 		if err == io.EOF {
 			log.Infof("dQP: %d chunks received at Dst", chunkCount)
-			if transport.LoadedConfig.Routing == transport.STORE_FORWARD {
+			if commonUtils.LoadedConfig.Routing == commonUtils.STORE_FORWARD {
 				bufferPool.StoreChannel(key, totalChunks, channel)
 			}
 			return
@@ -182,10 +187,10 @@ func PullDataFromSrcQP(ctx context.Context, key string, chunkSizeInBytes int) {
 		onlyOnce.Do(func() {
 			totalChunks = chunk.TotalChunks
 			log.Infof("dQP: requesting a new channel")
-			if transport.LoadedConfig.Routing == transport.CUT_THROUGH {
+			if commonUtils.LoadedConfig.Routing == commonUtils.CUT_THROUGH {
 				channel = bufferPool.CreateChannel()
 				bufferPool.StoreChannel(key, chunk.TotalChunks, channel)
-			} else if transport.LoadedConfig.Routing == transport.STORE_FORWARD {
+			} else if commonUtils.LoadedConfig.Routing == commonUtils.STORE_FORWARD {
 				channel = bufferPool.CreateChannel()
 			} else {
 				log.Errorf("dQP: Invalid route type. Check config.json")

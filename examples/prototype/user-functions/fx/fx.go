@@ -23,7 +23,7 @@
 package main
 
 import (
-	"XDTprototype/transport"
+	"XDTprototype/commonUtils"
 	"context"
 	"crypto/rand"
 	"google.golang.org/grpc/metadata"
@@ -40,7 +40,7 @@ func main() {
 		log.Fatal(err)
 	}
 
-	chunkSizeInBytes := transport.LoadedConfig.ChunkSizeInBytes
+	chunkSizeInBytes := commonUtils.LoadedConfig.ChunkSizeInBytes
 
 	payloadToSend := sdk.Payload{
 		FunctionName: "HelloXDT",
@@ -50,10 +50,10 @@ func main() {
 
 	start := time.Now()
 	log.Infof("starting XDT call")
-	url := transport.LoadedConfig.LBAddr
+	url := commonUtils.LoadedConfig.LBAddr
 	md := metadata.Pairs(
 		"timestamp", time.Now().Format(time.StampNano),
-		"Routing", transport.LoadedConfig.Routing,
+		"Routing", commonUtils.LoadedConfig.Routing,
 	)
 	ctx := metadata.NewOutgoingContext(context.Background(), md)
 	if err := sdk.InvokeWithXDT(ctx, url, payloadToSend, chunkSizeInBytes); err != nil {

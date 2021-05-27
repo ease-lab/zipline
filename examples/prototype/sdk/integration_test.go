@@ -31,6 +31,7 @@ import (
 	"time"
 
 	"XDTgRPC_stream/plotter"
+	"XDTprototype/commonUtils"
 	"XDTprototype/dqp"
 	"XDTprototype/sdk"
 	"XDTprototype/sqp"
@@ -57,19 +58,19 @@ func TestSdk_InvokeWithXDT(t *testing.T) {
 		log.Fatal(err)
 	}
 
-	if sdk.LoadedConfig.TracingEnabled {
+	if commonUtils.LoadedConfig.TracingEnabled {
 		shutdown := tracing.InitTracer()
 		defer shutdown()
 	}
 
 	// start server at sQP
-	go sqp.StartServer(sdk.LoadedConfig.SQPServerAddr)
-	go dqp.StartServer(sdk.LoadedConfig.DQPServerAddr)
-	go sdk.StartDstServer(sdk.LoadedConfig.DstServerAddr, handler)
+	go sqp.StartServer(commonUtils.LoadedConfig.SQPServerAddr)
+	go dqp.StartServer(commonUtils.LoadedConfig.DQPServerAddr)
+	go sdk.StartDstServer(commonUtils.LoadedConfig.DstServerAddr, handler)
 
-	time.Sleep(time.Second * 2)
+	time.Sleep(time.Second * 1)
 
-	chunkSizeInBytes := sdk.LoadedConfig.ChunkSizeInBytes
+	chunkSizeInBytes := commonUtils.LoadedConfig.ChunkSizeInBytes
 
 	payloadToSend := sdk.Payload{
 		FunctionName: "HelloXDT",
@@ -79,7 +80,7 @@ func TestSdk_InvokeWithXDT(t *testing.T) {
 
 	start := time.Now()
 	log.Infof("starting integ test")
-	url := sdk.LoadedConfig.LBAddr
+	url := commonUtils.LoadedConfig.LBAddr
 	ctx := context.Background()
 	if err := sdk.InvokeWithXDT(ctx, url, payloadToSend, chunkSizeInBytes); err != nil {
 		log.Fatalf("TestSdk_InvokeWithXDT failed %v", err)
@@ -95,9 +96,9 @@ func TestBenchmark_XDT(t *testing.T) {
 		log.Fatal("invalid sample size. Acceptable input is integers >= 10")
 	}
 
-	go sqp.StartServer(sdk.LoadedConfig.SQPServerAddr)
-	go dqp.StartServer(sdk.LoadedConfig.DQPServerAddr)
-	go sdk.StartDstServer(sdk.LoadedConfig.DstServerAddr, handler)
+	go sqp.StartServer(commonUtils.LoadedConfig.SQPServerAddr)
+	go dqp.StartServer(commonUtils.LoadedConfig.DQPServerAddr)
+	go sdk.StartDstServer(commonUtils.LoadedConfig.DstServerAddr, handler)
 
 	payloadSizes := []int{10, 100, 1000, 10000, 100000}
 
@@ -107,8 +108,8 @@ func TestBenchmark_XDT(t *testing.T) {
 	if _, err := rand.Read(payloadData); err != nil {
 		log.Fatal(err)
 	}
-	chunkSizeInBytes := sdk.LoadedConfig.ChunkSizeInBytes
-	url := sdk.LoadedConfig.LBAddr
+	chunkSizeInBytes := commonUtils.LoadedConfig.ChunkSizeInBytes
+	url := commonUtils.LoadedConfig.LBAddr
 
 	benchPayload := func(payloadSize int, chunkSizeInBytes int, sampleSize int, URL string, payloadData []byte) []float64 {
 		var latencies []float64

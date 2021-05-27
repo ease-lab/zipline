@@ -8,5 +8,7 @@
   "CTBufferSize": 25,
   "StAndFwBufferSize": 1600,
   "Routing": "Store&Forward",
-  "TracingEnabled": false
+  "TracingEnabled": false,
+  "RPCTimeoutMaxBackoffInMiliSecs": 100,
+  "RPCTimeoutDurationInMiliSecs": 5000
 }
