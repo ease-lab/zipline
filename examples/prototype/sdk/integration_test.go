@@ -31,11 +31,11 @@ import (
 	"time"
 
 	"XDTgRPC_stream/plotter"
-	"XDTprototype/commonUtils"
 	"XDTprototype/dqp"
 	"XDTprototype/sdk"
 	"XDTprototype/sqp"
 	"XDTprototype/tracing"
+	"XDTprototype/utils"
 	log "github.com/sirupsen/logrus"
 )
 
@@ -58,19 +58,22 @@ func TestSdk_InvokeWithXDT(t *testing.T) {
 		log.Fatal(err)
 	}
 
-	if commonUtils.LoadedConfig.TracingEnabled {
-		shutdown := tracing.InitTracer()
+	if utils.LoadedConfig.TracingEnabled {
+		shutdown, err := tracing.InitTracer()
+		if err != nil {
+			log.Fatal(err)
+		}
 		defer shutdown()
 	}
 
 	// start server at sQP
-	go sqp.StartServer(commonUtils.LoadedConfig.SQPServerAddr)
-	go dqp.StartServer(commonUtils.LoadedConfig.DQPServerAddr)
-	go sdk.StartDstServer(commonUtils.LoadedConfig.DstServerAddr, handler)
+	go sqp.StartServer(utils.LoadedConfig.SQPServerAddr)
+	go dqp.StartServer(utils.LoadedConfig.DQPServerAddr)
+	go sdk.StartDstServer(utils.LoadedConfig.DstServerAddr, handler)
 
 	time.Sleep(time.Second * 1)
 
-	chunkSizeInBytes := commonUtils.LoadedConfig.ChunkSizeInBytes
+	chunkSizeInBytes := utils.LoadedConfig.ChunkSizeInBytes
 
 	payloadToSend := sdk.Payload{
 		FunctionName: "HelloXDT",
@@ -80,10 +83,106 @@ func TestSdk_InvokeWithXDT(t *testing.T) {
 
 	start := time.Now()
 	log.Infof("starting integ test")
-	url := commonUtils.LoadedConfig.LBAddr
+	url := utils.LoadedConfig.LBAddr
 	ctx := context.Background()
 	if err := sdk.InvokeWithXDT(ctx, url, payloadToSend, chunkSizeInBytes); err != nil {
 		log.Fatalf("TestSdk_InvokeWithXDT failed %v", err)
+	}
+	elapsed := time.Since(start)
+
+	log.Infof("completed XDT in %s", elapsed)
+}
+
+func TestErr_DQPTimeout(t *testing.T) {
+
+	payloadData := make([]byte, 10*1024*1024) // 10MiB
+	if _, err := rand.Read(payloadData); err != nil {
+		log.Fatal(err)
+	}
+
+	if utils.LoadedConfig.TracingEnabled {
+		shutdown, err := tracing.InitTracer()
+		if err != nil {
+			log.Fatal(err)
+		}
+		defer shutdown()
+	}
+
+	// start server at sQP
+	go sqp.StartServer(utils.LoadedConfig.SQPServerAddr)
+	go func() {
+		time.Sleep(10 * time.Second)
+		dqp.StartServer(utils.LoadedConfig.DQPServerAddr)
+	}()
+	go sdk.StartDstServer(utils.LoadedConfig.DstServerAddr, handler)
+
+	time.Sleep(time.Second * 1)
+
+	chunkSizeInBytes := utils.LoadedConfig.ChunkSizeInBytes
+
+	payloadToSend := sdk.Payload{
+		FunctionName: "HelloXDT",
+		Data:         payloadData,
+		Key:          "",
+	}
+
+	start := time.Now()
+	log.Infof("starting integ test")
+	url := utils.LoadedConfig.LBAddr
+	ctx := context.Background()
+
+	if err := sdk.InvokeWithXDT(ctx, url, payloadToSend, chunkSizeInBytes); err == context.DeadlineExceeded {
+		log.Errorf("TestSdk_InvokeWithXDT failed successfully")
+	} else {
+		log.Fatalf("Unexpected Error Occured: %v", err)
+	}
+	elapsed := time.Since(start)
+
+	log.Infof("completed XDT in %s", elapsed)
+}
+
+func TestErr_DSTTimeout(t *testing.T) {
+
+	payloadData := make([]byte, 10*1024*1024) // 10MiB
+	if _, err := rand.Read(payloadData); err != nil {
+		log.Fatal(err)
+	}
+
+	if utils.LoadedConfig.TracingEnabled {
+		shutdown, err := tracing.InitTracer()
+		if err != nil {
+			log.Fatal(err)
+		}
+		defer shutdown()
+	}
+
+	// start server at sQP
+	go sqp.StartServer(utils.LoadedConfig.SQPServerAddr)
+	go dqp.StartServer(utils.LoadedConfig.DQPServerAddr)
+	go func() {
+		time.Sleep(10 * time.Second)
+		sdk.StartDstServer(utils.LoadedConfig.DstServerAddr, handler)
+	}()
+
+	time.Sleep(time.Second * 1)
+
+	chunkSizeInBytes := utils.LoadedConfig.ChunkSizeInBytes
+
+	payloadToSend := sdk.Payload{
+		FunctionName: "HelloXDT",
+		Data:         payloadData,
+		Key:          "",
+	}
+
+	start := time.Now()
+	log.Infof("starting integ test")
+	url := utils.LoadedConfig.LBAddr
+	ctx := context.Background()
+
+	if err := sdk.InvokeWithXDT(ctx, url, payloadToSend, chunkSizeInBytes); err == context.DeadlineExceeded {
+		log.Errorf("TestSdk_InvokeWithXDT failed successfully")
+	} else {
+		log.Fatalf("Unexpected Error Occured: %v", err)
 	}
 	elapsed := time.Since(start)
 
@@ -96,9 +195,9 @@ func TestBenchmark_XDT(t *testing.T) {
 		log.Fatal("invalid sample size. Acceptable input is integers >= 10")
 	}
 
-	go sqp.StartServer(commonUtils.LoadedConfig.SQPServerAddr)
-	go dqp.StartServer(commonUtils.LoadedConfig.DQPServerAddr)
-	go sdk.StartDstServer(commonUtils.LoadedConfig.DstServerAddr, handler)
+	go sqp.StartServer(utils.LoadedConfig.SQPServerAddr)
+	go dqp.StartServer(utils.LoadedConfig.DQPServerAddr)
+	go sdk.StartDstServer(utils.LoadedConfig.DstServerAddr, handler)
 
 	payloadSizes := []int{10, 100, 1000, 10000, 100000}
 
@@ -108,8 +207,8 @@ func TestBenchmark_XDT(t *testing.T) {
 	if _, err := rand.Read(payloadData); err != nil {
 		log.Fatal(err)
 	}
-	chunkSizeInBytes := commonUtils.LoadedConfig.ChunkSizeInBytes
-	url := commonUtils.LoadedConfig.LBAddr
+	chunkSizeInBytes := utils.LoadedConfig.ChunkSizeInBytes
+	url := utils.LoadedConfig.LBAddr
 
 	benchPayload := func(payloadSize int, chunkSizeInBytes int, sampleSize int, URL string, payloadData []byte) []float64 {
 		var latencies []float64

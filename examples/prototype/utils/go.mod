@@ -1,4 +1,4 @@
-module commonUtils
+module utils
 
 go 1.16
 

@@ -32,8 +32,8 @@ import (
 	"sync"
 	"time"
 
-	"XDTprototype/commonUtils"
 	"XDTprototype/proto/downXDT"
+	"XDTprototype/utils"
 
 	"google.golang.org/grpc"
 )
@@ -57,7 +57,7 @@ func (s downXDTServer) XDTFnCall(ctx context.Context, in *downXDT.InvocationRequ
 
 	key := xdtPayload.Key
 
-	chunkSizeInBytes := commonUtils.LoadedConfig.ChunkSizeInBytes
+	chunkSizeInBytes := utils.LoadedConfig.ChunkSizeInBytes
 
 	// fetch data from dQP
 	payloadBytes, err := FetchFromDQP(ctx, key, chunkSizeInBytes)
@@ -75,11 +75,11 @@ func (s downXDTServer) XDTFnCall(ctx context.Context, in *downXDT.InvocationRequ
 func FetchFromDQP(ctx context.Context, key string, chunkSizeInBytes int) ([]byte, error) {
 
 	//  This timeout must be large enough for the request to complete
-	timeoutDuration := time.Duration(commonUtils.LoadedConfig.RPCTimeoutDurationInMiliSecs) * time.Millisecond
+	timeoutDuration := time.Duration(utils.LoadedConfig.RPCTimeoutDuration) * time.Millisecond
 	ctxx, cancel := context.WithTimeout(ctx, timeoutDuration)
 	defer cancel()
 
-	conn, err := grpc.DialContext(ctxx, commonUtils.LoadedConfig.DQPServerAddr, commonUtils.GetGopts()...)
+	conn, err := grpc.DialContext(ctxx, utils.LoadedConfig.DQPServerAddr, utils.GetGopts()...)
 	if err != nil {
 		log.Errorf("DST: can not connect with server %v", err)
 		return []byte{}, err
@@ -113,7 +113,7 @@ func FetchFromDQP(ctx context.Context, key string, chunkSizeInBytes int) ([]byte
 		onlyOnce.Do(func() {
 			totalChunks = chunk.TotalChunks
 			log.Infof("DST: creating a new buffer")
-			payloadBytes = make([]byte, commonUtils.LoadedConfig.StAndFwBufferSize*commonUtils.LoadedConfig.ChunkSizeInBytes)
+			payloadBytes = make([]byte, utils.LoadedConfig.StAndFwBufferSize*utils.LoadedConfig.ChunkSizeInBytes)
 			log.Infof("DST: chunkTotal = %d", totalChunks)
 		})
 		log.Debugf("DST: appending chunk number %d", chunkCount)

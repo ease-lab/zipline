@@ -36,7 +36,7 @@ import (
 )
 
 // InitTracer creates a new trace provider instance and registers it as global trace provider.
-func InitTracer() func() {
+func InitTracer() (func(), error) {
 	url := flag.String("zipkin", "http://localhost:9411/api/v2/spans", "zipkin url")
 	flag.Parse()
 
@@ -53,7 +53,8 @@ func InitTracer() func() {
 		zipkin.WithSDKOptions(sdktrace.WithSampler(sdktrace.AlwaysSample())),
 	)
 	if err != nil {
-		log.Fatal(err)
+		log.Errorf("Tracer: Zipkin exporter creation failed: %v", err)
+		return nil, err
 	}
 
 	tp := sdktrace.NewTracerProvider(
@@ -65,5 +66,5 @@ func InitTracer() func() {
 	otel.SetTextMapPropagator(propagation.NewCompositeTextMapPropagator(propagation.TraceContext{}, propagation.Baggage{}))
 	return func() {
 		_ = tp.Shutdown(context.Background())
-	}
+	}, nil
 }

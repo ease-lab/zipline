@@ -4,7 +4,7 @@ go 1.16
 
 replace (
 	XDTgRPC_stream/plotter => ../plotter
-	XDTprototype/commonUtils => ../commonUtils
+	XDTprototype/utils => ../utils
 	XDTprototype/dqp => ../dQP
 	XDTprototype/proto/crossXDT => ../proto/crossXDT
 	XDTprototype/proto/downXDT => ../proto/downXDT
@@ -18,7 +18,7 @@ replace (
 
 require (
 	XDTgRPC_stream/plotter v0.0.0-00010101000000-000000000000
-	XDTprototype/commonUtils v0.0.0-00010101000000-000000000000 // indirect
+	XDTprototype/utils v0.0.0-00010101000000-000000000000 // indirect
 	XDTprototype/dqp v0.0.0-00010101000000-000000000000
 	XDTprototype/proto/downXDT v0.0.0-00010101000000-000000000000
 	XDTprototype/proto/fnInvocation v0.0.0-00010101000000-000000000000

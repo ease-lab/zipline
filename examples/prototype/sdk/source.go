@@ -23,7 +23,7 @@
 package sdk
 
 import (
-	"XDTprototype/commonUtils"
+	"XDTprototype/utils"
 	"context"
 	"encoding/json"
 	"golang.org/x/sync/errgroup"
@@ -58,14 +58,14 @@ func InvokeWithXDT(ctx context.Context, URL string, xdtPayload Payload, chunkSiz
 
 	errGroup, _ := errgroup.WithContext(ctx)
 
-	if commonUtils.LoadedConfig.Routing == commonUtils.STORE_FORWARD {
+	if utils.LoadedConfig.Routing == utils.STORE_FORWARD {
 		log.Info("SDK: using store & forward routing")
 		err := PushData(ctx, key, payloadData, chunkSizeInBytes)
 		if err != nil {
 			log.Errorf("SDK: [Store & Forward] Push data failed")
 			return err
 		}
-	} else if commonUtils.LoadedConfig.Routing == commonUtils.CUT_THROUGH {
+	} else if utils.LoadedConfig.Routing == utils.CUT_THROUGH {
 		log.Info("SDK: using cut through routing")
 		errGroup.Go(func() error {
 			err := PushData(ctx, key, payloadData, chunkSizeInBytes)
@@ -89,11 +89,11 @@ func InvokeWithXDT(ctx context.Context, URL string, xdtPayload Payload, chunkSiz
 func fnInvocationCall(ctx context.Context, URL string, serialisedPayload []byte) error {
 
 	//  This timeout must be large enough for the request to complete
-	timeoutDuration := time.Duration(commonUtils.LoadedConfig.RPCTimeoutDurationInMiliSecs) * time.Millisecond
+	timeoutDuration := time.Duration(utils.LoadedConfig.RPCTimeoutDuration) * time.Millisecond
 	ctxx, cancel := context.WithTimeout(ctx, timeoutDuration)
 	defer cancel()
 
-	conn, err := grpc.DialContext(ctxx, URL, commonUtils.GetGopts()...)
+	conn, err := grpc.DialContext(ctxx, URL, utils.GetGopts()...)
 	if err != nil {
 		log.Errorf("SDK: fnInvocationCall: did not connect: %v", err)
 		return err
@@ -105,7 +105,7 @@ func fnInvocationCall(ctx context.Context, URL string, serialisedPayload []byte)
 	log.Infof("SDK: Fn invocation start")
 	_, err = c.RouteInvocation(ctx, &fnInvocation.InvocationRequest{XDTJSON: serialisedPayload})
 	if err != nil {
-		log.Errorf("SDK: Fn invocation failed")
+		log.Errorf("SDK: Fn invocation failed: %v", err)
 		return err
 	}
 	log.Infof("SDK: Fn invocation successful")
@@ -128,7 +128,7 @@ func PushData(ctx context.Context, key string, payload []byte, chunkSizeInBytes 
 	ctxx, cancel := context.WithTimeout(ctx, 1*time.Second)
 	defer cancel()
 
-	conn, err := grpc.DialContext(ctxx, commonUtils.LoadedConfig.SQPServerAddr, commonUtils.GetGopts()...)
+	conn, err := grpc.DialContext(ctxx, utils.LoadedConfig.SQPServerAddr, utils.GetGopts()...)
 	if err != nil {
 		log.Errorf("can not connect with server %v", err)
 		return err

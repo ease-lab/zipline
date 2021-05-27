@@ -23,8 +23,8 @@
 package sqp
 
 import (
-	"XDTprototype/commonUtils"
 	"XDTprototype/transport"
+	"XDTprototype/utils"
 	"go.opentelemetry.io/contrib/instrumentation/google.golang.org/grpc/otelgrpc"
 	"io"
 	"sync"
@@ -60,7 +60,7 @@ func (s upXDTServer) SendData(srv upXDT.StreamData_SendDataServer) error {
 		chunk, err := srv.Recv()
 		if err == io.EOF {
 			log.Infof("sQP: %d chunks received", chunkCount)
-			if commonUtils.LoadedConfig.Routing == commonUtils.STORE_FORWARD {
+			if utils.LoadedConfig.Routing == utils.STORE_FORWARD {
 				bufferPool.StoreChannel(key, totalChunks, channel)
 			}
 			return srv.SendAndClose(&upXDT.Empty{})
@@ -74,10 +74,10 @@ func (s upXDTServer) SendData(srv upXDT.StreamData_SendDataServer) error {
 			key = chunk.Key
 			totalChunks = chunk.TotalChunks
 			log.Infof("sQP: requesting a new channel")
-			if commonUtils.LoadedConfig.Routing == commonUtils.CUT_THROUGH {
+			if utils.LoadedConfig.Routing == utils.CUT_THROUGH {
 				channel = bufferPool.CreateChannel()
 				bufferPool.StoreChannel(key, totalChunks, channel)
-			} else if commonUtils.LoadedConfig.Routing == commonUtils.STORE_FORWARD {
+			} else if utils.LoadedConfig.Routing == utils.STORE_FORWARD {
 				channel = bufferPool.CreateChannel()
 			} else {
 				log.Errorf("sQP: Invalid route type. Check config.json")
@@ -112,7 +112,8 @@ func (s crossXDTServer) ServeData(in *crossXDT.Request, srv crossXDT.StreamData_
 		case chunk := <-channel:
 			resp := crossXDT.Response{Chunk: chunk, TotalChunks: chunkTotal}
 			if err := srv.Send(&resp); err != nil {
-				log.Fatalf("sQP: send error %v", err)
+				log.Errorf("sQP: send error %v", err)
+				return err
 			}
 			log.Debugf("sQP: pushing chunk no. %d to dQP", chunkCount)
 			chunkCount += 1

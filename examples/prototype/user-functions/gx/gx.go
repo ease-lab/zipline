@@ -26,7 +26,7 @@ import (
 	"XDTprototype/sdk"
 	log "github.com/sirupsen/logrus"
 
-	"XDTprototype/commonUtils"
+	"XDTprototype/utils"
 )
 
 var handler = func(data []byte) {
@@ -34,5 +34,5 @@ var handler = func(data []byte) {
 }
 
 func main() {
-	sdk.StartDstServer(commonUtils.LoadedConfig.DstServerAddr, handler)
+	sdk.StartDstServer(utils.LoadedConfig.DstServerAddr, handler)
 }

@@ -3,14 +3,14 @@ module sqp
 go 1.16
 
 replace (
-	XDTprototype/commonUtils => ../commonUtils
+	XDTprototype/utils => ../utils
 	XDTprototype/proto/crossXDT => ../proto/crossXDT
 	XDTprototype/proto/upXDT => ../proto/upXDT
 	XDTprototype/transport => ../transport
 )
 
 require (
-	XDTprototype/commonUtils v0.0.0-00010101000000-000000000000
+	XDTprototype/utils v0.0.0-00010101000000-000000000000
 	XDTprototype/proto/crossXDT v0.0.0-00010101000000-000000000000
 	XDTprototype/proto/upXDT v0.0.0-00010101000000-000000000000
 	XDTprototype/transport v0.0.0-00010101000000-000000000000

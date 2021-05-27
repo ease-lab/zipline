@@ -29,18 +29,18 @@ import (
 	"testing"
 	"time"
 
-	"XDTprototype/commonUtils"
 	"XDTprototype/dqp"
 	"XDTprototype/sdk"
 	"XDTprototype/sqp"
+	"XDTprototype/utils"
 	log "github.com/sirupsen/logrus"
 )
 
 func init() {
 	log.SetLevel(log.InfoLevel)
 	log.SetFormatter(&log.TextFormatter{TimestampFormat: "2006-01-02 15:04:05.000000", FullTimestamp: true})
-	go sqp.StartServer(commonUtils.LoadedConfig.SQPServerAddr)
-	go dqp.StartServer(commonUtils.LoadedConfig.DQPServerAddr)
+	go sqp.StartServer(utils.LoadedConfig.SQPServerAddr)
+	go dqp.StartServer(utils.LoadedConfig.DQPServerAddr)
 }
 
 func TestSDK_to_sQP_data_transfer(t *testing.T) {
@@ -52,7 +52,7 @@ func TestSDK_to_sQP_data_transfer(t *testing.T) {
 	if _, err := rand.Read(payloadData); err != nil {
 		log.Fatal(err)
 	}
-	chunkSizeInBytes := commonUtils.LoadedConfig.ChunkSizeInBytes
+	chunkSizeInBytes := utils.LoadedConfig.ChunkSizeInBytes
 
 	start := time.Now()
 
@@ -72,7 +72,7 @@ func TestSQP_to_dQP_data_transfer(t *testing.T) {
 	if _, err := rand.Read(payloadData); err != nil {
 		log.Fatal(err)
 	}
-	chunkSizeInBytes := commonUtils.LoadedConfig.ChunkSizeInBytes
+	chunkSizeInBytes := utils.LoadedConfig.ChunkSizeInBytes
 
 	start := time.Now()
 	if err := sdk.PushData(context.Background(), key, payloadData, chunkSizeInBytes); err != nil {
@@ -97,7 +97,7 @@ func TestDQP_to_DstFn_data_transfer(t *testing.T) {
 	if _, err := rand.Read(payloadData); err != nil {
 		log.Fatal(err)
 	}
-	chunkSizeInBytes := commonUtils.LoadedConfig.ChunkSizeInBytes
+	chunkSizeInBytes := utils.LoadedConfig.ChunkSizeInBytes
 
 	start := time.Now()
 	if err := sdk.PushData(context.Background(), key, payloadData, chunkSizeInBytes); err != nil {

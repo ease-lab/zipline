@@ -33,11 +33,11 @@ import (
 	"sync"
 	"time"
 
-	"XDTprototype/commonUtils"
 	"XDTprototype/proto/crossXDT"
 	"XDTprototype/proto/downXDT"
 	"XDTprototype/proto/fnInvocation"
 	"XDTprototype/transport"
+	"XDTprototype/utils"
 	"google.golang.org/grpc"
 )
 
@@ -104,24 +104,24 @@ func (s fnInvocationServer) RouteInvocation(ctx context.Context, in *fnInvocatio
 		return &fnInvocation.Empty{}, err
 	}
 
-	chunkSizeInBytes := commonUtils.LoadedConfig.ChunkSizeInBytes
+	chunkSizeInBytes := utils.LoadedConfig.ChunkSizeInBytes
 	log.Infof("dQP: fetched data from sQP using key : %s", xdtPayload.Key)
 
-	if commonUtils.LoadedConfig.Routing == commonUtils.CUT_THROUGH {
+	if utils.LoadedConfig.Routing == utils.CUT_THROUGH {
 		log.Infof("dQP: [cut-through]: pulling data from sQP")
 		go PullDataFromSrcQP(ctx, xdtPayload.Key, chunkSizeInBytes)
-	} else if commonUtils.LoadedConfig.Routing == commonUtils.STORE_FORWARD {
+	} else if utils.LoadedConfig.Routing == utils.STORE_FORWARD {
 		log.Infof("dQP: [Store & Forward]: pulling data from sQP")
 		PullDataFromSrcQP(ctx, xdtPayload.Key, chunkSizeInBytes)
 	}
 
 	// route the invocation call to destination fn
 	//  This timeout must be large enough for the request to complete
-	timeoutDuration := time.Duration(commonUtils.LoadedConfig.RPCTimeoutDurationInMiliSecs) * time.Millisecond
+	timeoutDuration := time.Duration(utils.LoadedConfig.RPCTimeoutDuration) * time.Millisecond
 	ctxx, cancel := context.WithTimeout(ctx, timeoutDuration)
 	defer cancel()
 
-	conn, err := grpc.DialContext(ctxx, commonUtils.LoadedConfig.DstServerAddr, commonUtils.GetGopts()...)
+	conn, err := grpc.DialContext(ctxx, utils.LoadedConfig.DstServerAddr, utils.GetGopts()...)
 	if err != nil {
 		log.Errorf("dQP: RouteInvocation: did not connect: %v", err)
 		return &fnInvocation.Empty{}, err
@@ -149,15 +149,16 @@ func (s fnInvocationServer) RouteInvocation(ctx context.Context, in *fnInvocatio
 }
 
 // PullDataFromSrcQP pulls data from src QP to dst QP
-func PullDataFromSrcQP(ctx context.Context, key string, chunkSizeInBytes int) {
+func PullDataFromSrcQP(ctx context.Context, key string, chunkSizeInBytes int) error {
 	//  This timeout must be large enough for the request to complete
-	timeoutDuration := time.Duration(commonUtils.LoadedConfig.RPCTimeoutDurationInMiliSecs) * time.Millisecond
+	timeoutDuration := time.Duration(utils.LoadedConfig.RPCTimeoutDuration) * time.Millisecond
 	ctxx, cancel := context.WithTimeout(ctx, timeoutDuration)
 	defer cancel()
 
-	conn, err := grpc.DialContext(ctxx, commonUtils.LoadedConfig.SQPServerAddr, commonUtils.GetGopts()...)
+	conn, err := grpc.DialContext(ctxx, utils.LoadedConfig.SQPServerAddr, utils.GetGopts()...)
 	if err != nil {
 		log.Errorf("dQP: can not connect with server %v", err)
+		return err
 	}
 
 	client := crossXDT.NewStreamDataClient(conn)
@@ -165,6 +166,7 @@ func PullDataFromSrcQP(ctx context.Context, key string, chunkSizeInBytes int) {
 	stream, err := client.ServeData(ctx, in)
 	if err != nil {
 		log.Errorf("dQP: open stream error %v", err)
+		return err
 	}
 
 	chunkCount := 0
@@ -174,23 +176,24 @@ func PullDataFromSrcQP(ctx context.Context, key string, chunkSizeInBytes int) {
 	for {
 		chunk, err := stream.Recv()
 		if err == io.EOF {
-			log.Infof("dQP: %d chunks received at Dst", chunkCount)
-			if commonUtils.LoadedConfig.Routing == commonUtils.STORE_FORWARD {
+			log.Infof("dQP: %d chunks received", chunkCount)
+			if utils.LoadedConfig.Routing == utils.STORE_FORWARD {
 				bufferPool.StoreChannel(key, totalChunks, channel)
 			}
-			return
+			return nil
 		}
 		if err != nil {
 			log.Errorf("dQP: receive error: %v", err)
+			return err
 		}
 		log.Debugf("dQP: Received chunk no. %d", chunkCount)
 		onlyOnce.Do(func() {
 			totalChunks = chunk.TotalChunks
 			log.Infof("dQP: requesting a new channel")
-			if commonUtils.LoadedConfig.Routing == commonUtils.CUT_THROUGH {
+			if utils.LoadedConfig.Routing == utils.CUT_THROUGH {
 				channel = bufferPool.CreateChannel()
 				bufferPool.StoreChannel(key, chunk.TotalChunks, channel)
-			} else if commonUtils.LoadedConfig.Routing == commonUtils.STORE_FORWARD {
+			} else if utils.LoadedConfig.Routing == utils.STORE_FORWARD {
 				channel = bufferPool.CreateChannel()
 			} else {
 				log.Errorf("dQP: Invalid route type. Check config.json")

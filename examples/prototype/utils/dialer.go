@@ -20,74 +20,24 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 
-package commonUtils
+package utils
 
 import (
 	"context"
-	"encoding/json"
 	"github.com/pkg/errors"
 	log "github.com/sirupsen/logrus"
 	"go.opentelemetry.io/contrib/instrumentation/google.golang.org/grpc/otelgrpc"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/backoff"
-	"io/ioutil"
 	"net"
 	"os"
 	"syscall"
 	"time"
 )
 
-type Config struct {
-	ChunkSizeInBytes               int
-	DQPServerAddr                  string
-	LBAddr                         string
-	DstServerAddr                  string
-	SQPServerAddr                  string
-	CTBufferSize                   int
-	NumberOfBuffers                int
-	StAndFwBufferSize              int
-	Routing                        string
-	TracingEnabled                 bool
-	RPCTimeoutMaxBackoffInMiliSecs int
-	RPCTimeoutDurationInMiliSecs   int
-}
-
-const (
-	STORE_FORWARD = "Store&Forward"
-	CUT_THROUGH   = "CutThrough"
-)
-
-var LoadedConfig = LoadConfig("../config.json")
-
-func LoadConfig(file string) Config {
-	log.Debugf("Opening JSON file with config: %s\n", file)
-	jsonFile, err := os.Open(file)
-	if err != nil {
-		log.Fatal(err)
-	}
-	defer func() {
-		err = jsonFile.Close()
-		if err != nil {
-			log.Errorf("transport: Error closing the config file")
-		}
-	}()
-
-	jsonByteValue, err := ioutil.ReadAll(jsonFile)
-	if err != nil {
-		log.Fatal(err)
-	}
-
-	var config Config
-	if err = json.Unmarshal(jsonByteValue, &config); err != nil {
-		log.Fatal(err)
-	}
-
-	return config
-}
-
 func GetGopts() []grpc.DialOption {
 	backoffConfig := backoff.DefaultConfig
-	backoffConfig.MaxDelay = time.Duration(LoadedConfig.RPCTimeoutMaxBackoffInMiliSecs) * time.Millisecond
+	backoffConfig.MaxDelay = time.Duration(LoadedConfig.RPCTimeoutMaxBackoff) * time.Millisecond
 	connParams := grpc.ConnectParams{
 		Backoff: backoffConfig,
 	}
@@ -144,12 +94,12 @@ func timeoutDialer(address string, timeout time.Duration) (net.Conn, error) {
 			default:
 				c, err := net.DialTimeout("tcp", address, timeout)
 				if isConnRefused(err) {
-					<-time.After(1 * time.Millisecond)
+					<-time.After(time.Duration(LoadedConfig.RPCRetryDelay) * time.Millisecond)
 					continue
 				}
 				if err != nil {
 					log.Debug("Reconnecting after an error")
-					<-time.After(1 * time.Millisecond)
+					<-time.After(time.Duration(LoadedConfig.RPCRetryDelay) * time.Millisecond)
 					continue
 				}
 

@@ -9,6 +9,7 @@
   "StAndFwBufferSize": 1600,
   "Routing": "Store&Forward",
   "TracingEnabled": false,
-  "RPCTimeoutMaxBackoffInMiliSecs": 100,
-  "RPCTimeoutDurationInMiliSecs": 5000
+  "RPCTimeoutMaxBackoff": 100,
+  "RPCTimeoutDuration": 5000,
+  "RPCRetryDelay": 1
 }
