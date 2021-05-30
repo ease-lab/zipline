@@ -25,6 +25,7 @@ package sdk
 import (
 	"context"
 	"crypto/rand"
+	"errors"
 	"flag"
 	"sort"
 	"testing"
@@ -84,8 +85,7 @@ func TestSdk_InvokeWithXDT(t *testing.T) {
 	start := time.Now()
 	log.Infof("starting integ test")
 	url := utils.LoadedConfig.LBAddr
-	ctx := context.Background()
-	if err := sdk.InvokeWithXDT(ctx, url, payloadToSend, chunkSizeInBytes); err != nil {
+	if err := sdk.InvokeWithXDT(url, payloadToSend, chunkSizeInBytes); err != nil {
 		log.Fatalf("TestSdk_InvokeWithXDT failed %v", err)
 	}
 	elapsed := time.Since(start)
@@ -110,10 +110,6 @@ func TestErr_DQPTimeout(t *testing.T) {
 
 	// start server at sQP
 	go sqp.StartServer(utils.LoadedConfig.SQPServerAddr)
-	go func() {
-		time.Sleep(10 * time.Second)
-		dqp.StartServer(utils.LoadedConfig.DQPServerAddr)
-	}()
 	go sdk.StartDstServer(utils.LoadedConfig.DstServerAddr, handler)
 
 	time.Sleep(time.Second * 1)
@@ -129,10 +125,8 @@ func TestErr_DQPTimeout(t *testing.T) {
 	start := time.Now()
 	log.Infof("starting integ test")
 	url := utils.LoadedConfig.LBAddr
-	ctx := context.Background()
-
-	if err := sdk.InvokeWithXDT(ctx, url, payloadToSend, chunkSizeInBytes); err == context.DeadlineExceeded {
-		log.Errorf("TestSdk_InvokeWithXDT failed successfully")
+	if err := sdk.InvokeWithXDT(url, payloadToSend, chunkSizeInBytes); err == context.DeadlineExceeded {
+		log.Errorf("TestSdk_InvokeWithXDT failed predictably")
 	} else {
 		log.Fatalf("Unexpected Error Occured: %v", err)
 	}
@@ -159,10 +153,6 @@ func TestErr_DSTTimeout(t *testing.T) {
 	// start server at sQP
 	go sqp.StartServer(utils.LoadedConfig.SQPServerAddr)
 	go dqp.StartServer(utils.LoadedConfig.DQPServerAddr)
-	go func() {
-		time.Sleep(10 * time.Second)
-		sdk.StartDstServer(utils.LoadedConfig.DstServerAddr, handler)
-	}()
 
 	time.Sleep(time.Second * 1)
 
@@ -177,12 +167,10 @@ func TestErr_DSTTimeout(t *testing.T) {
 	start := time.Now()
 	log.Infof("starting integ test")
 	url := utils.LoadedConfig.LBAddr
-	ctx := context.Background()
-
-	if err := sdk.InvokeWithXDT(ctx, url, payloadToSend, chunkSizeInBytes); err == context.DeadlineExceeded {
-		log.Errorf("TestSdk_InvokeWithXDT failed successfully")
+	if err := sdk.InvokeWithXDT(url, payloadToSend, chunkSizeInBytes); err == context.DeadlineExceeded {
+		log.Errorf("TestSdk_InvokeWithXDT failed predictably")
 	} else {
-		log.Fatalf("Unexpected Error Occured: %v", err)
+		log.Fatalf("Unexpected Error Occured: %v", errors.Unwrap(err))
 	}
 	elapsed := time.Since(start)
 
@@ -220,8 +208,7 @@ func TestBenchmark_XDT(t *testing.T) {
 
 		for i := 0; i < sampleSize; i += 1 {
 			start := time.Now()
-			ctx := context.Background()
-			if err := sdk.InvokeWithXDT(ctx, url, payloadToSend, chunkSizeInBytes); err != nil {
+			if err := sdk.InvokeWithXDT(url, payloadToSend, chunkSizeInBytes); err != nil {
 				log.Fatalf("TestBenchmark_XDT failed %v", err)
 			}
 			latencyInUs := time.Since(start).Microseconds()

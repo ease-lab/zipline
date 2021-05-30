@@ -23,22 +23,19 @@
 package dqp
 
 import (
-	"context"
-	"encoding/json"
-	log "github.com/sirupsen/logrus"
-	"go.opentelemetry.io/contrib/instrumentation/google.golang.org/grpc/otelgrpc"
-	"golang.org/x/sync/errgroup"
-	"io"
-	"net"
-	"sync"
-	"time"
-
 	"XDTprototype/proto/crossXDT"
 	"XDTprototype/proto/downXDT"
 	"XDTprototype/proto/fnInvocation"
 	"XDTprototype/transport"
 	"XDTprototype/utils"
+	"context"
+	"encoding/json"
+	log "github.com/sirupsen/logrus"
+	"go.opentelemetry.io/contrib/instrumentation/google.golang.org/grpc/otelgrpc"
 	"google.golang.org/grpc"
+	"io"
+	"net"
+	"sync"
 )
 
 // bufferPool is responsible for managing bounded buffers of channels to store data
@@ -107,58 +104,103 @@ func (s fnInvocationServer) RouteInvocation(ctx context.Context, in *fnInvocatio
 	chunkSizeInBytes := utils.LoadedConfig.ChunkSizeInBytes
 	log.Infof("dQP: fetched data from sQP using key : %s", xdtPayload.Key)
 
-	if utils.LoadedConfig.Routing == utils.CUT_THROUGH {
-		log.Infof("dQP: [cut-through]: pulling data from sQP")
-		go PullDataFromSrcQP(ctx, xdtPayload.Key, chunkSizeInBytes)
-	} else if utils.LoadedConfig.Routing == utils.STORE_FORWARD {
+	errorPullDataFromSrcQP := make(chan error, 1)
+
+	go func() { errorPullDataFromSrcQP <- PullDataFromSrcQP(ctx, xdtPayload.Key, chunkSizeInBytes) }()
+
+	if utils.LoadedConfig.Routing == utils.STORE_FORWARD {
 		log.Infof("dQP: [Store & Forward]: pulling data from sQP")
-		PullDataFromSrcQP(ctx, xdtPayload.Key, chunkSizeInBytes)
+		select {
+		case <-ctx.Done():
+			<-errorPullDataFromSrcQP // Wait for f to return.
+			return &fnInvocation.Empty{}, ctx.Err()
+		case err := <-errorPullDataFromSrcQP:
+			if err != nil {
+				log.Errorf("dQP: [Store & Forward] Pull data failed")
+				return &fnInvocation.Empty{}, err
+			}
+		}
 	}
 
-	// route the invocation call to destination fn
-	//  This timeout must be large enough for the request to complete
-	timeoutDuration := time.Duration(utils.LoadedConfig.RPCTimeoutDuration) * time.Millisecond
-	ctxx, cancel := context.WithTimeout(ctx, timeoutDuration)
-	defer cancel()
+	errorRouteInvocation := make(chan error, 1)
 
-	conn, err := grpc.DialContext(ctxx, utils.LoadedConfig.DstServerAddr, utils.GetGopts()...)
-	if err != nil {
-		log.Errorf("dQP: RouteInvocation: did not connect: %v", err)
-		return &fnInvocation.Empty{}, err
-	}
-
-	c := downXDT.NewXDTtoFnClient(conn)
-	_, err = c.XDTFnCall(ctx, &downXDT.InvocationRequest{XDTJSON: in.XDTJSON})
-	if err != nil {
-		log.Errorf("dQP: Fn invocation route unsuccessful")
-		return &fnInvocation.Empty{}, err
-	}
-	log.Infof("dQP: Fn invocation route successful")
-
-	errGroup, _ := errgroup.WithContext(ctx)
-	errGroup.Go(func() error {
+	go func() {
+		conn, err := grpc.DialContext(ctx, utils.LoadedConfig.DstServerAddr, utils.GetGopts()...)
+		if err != nil {
+			log.Errorf("dQP: RouteInvocation: did not connect: %v", err)
+			errorRouteInvocation <- err
+			return
+		}
+		c := downXDT.NewXDTtoFnClient(conn)
+		log.Infof("dQP: DST invocation start")
+		_, err = c.XDTFnCall(ctx, &downXDT.InvocationRequest{XDTJSON: in.XDTJSON})
+		if err != nil {
+			log.Errorf("dQP: Fn invocation route unsuccessful")
+			errorRouteInvocation <- err
+			return
+		}
+		log.Infof("dQP: Fn invocation route successful")
+		// need some help in closing this connection in case of an error.
 		err = conn.Close()
 		if err != nil {
 			log.Errorf("dQP: Error closing the connection to Dest")
-			return err
+			errorRouteInvocation <- err
+			return
 		}
-		return nil
-	})
+		errorRouteInvocation <- nil
+	}()
+	select {
+	case <-ctx.Done():
+		log.Errorf("SDK: context expired at RouteInvocation@dQP")
+		<-errorRouteInvocation
+		return &fnInvocation.Empty{}, ctx.Err()
+	case err := <-errorRouteInvocation:
+		if err != nil {
+			return &fnInvocation.Empty{}, err
+		}
+		log.Infof("dQP: Fn invocation route successful")
+	}
 
-	return &fnInvocation.Empty{}, errGroup.Wait()
+	if utils.LoadedConfig.Routing == utils.CUT_THROUGH {
+		log.Infof("dQP: [cut-through]: pulling data from sQP")
+		select {
+		case <-ctx.Done():
+			<-errorPullDataFromSrcQP
+			return &fnInvocation.Empty{}, ctx.Err()
+		case err := <-errorPullDataFromSrcQP:
+			if err != nil {
+				log.Errorf("dQP: [cut-through]: pulling data from sQP failed")
+				return &fnInvocation.Empty{}, err
+			}
+		}
+	}
+	return &fnInvocation.Empty{}, nil
 }
 
 // PullDataFromSrcQP pulls data from src QP to dst QP
 func PullDataFromSrcQP(ctx context.Context, key string, chunkSizeInBytes int) error {
-	//  This timeout must be large enough for the request to complete
-	timeoutDuration := time.Duration(utils.LoadedConfig.RPCTimeoutDuration) * time.Millisecond
-	ctxx, cancel := context.WithTimeout(ctx, timeoutDuration)
-	defer cancel()
 
-	conn, err := grpc.DialContext(ctxx, utils.LoadedConfig.SQPServerAddr, utils.GetGopts()...)
-	if err != nil {
-		log.Errorf("dQP: can not connect with server %v", err)
+	errorChannel := make(chan error, 1)
+	connChannel := make(chan *grpc.ClientConn, 1)
+	var conn *grpc.ClientConn
+	go func() {
+		conn, err := grpc.DialContext(ctx, utils.LoadedConfig.SQPServerAddr, utils.GetGopts()...)
+		if err != nil {
+			log.Errorf("SRC: can not connect with server %v", err)
+			errorChannel <- err
+			return
+		} else {
+			connChannel <- conn
+			return
+		}
+	}()
+	select {
+	case <-ctx.Done():
+		<-errorChannel
+		return ctx.Err()
+	case err := <-errorChannel:
 		return err
+	case conn = <-connChannel:
 	}
 
 	client := crossXDT.NewStreamDataClient(conn)

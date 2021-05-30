@@ -59,8 +59,22 @@ integ-test_CT:
 	sed -i '/Routing/c\  "Routing": "CutThrough",' ./config.json
 	cd sdk && go test ./integration_test.go -run TestSdk_InvokeWithXDT -race -v -cover
 
+
 integ-test_SF:
 	sed -i '/Routing/c\  "Routing": "Store&Forward",' ./config.json
 	cd sdk && go test ./integration_test.go -run TestSdk_InvokeWithXDT -race -v -cover
 
 integ-test: integ-test_CT integ-test_SF
+
+timeout-test_CT:
+	sed -i '/Routing/c\  "Routing": "CutThrough",' ./config.json
+	cd sdk && go test ./integration_test.go -run TestErr_DQPTimeout -v
+	cd sdk && go test ./integration_test.go -run TestErr_DSTTimeout -v
+
+timeout-test_SF:
+	sed -i '/Routing/c\  "Routing": "Store&Forward",' ./config.json
+	cd sdk && go test ./integration_test.go -run TestErr_DQPTimeout -v
+	cd sdk && go test ./integration_test.go -run TestErr_DSTTimeout -v
+
+timeout-test: timeout-test_CT timeout-test_SF
+

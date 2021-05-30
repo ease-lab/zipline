@@ -83,7 +83,10 @@ func TestSQP_to_dQP_data_transfer(t *testing.T) {
 
 	log.Infof("transferred %d bytes from SrcFn to sQP in %s", len(payloadData), duration)
 
-	dqp.PullDataFromSrcQP(context.Background(), key, chunkSizeInBytes)
+	err := dqp.PullDataFromSrcQP(context.Background(), key, chunkSizeInBytes)
+	if err != nil {
+		log.Fatal(err)
+	}
 
 	log.Infof("transferred packet from sQP to dQP in %s", duration)
 }
@@ -108,7 +111,10 @@ func TestDQP_to_DstFn_data_transfer(t *testing.T) {
 	log.Infof("transferred %d bytes from SrcFn to sQP in %s", len(payloadData), duration)
 
 	start = time.Now()
-	dqp.PullDataFromSrcQP(context.Background(), key, chunkSizeInBytes)
+	err := dqp.PullDataFromSrcQP(context.Background(), key, chunkSizeInBytes)
+	if err != nil {
+		log.Fatal(err)
+	}
 	duration = time.Since(start)
 
 	log.Infof("transferred packet from sQP to dQP in %s", duration)

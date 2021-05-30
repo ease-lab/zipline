@@ -26,7 +26,6 @@ import (
 	"XDTprototype/utils"
 	"context"
 	"encoding/json"
-	"golang.org/x/sync/errgroup"
 	"strconv"
 	"time"
 
@@ -38,7 +37,12 @@ import (
 )
 
 // InvokeWithXDT invokes the RPC call with XDT
-func InvokeWithXDT(ctx context.Context, URL string, xdtPayload Payload, chunkSizeInBytes int) error {
+func InvokeWithXDT(URL string, xdtPayload Payload, chunkSizeInBytes int) error {
+
+	//  This timeout must be large enough for the request to complete
+	timeoutDuration := time.Duration(utils.LoadedConfig.RPCTimeoutDuration) * time.Millisecond
+	ctx, cancel := context.WithTimeout(context.Background(), timeoutDuration)
+	defer cancel()
 
 	log.Infof("SDK: XDT invoke start")
 	now := time.Now()
@@ -56,82 +60,123 @@ func InvokeWithXDT(ctx context.Context, URL string, xdtPayload Payload, chunkSiz
 		return err
 	}
 
-	errGroup, _ := errgroup.WithContext(ctx)
+	errorPushData := make(chan error, 1)
+
+	go func() { errorPushData <- PushData(ctx, key, payloadData, chunkSizeInBytes) }()
 
 	if utils.LoadedConfig.Routing == utils.STORE_FORWARD {
 		log.Info("SDK: using store & forward routing")
-		err := PushData(ctx, key, payloadData, chunkSizeInBytes)
+		select {
+		case <-ctx.Done():
+			<-errorPushData // Wait for f to return.
+			return ctx.Err()
+		case err := <-errorPushData:
+			if err != nil {
+				log.Errorf("SDK: [Store & Forward] Push data failed")
+				return err
+			}
+		}
+	}
+
+	errorFnInvocationCall := make(chan error, 1)
+
+	go func() { errorFnInvocationCall <- fnInvocationCall(ctx, URL, serialisedPayload) }()
+	select {
+	case <-ctx.Done():
+		<-errorFnInvocationCall
+		return ctx.Err()
+	case err := <-errorFnInvocationCall:
 		if err != nil {
-			log.Errorf("SDK: [Store & Forward] Push data failed")
+			log.Errorf("SDK: InvokeWithXDT: fnInvocationCall failed: %v", err)
 			return err
 		}
-	} else if utils.LoadedConfig.Routing == utils.CUT_THROUGH {
+	}
+
+	if utils.LoadedConfig.Routing == utils.CUT_THROUGH {
 		log.Info("SDK: using cut through routing")
-		errGroup.Go(func() error {
-			err := PushData(ctx, key, payloadData, chunkSizeInBytes)
+		// Wait for completion and return the first error (if any)
+		select {
+		case <-ctx.Done():
+			<-errorPushData
+			return ctx.Err()
+		case err := <-errorPushData:
 			if err != nil {
-				log.Errorf("SDK: [cut-through] Push data failed")
+				log.Errorf("SDK: [Cut Through] Push data failed")
 				return err
 			}
 			return nil
-		})
+		}
+	} else {
+		return nil
 	}
-
-	if err := fnInvocationCall(ctx, URL, serialisedPayload); err != nil {
-		log.Errorf("SDK: InvokeWithXDT: fnInvocationCall failed: %v", err)
-		return err
-	}
-	// Wait for completion and return the first error (if any)
-	return errGroup.Wait()
 }
 
 // fnInvocationCall makes fn invocation call to dQP with xdt payload
 func fnInvocationCall(ctx context.Context, URL string, serialisedPayload []byte) error {
 
-	//  This timeout must be large enough for the request to complete
-	timeoutDuration := time.Duration(utils.LoadedConfig.RPCTimeoutDuration) * time.Millisecond
-	ctxx, cancel := context.WithTimeout(ctx, timeoutDuration)
-	defer cancel()
+	errorChannel := make(chan error, 1)
 
-	conn, err := grpc.DialContext(ctxx, URL, utils.GetGopts()...)
-	if err != nil {
-		log.Errorf("SDK: fnInvocationCall: did not connect: %v", err)
-		return err
-	}
-	errGroup, _ := errgroup.WithContext(ctx)
-
-	c := fnInvocation.NewInvocationClient(conn)
-
-	log.Infof("SDK: Fn invocation start")
-	_, err = c.RouteInvocation(ctx, &fnInvocation.InvocationRequest{XDTJSON: serialisedPayload})
-	if err != nil {
-		log.Errorf("SDK: Fn invocation failed: %v", err)
-		return err
-	}
-	log.Infof("SDK: Fn invocation successful")
-
-	errGroup.Go(func() error {
+	go func() {
+		conn, err := grpc.DialContext(ctx, URL, utils.GetGopts()...)
+		if err != nil {
+			errorChannel <- err
+			return
+		}
+		c := fnInvocation.NewInvocationClient(conn)
+		log.Infof("SDK: Fn invocation start")
+		_, err = c.RouteInvocation(ctx, &fnInvocation.InvocationRequest{XDTJSON: serialisedPayload})
+		if err != nil {
+			errorChannel <- err
+			return
+		}
+		// need some help in closing this connection in case of an error.
 		err = conn.Close()
 		if err != nil {
 			log.Errorf("dQP: Error closing the connection to Dest")
+			errorChannel <- err
+			return
+		}
+		errorChannel <- nil
+	}()
+	select {
+	case <-ctx.Done():
+		log.Errorf("SDK: context expired at fnInvocationCall")
+		<-errorChannel
+		return ctx.Err()
+	case err := <-errorChannel:
+		if err != nil {
+			log.Errorf("SDK: Fn invocation failed: %v", err)
 			return err
 		}
+		log.Infof("SDK: Fn invocation successful")
 		return nil
-	})
-	return errGroup.Wait()
+	}
 }
 
 // PushData to source QP
 func PushData(ctx context.Context, key string, payload []byte, chunkSizeInBytes int) error {
 
-	//  This timeout must be large enough for the request to complete
-	ctxx, cancel := context.WithTimeout(ctx, 1*time.Second)
-	defer cancel()
-
-	conn, err := grpc.DialContext(ctxx, utils.LoadedConfig.SQPServerAddr, utils.GetGopts()...)
-	if err != nil {
-		log.Errorf("can not connect with server %v", err)
+	errorChannel := make(chan error, 1)
+	connChannel := make(chan *grpc.ClientConn, 1)
+	var conn *grpc.ClientConn
+	go func() {
+		conn, err := grpc.DialContext(ctx, utils.LoadedConfig.SQPServerAddr, utils.GetGopts()...)
+		if err != nil {
+			log.Errorf("can not connect with server %v", err)
+			errorChannel <- err
+			return
+		} else {
+			connChannel <- conn
+			return
+		}
+	}()
+	select {
+	case <-ctx.Done():
+		<-errorChannel
+		return ctx.Err()
+	case err := <-errorChannel:
 		return err
+	case conn = <-connChannel:
 	}
 
 	client := upXDT.NewStreamDataClient(conn)
@@ -173,5 +218,6 @@ func PushData(ctx context.Context, key string, payload []byte, chunkSizeInBytes 
 		log.Errorf("%v.CloseAndRecv() got error %v, want %v", stream, err, nil)
 		return err
 	}
+	log.Infof("SDK: data push successful")
 	return nil
 }

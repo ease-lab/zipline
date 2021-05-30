@@ -23,6 +23,8 @@
 package sdk
 
 import (
+	"XDTprototype/proto/downXDT"
+	"XDTprototype/utils"
 	"context"
 	"encoding/json"
 	log "github.com/sirupsen/logrus"
@@ -30,10 +32,6 @@ import (
 	"io"
 	"net"
 	"sync"
-	"time"
-
-	"XDTprototype/proto/downXDT"
-	"XDTprototype/utils"
 
 	"google.golang.org/grpc"
 )
@@ -74,15 +72,27 @@ func (s downXDTServer) XDTFnCall(ctx context.Context, in *downXDT.InvocationRequ
 // FetchFromDQP fetches data from dQP to DstFn
 func FetchFromDQP(ctx context.Context, key string, chunkSizeInBytes int) ([]byte, error) {
 
-	//  This timeout must be large enough for the request to complete
-	timeoutDuration := time.Duration(utils.LoadedConfig.RPCTimeoutDuration) * time.Millisecond
-	ctxx, cancel := context.WithTimeout(ctx, timeoutDuration)
-	defer cancel()
-
-	conn, err := grpc.DialContext(ctxx, utils.LoadedConfig.DQPServerAddr, utils.GetGopts()...)
-	if err != nil {
-		log.Errorf("DST: can not connect with server %v", err)
+	errorChannel := make(chan error, 1)
+	connChannel := make(chan *grpc.ClientConn, 1)
+	var conn *grpc.ClientConn
+	go func() {
+		conn, err := grpc.DialContext(ctx, utils.LoadedConfig.DQPServerAddr, utils.GetGopts()...)
+		if err != nil {
+			log.Errorf("DST: can not connect with server %v", err)
+			errorChannel <- err
+			return
+		} else {
+			connChannel <- conn
+			return
+		}
+	}()
+	select {
+	case <-ctx.Done():
+		<-errorChannel
+		return []byte{}, ctx.Err()
+	case err := <-errorChannel:
 		return []byte{}, err
+	case conn = <-connChannel:
 	}
 
 	client := downXDT.NewXDTtoFnClient(conn)
