@@ -68,13 +68,15 @@ integ-test: integ-test_CT integ-test_SF
 
 timeout-test_CT:
 	sed -i '/Routing/c\  "Routing": "CutThrough",' ./config.json
-	cd sdk && go test ./integration_test.go -run TestErr_DQPTimeout -v
+	sleep 60
 	cd sdk && go test ./integration_test.go -run TestErr_DSTTimeout -v
+	cd sdk && go test ./integration_test.go -run TestErr_DQPTimeout -v
 
 timeout-test_SF:
 	sed -i '/Routing/c\  "Routing": "Store&Forward",' ./config.json
-	cd sdk && go test ./integration_test.go -run TestErr_DQPTimeout -v
+	sleep 60
 	cd sdk && go test ./integration_test.go -run TestErr_DSTTimeout -v
+	cd sdk && go test ./integration_test.go -run TestErr_DQPTimeout -v
 
-timeout-test: timeout-test_CT timeout-test_SF
+timeout-test: timeout-test_SF timeout-test_CT
 

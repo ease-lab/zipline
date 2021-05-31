@@ -72,27 +72,10 @@ func (s downXDTServer) XDTFnCall(ctx context.Context, in *downXDT.InvocationRequ
 // FetchFromDQP fetches data from dQP to DstFn
 func FetchFromDQP(ctx context.Context, key string, chunkSizeInBytes int) ([]byte, error) {
 
-	errorChannel := make(chan error, 1)
-	connChannel := make(chan *grpc.ClientConn, 1)
-	var conn *grpc.ClientConn
-	go func() {
-		conn, err := grpc.DialContext(ctx, utils.LoadedConfig.DQPServerAddr, utils.GetGopts()...)
-		if err != nil {
-			log.Errorf("DST: can not connect with server %v", err)
-			errorChannel <- err
-			return
-		} else {
-			connChannel <- conn
-			return
-		}
-	}()
-	select {
-	case <-ctx.Done():
-		<-errorChannel
-		return []byte{}, ctx.Err()
-	case err := <-errorChannel:
+	conn, err := utils.GetGRPCConn(ctx, utils.LoadedConfig.DQPServerAddr, false)
+	if err != nil {
+		log.Errorf("DST: can not connect with server %v", err)
 		return []byte{}, err
-	case conn = <-connChannel:
 	}
 
 	client := downXDT.NewXDTtoFnClient(conn)

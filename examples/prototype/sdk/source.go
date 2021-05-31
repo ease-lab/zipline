@@ -36,14 +36,7 @@ import (
 	"google.golang.org/grpc"
 )
 
-// InvokeWithXDT invokes the RPC call with XDT
-func InvokeWithXDT(URL string, xdtPayload Payload, chunkSizeInBytes int) error {
-
-	//  This timeout must be large enough for the request to complete
-	timeoutDuration := time.Duration(utils.LoadedConfig.RPCTimeoutDuration) * time.Millisecond
-	ctx, cancel := context.WithTimeout(context.Background(), timeoutDuration)
-	defer cancel()
-
+func splitPayload(xdtPayload *Payload) (string, []byte) {
 	log.Infof("SDK: XDT invoke start")
 	now := time.Now()
 	key := strconv.Itoa(int(now.UnixNano()))
@@ -54,16 +47,25 @@ func InvokeWithXDT(URL string, xdtPayload Payload, chunkSizeInBytes int) error {
 	xdtPayload.Data = []byte("")
 	xdtPayload.Key = key
 	xdtPayload.IsXDT = true
+	return key, payloadData
+}
 
+// InvokeWithXDT invokes the RPC call with XDT
+func InvokeWithXDT(URL string, xdtPayload Payload, chunkSizeInBytes int) error {
+
+	//  This timeout must be large enough for the request to complete
+	timeoutDuration := time.Duration(utils.LoadedConfig.RPCTimeoutDuration) * time.Millisecond
+	ctx, cancel := context.WithTimeout(context.Background(), timeoutDuration)
+	defer cancel()
+
+	key, payloadData := splitPayload(&xdtPayload)
 	serialisedPayload, err := json.Marshal(xdtPayload)
 	if err != nil {
 		return err
 	}
 
 	errorPushData := make(chan error, 1)
-
 	go func() { errorPushData <- PushData(ctx, key, payloadData, chunkSizeInBytes) }()
-
 	if utils.LoadedConfig.Routing == utils.STORE_FORWARD {
 		log.Info("SDK: using store & forward routing")
 		select {
@@ -79,7 +81,6 @@ func InvokeWithXDT(URL string, xdtPayload Payload, chunkSizeInBytes int) error {
 	}
 
 	errorFnInvocationCall := make(chan error, 1)
-
 	go func() { errorFnInvocationCall <- fnInvocationCall(ctx, URL, serialisedPayload) }()
 	select {
 	case <-ctx.Done():
@@ -156,27 +157,10 @@ func fnInvocationCall(ctx context.Context, URL string, serialisedPayload []byte)
 // PushData to source QP
 func PushData(ctx context.Context, key string, payload []byte, chunkSizeInBytes int) error {
 
-	errorChannel := make(chan error, 1)
-	connChannel := make(chan *grpc.ClientConn, 1)
-	var conn *grpc.ClientConn
-	go func() {
-		conn, err := grpc.DialContext(ctx, utils.LoadedConfig.SQPServerAddr, utils.GetGopts()...)
-		if err != nil {
-			log.Errorf("can not connect with server %v", err)
-			errorChannel <- err
-			return
-		} else {
-			connChannel <- conn
-			return
-		}
-	}()
-	select {
-	case <-ctx.Done():
-		<-errorChannel
-		return ctx.Err()
-	case err := <-errorChannel:
+	conn, err := utils.GetGRPCConn(ctx, utils.LoadedConfig.SQPServerAddr, false)
+	if err != nil {
+		log.Errorf("SRC: can not connect to SQP %v", err)
 		return err
-	case conn = <-connChannel:
 	}
 
 	client := upXDT.NewStreamDataClient(conn)

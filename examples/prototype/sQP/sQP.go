@@ -113,6 +113,7 @@ func (s crossXDTServer) ServeData(in *crossXDT.Request, srv crossXDT.StreamData_
 			resp := crossXDT.Response{Chunk: chunk, TotalChunks: chunkTotal}
 			if err := srv.Send(&resp); err != nil {
 				log.Errorf("sQP: send error %v", err)
+				bufferPool.FreeChannel(in.Key)
 				return err
 			}
 			log.Debugf("sQP: pushing chunk no. %d to dQP", chunkCount)
