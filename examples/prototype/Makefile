@@ -86,3 +86,28 @@ parallel-invoke-test:
 	cd sdk && go test ./integration_test.go -run TestParallel_Invoke -concurrentCalls 2 $(GO_TEST_FLAGS)
 	cd sdk && go test ./integration_test.go -run TestParallel_Invoke -concurrentCalls 5 $(GO_TEST_FLAGS)
 
+fan-out-test: fan-out_SF fan-out_CT
+fan-in-test: fan-in_SF fan-in_CT
+
+fan-out_SF:
+	sed -i '/Routing/c\  "Routing": "Store&Forward",' ./config.json
+	cd sdk && go test ./integration_test.go -run TestParallel_FanOut -concurrentCalls 1 $(GO_TEST_FLAGS)
+	cd sdk && go test ./integration_test.go -run TestParallel_FanOut -concurrentCalls 2 $(GO_TEST_FLAGS)
+	cd sdk && go test ./integration_test.go -run TestParallel_FanOut -concurrentCalls 5 $(GO_TEST_FLAGS)
+fan-out_CT:
+	sed -i '/Routing/c\  "Routing": "CutThrough",' ./config.json
+	cd sdk && go test ./integration_test.go -run TestParallel_FanOut -concurrentCalls 1 $(GO_TEST_FLAGS)
+	cd sdk && go test ./integration_test.go -run TestParallel_FanOut -concurrentCalls 2 $(GO_TEST_FLAGS)
+	cd sdk && go test ./integration_test.go -run TestParallel_FanOut -concurrentCalls 5 $(GO_TEST_FLAGS)
+
+fan-in_SF:
+	sed -i '/Routing/c\  "Routing": "Store&Forward",' ./config.json
+	cd sdk && go test ./integration_test.go -run TestParallel_FanIn -concurrentCalls 1 $(GO_TEST_FLAGS)
+	cd sdk && go test ./integration_test.go -run TestParallel_FanIn -concurrentCalls 2 $(GO_TEST_FLAGS)
+	cd sdk && go test ./integration_test.go -run TestParallel_FanIn -concurrentCalls 5 $(GO_TEST_FLAGS)
+fan-in_CT:
+	sed -i '/Routing/c\  "Routing": "CutThrough",' ./config.json
+	cd sdk && go test ./integration_test.go -run TestParallel_FanIn -concurrentCalls 1 $(GO_TEST_FLAGS)
+	cd sdk && go test ./integration_test.go -run TestParallel_FanIn -concurrentCalls 2 $(GO_TEST_FLAGS)
+	cd sdk && go test ./integration_test.go -run TestParallel_FanIn -concurrentCalls 5 $(GO_TEST_FLAGS)
+

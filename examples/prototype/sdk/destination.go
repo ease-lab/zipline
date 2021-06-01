@@ -40,6 +40,7 @@ type downXDTServer struct {
 	downXDT.UnimplementedXDTtoFnServer
 }
 
+var config utils.Config
 var DestinationHandler func([]byte)
 
 // XDTFnCall is to be called by dQP to invoke DstFn
@@ -47,7 +48,7 @@ func (s downXDTServer) XDTFnCall(ctx context.Context, in *downXDT.InvocationRequ
 
 	log.Infof("DST: received invocation call %s", in.XDTJSON)
 
-	var xdtPayload Payload
+	var xdtPayload utils.Payload
 	if err := json.Unmarshal(in.XDTJSON, &xdtPayload); err != nil {
 		log.Error("DST: XDTFnCall", err)
 		return &downXDT.Empty{}, err
@@ -55,10 +56,10 @@ func (s downXDTServer) XDTFnCall(ctx context.Context, in *downXDT.InvocationRequ
 
 	key := xdtPayload.Key
 
-	chunkSizeInBytes := utils.LoadedConfig.ChunkSizeInBytes
+	chunkSizeInBytes := config.ChunkSizeInBytes
 
 	// fetch data from dQP
-	payloadBytes, err := FetchFromDQP(ctx, key, chunkSizeInBytes)
+	payloadBytes, err := FetchFromDQP(ctx, key, config.DQPServerAddr, chunkSizeInBytes)
 	if err != nil {
 		log.Errorf("DST: FetchFromDQP failed %v", err)
 		return &downXDT.Empty{}, err
@@ -70,9 +71,9 @@ func (s downXDTServer) XDTFnCall(ctx context.Context, in *downXDT.InvocationRequ
 }
 
 // FetchFromDQP fetches data from dQP to DstFn
-func FetchFromDQP(ctx context.Context, key string, chunkSizeInBytes int) ([]byte, error) {
+func FetchFromDQP(ctx context.Context, key string, dQPAddr string, chunkSizeInBytes int) ([]byte, error) {
 
-	conn, err := utils.GetGRPCConn(ctx, utils.LoadedConfig.DQPServerAddr, false)
+	conn, err := utils.GetGRPCConn(ctx, dQPAddr, false)
 	if err != nil {
 		log.Errorf("DST: can not connect with server %v", err)
 		return []byte{}, err
@@ -106,7 +107,7 @@ func FetchFromDQP(ctx context.Context, key string, chunkSizeInBytes int) ([]byte
 		onlyOnce.Do(func() {
 			totalChunks = chunk.TotalChunks
 			log.Infof("DST: creating a new buffer")
-			payloadBytes = make([]byte, utils.LoadedConfig.StAndFwBufferSize*utils.LoadedConfig.ChunkSizeInBytes)
+			payloadBytes = make([]byte, utils.LoadConfig.StAndFwBufferSize*utils.LoadConfig.ChunkSizeInBytes)
 			log.Infof("DST: chunkTotal = %d", totalChunks)
 		})
 		log.Debugf("DST: appending chunk number %d", chunkCount)
@@ -117,11 +118,12 @@ func FetchFromDQP(ctx context.Context, key string, chunkSizeInBytes int) ([]byte
 }
 
 // StartDstServer starts DstQP server
-func StartDstServer(serverAddr string, handler func([]byte)) {
+func StartDstServer(receivedConfig utils.Config, handler func([]byte)) {
 
+	config = receivedConfig
 	DestinationHandler = handler
 
-	lis, err := net.Listen("tcp", serverAddr)
+	lis, err := net.Listen("tcp", config.DstServerAddr)
 	if err != nil {
 		log.Fatalf("DST: failed to listen: %v", err)
 	}

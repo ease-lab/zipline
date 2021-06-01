@@ -38,6 +38,8 @@ import (
 	"sync"
 )
 
+var config utils.Config
+
 // bufferPool is responsible for managing bounded buffers of channels to store data
 var bufferPool transport.BufferPool
 
@@ -47,12 +49,6 @@ type fnInvocationServer struct {
 
 type downXDTServer struct {
 	downXDT.UnimplementedXDTtoFnServer
-}
-
-type payload struct {
-	FunctionName string
-	Data         []byte
-	Key          string
 }
 
 // XDTDataServe is a gRPC server to serve data to the DstFn
@@ -95,7 +91,7 @@ func invokeDestinationHandler(ctx context.Context, XDTJSON []byte) error {
 	errorRouteInvocation := make(chan error, 1)
 
 	go func() {
-		conn, err := grpc.DialContext(ctx, utils.LoadedConfig.DstServerAddr, utils.GetGopts()...)
+		conn, err := grpc.DialContext(ctx, config.DstServerAddr, utils.GetGopts()...)
 		if err != nil {
 			log.Errorf("dQP: RouteInvocation: did not connect: %v", err)
 			errorRouteInvocation <- err
@@ -140,7 +136,7 @@ func (s fnInvocationServer) RouteInvocation(ctx context.Context, in *fnInvocatio
 
 	log.Infof("dQP: received serialised json: %s", in.XDTJSON)
 
-	var xdtPayload payload
+	var xdtPayload utils.Payload
 	if err := json.Unmarshal(in.XDTJSON, &xdtPayload); err != nil {
 		log.Error("dQP: RouteInvocation", err)
 		return &fnInvocation.Empty{}, err
@@ -150,9 +146,9 @@ func (s fnInvocationServer) RouteInvocation(ctx context.Context, in *fnInvocatio
 
 	errorPullDataFromSrcQP := make(chan error, 1)
 	go func() {
-		errorPullDataFromSrcQP <- PullDataFromSrcQP(ctx, xdtPayload.Key, in.SQPAddr, utils.LoadedConfig.ChunkSizeInBytes)
+		errorPullDataFromSrcQP <- PullDataFromSrcQP(ctx, xdtPayload.Key, in.SQPAddr, config.ChunkSizeInBytes)
 	}()
-	if utils.LoadedConfig.Routing == utils.STORE_FORWARD {
+	if config.Routing == utils.STORE_FORWARD {
 		log.Infof("dQP: [Store & Forward]: pulling data from sQP")
 		select {
 		case <-ctx.Done():
@@ -171,7 +167,7 @@ func (s fnInvocationServer) RouteInvocation(ctx context.Context, in *fnInvocatio
 		return &fnInvocation.Empty{}, err
 	}
 
-	if utils.LoadedConfig.Routing == utils.CUT_THROUGH {
+	if config.Routing == utils.CUT_THROUGH {
 		log.Infof("dQP: [cut-through]: pulling data from sQP")
 		select {
 		case <-ctx.Done():
@@ -212,7 +208,7 @@ func PullDataFromSrcQP(ctx context.Context, key string, sQPAddr string, chunkSiz
 		chunk, err := stream.Recv()
 		if err == io.EOF {
 			log.Infof("dQP: %d chunks received", chunkCount)
-			if utils.LoadedConfig.Routing == utils.STORE_FORWARD {
+			if config.Routing == utils.STORE_FORWARD {
 				bufferPool.StoreChannel(key, totalChunks, channel)
 			}
 			return nil
@@ -225,10 +221,10 @@ func PullDataFromSrcQP(ctx context.Context, key string, sQPAddr string, chunkSiz
 		onlyOnce.Do(func() {
 			totalChunks = chunk.TotalChunks
 			log.Debugf("dQP: requesting a new channel")
-			if utils.LoadedConfig.Routing == utils.CUT_THROUGH {
+			if config.Routing == utils.CUT_THROUGH {
 				channel = bufferPool.CreateChannel()
 				bufferPool.StoreChannel(key, chunk.TotalChunks, channel)
-			} else if utils.LoadedConfig.Routing == utils.STORE_FORWARD {
+			} else if config.Routing == utils.STORE_FORWARD {
 				channel = bufferPool.CreateChannel()
 			} else {
 				log.Errorf("dQP: Invalid route type. Check config.json")
@@ -243,11 +239,12 @@ func PullDataFromSrcQP(ctx context.Context, key string, sQPAddr string, chunkSiz
 }
 
 // StartServer starts DstQP server
-func StartServer(serverAddr string) {
+func StartServer(receivedConfig utils.Config) {
 
+	config = receivedConfig
 	bufferPool.Init()
 
-	lis, err := net.Listen("tcp", serverAddr)
+	lis, err := net.Listen("tcp", config.DQPServerAddr)
 	if err != nil {
 		log.Fatalf("dQP: failed to listen: %v", err)
 	}

@@ -34,5 +34,5 @@ var handler = func(data []byte) {
 }
 
 func main() {
-	sdk.StartDstServer(utils.LoadedConfig.DstServerAddr, handler)
+	sdk.StartDstServer(utils.LoadConfig, handler)
 }

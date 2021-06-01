@@ -37,7 +37,7 @@ import (
 
 func GetGopts() []grpc.DialOption {
 	backoffConfig := backoff.DefaultConfig
-	backoffConfig.MaxDelay = time.Duration(LoadedConfig.RPCTimeoutMaxBackoff) * time.Millisecond
+	backoffConfig.MaxDelay = time.Duration(LoadConfig.RPCTimeoutMaxBackoff) * time.Millisecond
 	connParams := grpc.ConnectParams{
 		Backoff: backoffConfig,
 	}
@@ -94,12 +94,12 @@ func timeoutDialer(address string, timeout time.Duration) (net.Conn, error) {
 			default:
 				c, err := net.DialTimeout("tcp", address, timeout)
 				if isConnRefused(err) {
-					<-time.After(time.Duration(LoadedConfig.RPCRetryDelay) * time.Millisecond)
+					<-time.After(time.Duration(LoadConfig.RPCRetryDelay) * time.Millisecond)
 					continue
 				}
 				if err != nil {
 					log.Debug("Reconnecting after an error")
-					<-time.After(time.Duration(LoadedConfig.RPCRetryDelay) * time.Millisecond)
+					<-time.After(time.Duration(LoadConfig.RPCRetryDelay) * time.Millisecond)
 					continue
 				}
 

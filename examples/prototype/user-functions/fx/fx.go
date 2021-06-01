@@ -38,9 +38,9 @@ func main() {
 		log.Fatal(err)
 	}
 
-	chunkSizeInBytes := utils.LoadedConfig.ChunkSizeInBytes
+	chunkSizeInBytes := utils.LoadConfig.ChunkSizeInBytes
 
-	payloadToSend := sdk.Payload{
+	payloadToSend := utils.Payload{
 		FunctionName: "HelloXDT",
 		Data:         payloadData,
 		Key:          "",
@@ -48,8 +48,8 @@ func main() {
 
 	start := time.Now()
 	log.Infof("starting XDT call")
-	url := utils.LoadedConfig.LBAddr
-	if err := sdk.InvokeWithXDT(url, payloadToSend, chunkSizeInBytes); err != nil {
+	url := utils.LoadConfig.LBAddr
+	if err := sdk.InvokeWithXDT(url, payloadToSend, utils.LoadConfig.SQPServerAddr, chunkSizeInBytes); err != nil {
 		log.Fatalf("TestSQP_to_dQP_data_transfer failed %v", err)
 	}
 	elapsed := time.Since(start)

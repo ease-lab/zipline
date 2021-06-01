@@ -40,26 +40,26 @@ type buffer struct {
 
 func (b *BufferPool) Init() {
 
-	b.bufferChannels = make(chan chan []byte, utils.LoadedConfig.NumberOfBuffers)
+	b.bufferChannels = make(chan chan []byte, utils.LoadConfig.NumberOfBuffers)
 
 	var bufferSize int
 
-	if utils.LoadedConfig.Routing == utils.CUT_THROUGH {
-		bufferSize = utils.LoadedConfig.CTBufferSize
-	} else if utils.LoadedConfig.Routing == utils.STORE_FORWARD {
-		bufferSize = utils.LoadedConfig.StAndFwBufferSize
+	if utils.LoadConfig.Routing == utils.CUT_THROUGH {
+		bufferSize = utils.LoadConfig.CTBufferSize
+	} else if utils.LoadConfig.Routing == utils.STORE_FORWARD {
+		bufferSize = utils.LoadConfig.StAndFwBufferSize
 	} else {
 		log.Fatalf("transport: Invalid route type. Check config.json")
 	}
 
-	for i := 0; i < utils.LoadedConfig.NumberOfBuffers; i++ {
+	for i := 0; i < utils.LoadConfig.NumberOfBuffers; i++ {
 		tmpChannel := make(chan []byte, bufferSize)
 		b.bufferChannels <- tmpChannel
 	}
 }
 
 func (b *BufferPool) CreateChannel() chan []byte {
-	log.Debugf("%d free channels available", cap(b.bufferChannels)-len(b.bufferChannels))
+	log.Infof("%d free channels available", cap(b.bufferChannels)-len(b.bufferChannels))
 	channel := <-b.bufferChannels
 	return channel
 }

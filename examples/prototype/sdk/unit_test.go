@@ -39,8 +39,9 @@ import (
 func init() {
 	log.SetLevel(log.InfoLevel)
 	log.SetFormatter(&log.TextFormatter{TimestampFormat: "2006-01-02 15:04:05.000000", FullTimestamp: true})
-	go sqp.StartServer(utils.LoadedConfig.SQPServerAddr)
-	go dqp.StartServer(utils.LoadedConfig.DQPServerAddr)
+
+	go sqp.StartServer(utils.LoadConfig)
+	go dqp.StartServer(utils.LoadConfig)
 }
 
 func TestSDK_to_sQP_data_transfer(t *testing.T) {
@@ -52,11 +53,11 @@ func TestSDK_to_sQP_data_transfer(t *testing.T) {
 	if _, err := rand.Read(payloadData); err != nil {
 		log.Fatal(err)
 	}
-	chunkSizeInBytes := utils.LoadedConfig.ChunkSizeInBytes
+	chunkSizeInBytes := utils.LoadConfig.ChunkSizeInBytes
 
 	start := time.Now()
 
-	if err := sdk.PushData(context.Background(), key, payloadData, chunkSizeInBytes); err != nil {
+	if err := sdk.PushData(context.Background(), key, payloadData, utils.LoadConfig.SQPServerAddr, chunkSizeInBytes); err != nil {
 		log.Fatalf("TestSDK_to_sQP_data_transfer failed %v", err)
 	}
 	duration := time.Since(start)
@@ -72,10 +73,10 @@ func TestSQP_to_dQP_data_transfer(t *testing.T) {
 	if _, err := rand.Read(payloadData); err != nil {
 		log.Fatal(err)
 	}
-	chunkSizeInBytes := utils.LoadedConfig.ChunkSizeInBytes
+	chunkSizeInBytes := utils.LoadConfig.ChunkSizeInBytes
 
 	start := time.Now()
-	if err := sdk.PushData(context.Background(), key, payloadData, chunkSizeInBytes); err != nil {
+	if err := sdk.PushData(context.Background(), key, payloadData, utils.LoadConfig.SQPServerAddr, chunkSizeInBytes); err != nil {
 		log.Fatalf("TestSQP_to_dQP_data_transfer failed %v", err)
 	}
 	duration := time.Since(start)
@@ -83,7 +84,7 @@ func TestSQP_to_dQP_data_transfer(t *testing.T) {
 
 	log.Infof("transferred %d bytes from SrcFn to sQP in %s", len(payloadData), duration)
 
-	err := dqp.PullDataFromSrcQP(context.Background(), key, utils.LoadedConfig.SQPServerAddr, chunkSizeInBytes)
+	err := dqp.PullDataFromSrcQP(context.Background(), key, utils.LoadConfig.SQPServerAddr, chunkSizeInBytes)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -100,10 +101,10 @@ func TestDQP_to_DstFn_data_transfer(t *testing.T) {
 	if _, err := rand.Read(payloadData); err != nil {
 		log.Fatal(err)
 	}
-	chunkSizeInBytes := utils.LoadedConfig.ChunkSizeInBytes
+	chunkSizeInBytes := utils.LoadConfig.ChunkSizeInBytes
 
 	start := time.Now()
-	if err := sdk.PushData(context.Background(), key, payloadData, chunkSizeInBytes); err != nil {
+	if err := sdk.PushData(context.Background(), key, payloadData, utils.LoadConfig.SQPServerAddr, chunkSizeInBytes); err != nil {
 		log.Fatalf("TestDQP_to_DstFn_data_transfer failed %v", err)
 	}
 	duration := time.Since(start)
@@ -111,7 +112,7 @@ func TestDQP_to_DstFn_data_transfer(t *testing.T) {
 	log.Infof("transferred %d bytes from SrcFn to sQP in %s", len(payloadData), duration)
 
 	start = time.Now()
-	err := dqp.PullDataFromSrcQP(context.Background(), key, utils.LoadedConfig.SQPServerAddr, chunkSizeInBytes)
+	err := dqp.PullDataFromSrcQP(context.Background(), key, utils.LoadConfig.SQPServerAddr, chunkSizeInBytes)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -120,7 +121,7 @@ func TestDQP_to_DstFn_data_transfer(t *testing.T) {
 	log.Infof("transferred packet from sQP to dQP in %s", duration)
 
 	start = time.Now()
-	payloadBytes, err := sdk.FetchFromDQP(context.Background(), key, chunkSizeInBytes)
+	payloadBytes, err := sdk.FetchFromDQP(context.Background(), key, utils.LoadConfig.DQPServerAddr, chunkSizeInBytes)
 	if err != nil {
 		log.Fatalf("FetchFromDQP failed %v", err)
 	}

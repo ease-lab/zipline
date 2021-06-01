@@ -45,14 +45,21 @@ type Config struct {
 	RPCRetryDelay        int
 }
 
+type Payload struct {
+	FunctionName string
+	Data         []byte
+	Key          string
+	IsXDT        bool
+}
+
 const (
 	STORE_FORWARD = "Store&Forward"
 	CUT_THROUGH   = "CutThrough"
 )
 
-var LoadedConfig = LoadConfig("../config.json")
+var LoadConfig = readConfig("../config.json")
 
-func LoadConfig(file string) Config {
+func readConfig(file string) Config {
 	log.Debugf("Opening JSON file with config: %s\n", file)
 	jsonFile, err := os.Open(file)
 	if err != nil {

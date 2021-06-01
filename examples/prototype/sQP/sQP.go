@@ -38,6 +38,8 @@ import (
 	"google.golang.org/grpc"
 )
 
+var config utils.Config
+
 // bufferPool is responsible for managing bounded buffers of channels to store data
 var bufferPool transport.BufferPool
 
@@ -60,7 +62,7 @@ func (s upXDTServer) SendData(srv upXDT.StreamData_SendDataServer) error {
 		chunk, err := srv.Recv()
 		if err == io.EOF {
 			log.Infof("sQP: %d chunks received", chunkCount)
-			if utils.LoadedConfig.Routing == utils.STORE_FORWARD {
+			if config.Routing == utils.STORE_FORWARD {
 				bufferPool.StoreChannel(key, totalChunks, channel)
 			}
 			return srv.SendAndClose(&upXDT.Empty{})
@@ -74,10 +76,10 @@ func (s upXDTServer) SendData(srv upXDT.StreamData_SendDataServer) error {
 			key = chunk.Key
 			totalChunks = chunk.TotalChunks
 			log.Debugf("sQP: requesting a new channel")
-			if utils.LoadedConfig.Routing == utils.CUT_THROUGH {
+			if config.Routing == utils.CUT_THROUGH {
 				channel = bufferPool.CreateChannel()
 				bufferPool.StoreChannel(key, totalChunks, channel)
-			} else if utils.LoadedConfig.Routing == utils.STORE_FORWARD {
+			} else if config.Routing == utils.STORE_FORWARD {
 				channel = bufferPool.CreateChannel()
 			} else {
 				log.Errorf("sQP: Invalid route type. Check config.json")
@@ -129,11 +131,12 @@ func (s crossXDTServer) ServeData(in *crossXDT.Request, srv crossXDT.StreamData_
 }
 
 // StartServer starts the SrcQP server
-func StartServer(serverAddr string) {
+func StartServer(receivedConfig utils.Config) {
 
+	config = receivedConfig
 	bufferPool.Init()
 
-	lis, err := net.Listen("tcp", serverAddr)
+	lis, err := net.Listen("tcp", config.SQPServerAddr)
 	if err != nil {
 		log.Fatalf("sQP: failed to listen: %v", err)
 	}

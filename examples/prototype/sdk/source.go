@@ -36,7 +36,7 @@ import (
 	"google.golang.org/grpc"
 )
 
-func splitPayload(xdtPayload *Payload) (string, []byte) {
+func splitPayload(xdtPayload *utils.Payload) (string, []byte) {
 	now := time.Now()
 	key := strconv.Itoa(int(now.UnixNano()))
 	log.Infof("XDT invoke called with payload size %d", len(xdtPayload.Data))
@@ -50,10 +50,10 @@ func splitPayload(xdtPayload *Payload) (string, []byte) {
 }
 
 // InvokeWithXDT invokes the RPC call with XDT
-func InvokeWithXDT(URL string, xdtPayload Payload, chunkSizeInBytes int) error {
+func InvokeWithXDT(URL string, xdtPayload utils.Payload, sQPAddr string, chunkSizeInBytes int) error {
 
 	//  This timeout must be large enough for the request to complete
-	timeoutDuration := time.Duration(utils.LoadedConfig.RPCTimeoutDuration) * time.Millisecond
+	timeoutDuration := time.Duration(utils.LoadConfig.RPCTimeoutDuration) * time.Millisecond
 	ctx, cancel := context.WithTimeout(context.Background(), timeoutDuration)
 	defer cancel()
 
@@ -64,8 +64,8 @@ func InvokeWithXDT(URL string, xdtPayload Payload, chunkSizeInBytes int) error {
 	}
 
 	errorPushData := make(chan error, 1)
-	go func() { errorPushData <- PushData(ctx, key, payloadData, chunkSizeInBytes) }()
-	if utils.LoadedConfig.Routing == utils.STORE_FORWARD {
+	go func() { errorPushData <- PushData(ctx, key, payloadData, sQPAddr, chunkSizeInBytes) }()
+	if utils.LoadConfig.Routing == utils.STORE_FORWARD {
 		log.Info("SDK: using store & forward routing")
 		select {
 		case <-ctx.Done():
@@ -81,7 +81,7 @@ func InvokeWithXDT(URL string, xdtPayload Payload, chunkSizeInBytes int) error {
 
 	errorFnInvocationCall := make(chan error, 1)
 	go func() {
-		errorFnInvocationCall <- fnInvocationCall(ctx, URL, serialisedPayload, utils.LoadedConfig.SQPServerAddr)
+		errorFnInvocationCall <- fnInvocationCall(ctx, URL, serialisedPayload, sQPAddr)
 	}()
 	select {
 	case <-ctx.Done():
@@ -94,7 +94,7 @@ func InvokeWithXDT(URL string, xdtPayload Payload, chunkSizeInBytes int) error {
 		}
 	}
 
-	if utils.LoadedConfig.Routing == utils.CUT_THROUGH {
+	if utils.LoadConfig.Routing == utils.CUT_THROUGH {
 		log.Info("SDK: using cut through routing")
 		// Wait for completion and return the first error (if any)
 		select {
@@ -156,9 +156,9 @@ func fnInvocationCall(ctx context.Context, URL string, serialisedPayload []byte,
 }
 
 // PushData to source QP
-func PushData(ctx context.Context, key string, payload []byte, chunkSizeInBytes int) error {
+func PushData(ctx context.Context, key string, payload []byte, sQPAddr string, chunkSizeInBytes int) error {
 
-	conn, err := utils.GetGRPCConn(ctx, utils.LoadedConfig.SQPServerAddr, false)
+	conn, err := utils.GetGRPCConn(ctx, sQPAddr, false)
 	if err != nil {
 		log.Errorf("SRC: can not connect to SQP %v", err)
 		return err
