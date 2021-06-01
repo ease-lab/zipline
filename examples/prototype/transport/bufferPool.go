@@ -59,12 +59,9 @@ func (b *BufferPool) Init() {
 }
 
 func (b *BufferPool) CreateChannel() chan []byte {
-	select {
-	case channel := <-b.bufferChannels:
-		return channel
-	default:
-		return nil
-	}
+	log.Debugf("%d free channels available", cap(b.bufferChannels)-len(b.bufferChannels))
+	channel := <-b.bufferChannels
+	return channel
 }
 
 func (b *BufferPool) StoreChannel(key string, totalChunks int64, channel chan []byte) {

@@ -42,11 +42,12 @@ import (
 
 var sampleSize = flag.Int("sample", 10, "sampleSize")
 var URL = flag.String("url", "helloworld.default.192.168.1.240.nip.io", "Function URL")
+var numConcurrentFunctions = flag.Int("concurrentCalls", 5, "num of simultaneous calls")
 var chunkSizeInBytes = utils.LoadedConfig.ChunkSizeInBytes
 
 func init() {
 	log.SetLevel(log.InfoLevel)
-	log.SetFormatter(&log.TextFormatter{TimestampFormat: "2006-01-02 15:04:05.000000", FullTimestamp: true})
+	log.SetFormatter(&log.TextFormatter{TimestampFormat: "2006-01-02 15:04:05.000000", FullTimestamp: true, ForceColors: true})
 }
 
 var handler = func(data []byte) {
@@ -151,6 +152,45 @@ func TestErr_DSTTimeout(t *testing.T) {
 	elapsed := time.Since(start)
 
 	log.Infof("completed XDT in %s", elapsed)
+}
+
+func TestParallel_Invoke(t *testing.T) {
+
+	if utils.LoadedConfig.TracingEnabled {
+		shutdown, err := tracing.InitTracer()
+		if err != nil {
+			log.Fatal(err)
+		}
+		defer shutdown()
+	}
+
+	// start server at sQP
+	go sqp.StartServer(utils.LoadedConfig.SQPServerAddr)
+	go dqp.StartServer(utils.LoadedConfig.DQPServerAddr)
+	go sdk.StartDstServer(utils.LoadedConfig.DstServerAddr, handler)
+
+	time.Sleep(time.Second * 1)
+
+	start := time.Now()
+	log.Infof("starting integ test")
+	url := utils.LoadedConfig.LBAddr
+	numberOfSources := *numConcurrentFunctions
+	errChannel := make(chan error, numberOfSources)
+	for i := 0; i < numberOfSources; i += 1 {
+		go func() {
+			errChannel <- sdk.InvokeWithXDT(url, preparePayload(), chunkSizeInBytes)
+		}()
+	}
+	for i := 0; i < numberOfSources; i += 1 {
+		err := <-errChannel
+		if err != nil {
+			log.Fatalf("InvokeWithXDT no. %d failed with: %v", i, err)
+		}
+
+	}
+	elapsed := time.Since(start)
+
+	log.Infof("completed TestFan_In in %s", elapsed)
 }
 
 func TestBenchmark_XDT(t *testing.T) {

@@ -37,7 +37,6 @@ import (
 )
 
 func splitPayload(xdtPayload *Payload) (string, []byte) {
-	log.Infof("SDK: XDT invoke start")
 	now := time.Now()
 	key := strconv.Itoa(int(now.UnixNano()))
 	log.Infof("XDT invoke called with payload size %d", len(xdtPayload.Data))
@@ -81,7 +80,9 @@ func InvokeWithXDT(URL string, xdtPayload Payload, chunkSizeInBytes int) error {
 	}
 
 	errorFnInvocationCall := make(chan error, 1)
-	go func() { errorFnInvocationCall <- fnInvocationCall(ctx, URL, serialisedPayload) }()
+	go func() {
+		errorFnInvocationCall <- fnInvocationCall(ctx, URL, serialisedPayload, utils.LoadedConfig.SQPServerAddr)
+	}()
 	select {
 	case <-ctx.Done():
 		<-errorFnInvocationCall
@@ -113,7 +114,7 @@ func InvokeWithXDT(URL string, xdtPayload Payload, chunkSizeInBytes int) error {
 }
 
 // fnInvocationCall makes fn invocation call to dQP with xdt payload
-func fnInvocationCall(ctx context.Context, URL string, serialisedPayload []byte) error {
+func fnInvocationCall(ctx context.Context, URL string, serialisedPayload []byte, sQPAddr string) error {
 
 	errorChannel := make(chan error, 1)
 
@@ -125,7 +126,7 @@ func fnInvocationCall(ctx context.Context, URL string, serialisedPayload []byte)
 		}
 		c := fnInvocation.NewInvocationClient(conn)
 		log.Infof("SDK: Fn invocation start")
-		_, err = c.RouteInvocation(ctx, &fnInvocation.InvocationRequest{XDTJSON: serialisedPayload})
+		_, err = c.RouteInvocation(ctx, &fnInvocation.InvocationRequest{XDTJSON: serialisedPayload, SQPAddr: sQPAddr})
 		if err != nil {
 			errorChannel <- err
 			return

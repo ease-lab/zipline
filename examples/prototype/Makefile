@@ -26,6 +26,7 @@ all: local
 
 PROTO_FILES:=crossXDT fnInvocation downXDT upXDT
 ROUTING_MODES:=Store&Forward CutThrough
+GO_TEST_FLAGS:=-race -v -cover
 
 proto_install:
 	GO111MODULE="on" go get google.golang.org/protobuf/cmd/protoc-gen-go \
@@ -57,26 +58,31 @@ unit-test:
 
 integ-test_CT:
 	sed -i '/Routing/c\  "Routing": "CutThrough",' ./config.json
-	cd sdk && go test ./integration_test.go -run TestSdk_InvokeWithXDT -race -v -cover
+	cd sdk && go test ./integration_test.go -run TestSdk_InvokeWithXDT $(GO_TEST_FLAGS)
 
 
 integ-test_SF:
 	sed -i '/Routing/c\  "Routing": "Store&Forward",' ./config.json
-	cd sdk && go test ./integration_test.go -run TestSdk_InvokeWithXDT -race -v -cover
+	cd sdk && go test ./integration_test.go -run TestSdk_InvokeWithXDT $(GO_TEST_FLAGS)
 
 integ-test: integ-test_CT integ-test_SF
 
 timeout-test_CT:
 	sed -i '/Routing/c\  "Routing": "CutThrough",' ./config.json
 	sleep 60
-	cd sdk && go test ./integration_test.go -run TestErr_DSTTimeout -v
-	cd sdk && go test ./integration_test.go -run TestErr_DQPTimeout -v
+	cd sdk && go test ./integration_test.go -run TestErr_DSTTimeout $(GO_TEST_FLAGS)
+	cd sdk && go test ./integration_test.go -run TestErr_DQPTimeout $(GO_TEST_FLAGS)
 
 timeout-test_SF:
 	sed -i '/Routing/c\  "Routing": "Store&Forward",' ./config.json
 	sleep 60
-	cd sdk && go test ./integration_test.go -run TestErr_DSTTimeout -v
-	cd sdk && go test ./integration_test.go -run TestErr_DQPTimeout -v
+	cd sdk && go test ./integration_test.go -run TestErr_DSTTimeout $(GO_TEST_FLAGS)
+	cd sdk && go test ./integration_test.go -run TestErr_DQPTimeout $(GO_TEST_FLAGS)
 
 timeout-test: timeout-test_SF timeout-test_CT
+
+parallel-invoke-test:
+	cd sdk && go test ./integration_test.go -run TestParallel_Invoke -concurrentCalls 1 $(GO_TEST_FLAGS)
+	cd sdk && go test ./integration_test.go -run TestParallel_Invoke -concurrentCalls 2 $(GO_TEST_FLAGS)
+	cd sdk && go test ./integration_test.go -run TestParallel_Invoke -concurrentCalls 5 $(GO_TEST_FLAGS)
 

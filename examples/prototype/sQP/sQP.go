@@ -73,7 +73,7 @@ func (s upXDTServer) SendData(srv upXDT.StreamData_SendDataServer) error {
 		onlyOnce.Do(func() {
 			key = chunk.Key
 			totalChunks = chunk.TotalChunks
-			log.Infof("sQP: requesting a new channel")
+			log.Debugf("sQP: requesting a new channel")
 			if utils.LoadedConfig.Routing == utils.CUT_THROUGH {
 				channel = bufferPool.CreateChannel()
 				bufferPool.StoreChannel(key, totalChunks, channel)
@@ -82,6 +82,7 @@ func (s upXDTServer) SendData(srv upXDT.StreamData_SendDataServer) error {
 			} else {
 				log.Errorf("sQP: Invalid route type. Check config.json")
 			}
+			log.Debugf("sQP: channel allocated")
 			log.Infof("sQP: chunkTotal = %d", totalChunks)
 		})
 		log.Debugf("sQP: Enquing chunk number %d", chunkCount)

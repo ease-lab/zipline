@@ -150,7 +150,7 @@ func (s fnInvocationServer) RouteInvocation(ctx context.Context, in *fnInvocatio
 
 	errorPullDataFromSrcQP := make(chan error, 1)
 	go func() {
-		errorPullDataFromSrcQP <- PullDataFromSrcQP(ctx, xdtPayload.Key, utils.LoadedConfig.ChunkSizeInBytes)
+		errorPullDataFromSrcQP <- PullDataFromSrcQP(ctx, xdtPayload.Key, in.SQPAddr, utils.LoadedConfig.ChunkSizeInBytes)
 	}()
 	if utils.LoadedConfig.Routing == utils.STORE_FORWARD {
 		log.Infof("dQP: [Store & Forward]: pulling data from sQP")
@@ -188,9 +188,9 @@ func (s fnInvocationServer) RouteInvocation(ctx context.Context, in *fnInvocatio
 }
 
 // PullDataFromSrcQP pulls data from src QP to dst QP
-func PullDataFromSrcQP(ctx context.Context, key string, chunkSizeInBytes int) error {
+func PullDataFromSrcQP(ctx context.Context, key string, sQPAddr string, chunkSizeInBytes int) error {
 
-	conn, err := utils.GetGRPCConn(ctx, utils.LoadedConfig.SQPServerAddr, true)
+	conn, err := utils.GetGRPCConn(ctx, sQPAddr, true)
 	if err != nil {
 		log.Errorf("SRC: can not connect with server %v", err)
 		return err
@@ -224,7 +224,7 @@ func PullDataFromSrcQP(ctx context.Context, key string, chunkSizeInBytes int) er
 		log.Debugf("dQP: Received chunk no. %d", chunkCount)
 		onlyOnce.Do(func() {
 			totalChunks = chunk.TotalChunks
-			log.Infof("dQP: requesting a new channel")
+			log.Debugf("dQP: requesting a new channel")
 			if utils.LoadedConfig.Routing == utils.CUT_THROUGH {
 				channel = bufferPool.CreateChannel()
 				bufferPool.StoreChannel(key, chunk.TotalChunks, channel)
@@ -233,6 +233,7 @@ func PullDataFromSrcQP(ctx context.Context, key string, chunkSizeInBytes int) er
 			} else {
 				log.Errorf("dQP: Invalid route type. Check config.json")
 			}
+			log.Debugf("dQP: channel allocated")
 			log.Infof("dQP: chunkTotal = %d", chunk.TotalChunks)
 		})
 		log.Debugf("dQP: Enquing chunk number %d", chunkCount)
