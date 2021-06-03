@@ -302,6 +302,16 @@ func TestParallel_FanOut(t *testing.T) {
 	log.Infof("completed TestFan_In in %s", elapsed)
 }
 
+func TestPython_SDK(t *testing.T) {
+
+	config := utils.LoadConfig
+	// start servers
+	go sqp.StartServer(config)
+	dqp.StartServer(config)
+	//sdk.StartDstServer(sdk.LoadedConfig.DstServerAddr, handler)
+
+}
+
 func TestBenchmark_XDT(t *testing.T) {
 
 	config := utils.LoadConfig

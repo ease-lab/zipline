@@ -29,11 +29,13 @@ ROUTING_MODES:=Store&Forward CutThrough
 GO_TEST_FLAGS:=-race -v -cover
 
 proto_install:
+	pip install grpcio-tools --user
 	GO111MODULE="on" go get google.golang.org/protobuf/cmd/protoc-gen-go \
             google.golang.org/grpc/cmd/protoc-gen-go-grpc
 proto_gen: $(PROTO_FILES)
 
 $(PROTO_FILES):
+	python -m grpc_tools.protoc -I./proto --python_out=./proto/$@ --grpc_python_out=./proto/$@ proto/$@.proto
 	GO111MODULE="on" PATH="$$PATH:$$(go env GOPATH)/bin" protoc proto/$@.proto \
 	    --proto_path=./proto \
 	    --go_out=./proto/$@ --go-grpc_out=./proto/$@ \

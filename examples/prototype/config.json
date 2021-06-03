@@ -1,9 +1,9 @@
 {
   "ChunkSizeInBytes": 65536,
-  "DQPServerAddr": ":50008",
-  "LBAddr": ":50008",
-  "DstServerAddr": ":50007",
-  "SQPServerAddr": ":50005",
+  "DQPServerAddr": "localhost:50008",
+  "LBAddr": "localhost:50008",
+  "DstServerAddr": "localhost:50007",
+  "SQPServerAddr": "localhost:50005",
   "NumberOfBuffers": 2,
   "CTBufferSize": 25,
   "StAndFwBufferSize": 1600,
