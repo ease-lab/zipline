@@ -48,7 +48,7 @@ def test_Push_data():
 
 
 def test_Invoke_XDT():
-    data = random.randbytes(1024 * 1024)
+    data = random.randbytes(1024 * 1024 *100)
     payload = Payload(FunctionName="foo", Data=data, Key="", IsXDT=False)
     InvokeWithXDT(URL=config['LBAddr'], xdtPayload=payload,
                   sQPAddr=config['SQPServerAddr'], chunkSizeInBytes=65536)

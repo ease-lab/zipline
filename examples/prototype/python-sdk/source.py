@@ -33,7 +33,8 @@ import upXDT_pb2
 import fnInvocation_pb2_grpc
 import fnInvocation_pb2
 import time
-
+import multiprocessing as mp
+import utils
 
 def splitPayload(xdtPayload):
     now = time.time_ns()
@@ -55,10 +56,20 @@ def InvokeWithXDT(URL, xdtPayload, sQPAddr, chunkSizeInBytes):
     key, payloadData, xdtPayload = splitPayload(xdtPayload)
     serialisedPayload = xdtPayload.tobytes()
 
-    log.info("SDK: using store & forward routing")
-    PushData(key, payloadData, sQPAddr, chunkSizeInBytes)
+    config = utils.loadConfig()
+    p = mp.Process(target=PushData, args=(key, payloadData, sQPAddr, chunkSizeInBytes,))
+    if config['Routing'] == utils.CUT_THROUGH:
+        log.info("SDK: using CutThrough routing")
+        p.start()
+    elif config['Routing'] == utils.STORE_FORWARD:
+        log.info("SDK: using store & forward routing")
+        PushData(key, payloadData, sQPAddr, chunkSizeInBytes)
+    else:
+        log.fatal("SDK: invalid routing specified in config")
 
     fnInvocationCall(URL, serialisedPayload, sQPAddr)
+    if config['Routing'] == utils.CUT_THROUGH:
+        p.join()
     return
 
 

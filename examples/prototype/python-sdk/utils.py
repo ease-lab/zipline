@@ -43,9 +43,14 @@ class Payload:
     def loadFromBytes(self, jsonBytes):
         jsonDump = jsonBytes.decode('utf-8')
         objectDict = json.loads(jsonDump)
-        return Payload(objectDict['FunctionName'], bytes(objectDict['Data'], 'utf-8'), objectDict['Key'], objectDict['IsXDT'])
+        return Payload(objectDict['FunctionName'], bytes(objectDict['Data'], 'utf-8'), objectDict['Key'],
+                       objectDict['IsXDT'])
 
 
 def loadConfig():
     with open('../config.json') as json_file:
         return json.load(json_file)
+
+
+STORE_FORWARD = "Store&Forward"
+CUT_THROUGH = "CutThrough"
