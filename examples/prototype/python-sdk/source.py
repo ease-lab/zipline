@@ -35,6 +35,8 @@ import fnInvocation_pb2
 import time
 import multiprocessing as mp
 import utils
+import queue
+
 
 def splitPayload(xdtPayload):
     now = time.time_ns()
@@ -56,8 +58,10 @@ def InvokeWithXDT(URL, xdtPayload, sQPAddr, chunkSizeInBytes):
     key, payloadData, xdtPayload = splitPayload(xdtPayload)
     serialisedPayload = xdtPayload.tobytes()
 
+    global config
     config = utils.loadConfig()
-    p = mp.Process(target=PushData, args=(key, payloadData, sQPAddr, chunkSizeInBytes,))
+    mpQueue = mp.Queue()
+    p = mp.Process(target=PushData, args=(key, payloadData, sQPAddr, chunkSizeInBytes, mpQueue,))
     if config['Routing'] == utils.CUT_THROUGH:
         log.info("SDK: using CutThrough routing")
         p.start()
@@ -69,6 +73,12 @@ def InvokeWithXDT(URL, xdtPayload, sQPAddr, chunkSizeInBytes):
 
     fnInvocationCall(URL, serialisedPayload, sQPAddr)
     if config['Routing'] == utils.CUT_THROUGH:
+        try:
+            err = mpQueue.get(block=True, timeout=config['RPCTimeoutDuration']/1000)
+            if err is not None:
+                raise err
+        except queue.Empty:
+            raise grpc.RpcError
         p.join()
     return
 
@@ -76,10 +86,18 @@ def InvokeWithXDT(URL, xdtPayload, sQPAddr, chunkSizeInBytes):
 # fnInvocationCall makes fn invocation call to dQP with xdt payload
 def fnInvocationCall(URL, serialisedPayload, sQPAddr):
 
-    with grpc.insecure_channel(URL) as channel:
+    channel = grpc.insecure_channel(URL)
+    channel_ready_future = grpc.channel_ready_future(channel)
+    global config
+    try:
+        channel_ready_future.result(timeout=config['RPCTimeoutDuration']/1000)
+    except grpc.FutureTimeoutError as e:
+        log.error("SRC: connection to LB/DQP timed out")
+        raise e
+    else:
         stub = fnInvocation_pb2_grpc.InvocationStub(channel)
-        ret = stub.RouteInvocation(fnInvocation_pb2.InvocationRequest(
-            XDTJSON=serialisedPayload, SQPAddr=sQPAddr))
+        stub.RouteInvocation(fnInvocation_pb2.InvocationRequest(
+            XDTJSON=serialisedPayload, SQPAddr=sQPAddr), timeout=config['RPCTimeoutDuration']/1000)
     return
 
 
@@ -91,7 +109,6 @@ def generate_chunks(payload, key, chunkSizeInBytes):
 
     payloadSize = len(payload)
     currentByte = 0
-    chunk = bytes(0)
     while currentByte < payloadSize:
         if currentByte+chunkSizeInBytes > payloadSize:
             chunk = payload[currentByte:payloadSize]
@@ -103,17 +120,32 @@ def generate_chunks(payload, key, chunkSizeInBytes):
 
 
 # PushData to sQP
-def PushData(key, payload, sQPAddr, chunkSizeInBytes):
-    with grpc.insecure_channel(sQPAddr) as channel:
-        stub = upXDT_pb2_grpc.StreamDataStub(channel)
-        payload_iterator = generate_chunks(payload, key, chunkSizeInBytes)
-        route_summary = stub.SendData(payload_iterator)
-        if route_summary == upXDT_pb2.Empty():
-            log.info("Src: payload pushed successfully")
+def PushData(key, payload, sQPAddr, chunkSizeInBytes, mpQueue=None):
+
+    global config
+    try:
+        with grpc.insecure_channel(sQPAddr) as channel:
+            stub = upXDT_pb2_grpc.StreamDataStub(channel)
+            payload_iterator = generate_chunks(payload, key, chunkSizeInBytes)
+            route_summary = stub.SendData(payload_iterator, timeout=config['RPCTimeoutDuration']/1000)
+            if route_summary == upXDT_pb2.Empty():
+                log.info("Src: payload pushed successfully")
+            else:
+                log.info("Src: err while pushing the data")
+                log.info(route_summary)
+    except grpc.RpcError as e:
+        log.info("Push data timed out")
+        if mpQueue is not None:
+            mpQueue.put(e)
+            return
         else:
-            log.info("Src: err while pushing the data")
-            log.info(route_summary)
-    return
+            raise e
+    else:
+        log.info("Push data successful")
+
+        if mpQueue is not None:
+            mpQueue.put(None)
+        return
 
 
 if __name__ == '__main__':
