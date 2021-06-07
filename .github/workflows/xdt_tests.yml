@@ -93,3 +93,20 @@ jobs:
           name: XDT benchmarks
           path: |
             examples/prototype/sdk/*.png
+
+  Python-SDK-Test:
+    name: Test
+    runs-on: [ self-hosted ]
+    strategy:
+      fail-fast: false
+      matrix:
+        test-type: [ unit, integ, timeout]
+    steps:
+      - name: Set up Python 3.9
+        uses: actions/setup-python@v2
+        with:
+          python-version: '3.9'
+      - name: Check out code into the Go module directory
+        uses: actions/checkout@v2
+      - name: Run test
+        run: cd examples/prototype && make python-${{ matrix.test-type }}-test

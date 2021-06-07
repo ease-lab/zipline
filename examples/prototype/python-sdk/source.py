@@ -122,12 +122,11 @@ def generate_chunks(payload, key, chunkSizeInBytes):
 # PushData to sQP
 def PushData(key, payload, sQPAddr, chunkSizeInBytes, mpQueue=None):
 
-    global config
     try:
         with grpc.insecure_channel(sQPAddr) as channel:
             stub = upXDT_pb2_grpc.StreamDataStub(channel)
             payload_iterator = generate_chunks(payload, key, chunkSizeInBytes)
-            route_summary = stub.SendData(payload_iterator, timeout=config['RPCTimeoutDuration']/1000)
+            route_summary = stub.SendData(payload_iterator)
             if route_summary == upXDT_pb2.Empty():
                 log.info("Src: payload pushed successfully")
             else:

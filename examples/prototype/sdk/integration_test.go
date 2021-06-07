@@ -308,7 +308,14 @@ func TestPython_SDK(t *testing.T) {
 	// start servers
 	go sqp.StartServer(config)
 	dqp.StartServer(config)
-	//sdk.StartDstServer(sdk.LoadedConfig.DstServerAddr, handler)
+
+}
+
+func TestPython_SDKTimeout(t *testing.T) {
+
+	config := utils.LoadConfig
+	// start servers
+	sqp.StartServer(config)
 
 }
 

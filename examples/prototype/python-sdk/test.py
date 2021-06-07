@@ -34,7 +34,7 @@ class UnitTest(unittest.TestCase):
     def test_splitPayload(self):
         payloadToSplit = Payload(
             FunctionName="foo", Data=b'0123456789', Key="", IsXDT=False)
-        key, data = splitPayload(payloadToSplit)
+        key, data, xdtPayload = splitPayload(payloadToSplit)
         log.info("Generated Key is %s", key)
         assert data == b'0123456789'
 
@@ -51,7 +51,7 @@ class IntegTest(unittest.TestCase):
                       sQPAddr=config['SQPServerAddr'], chunkSizeInBytes=65536)
 
     def test_Timeout(self):
-        data = random.randbytes(1024 * 1024 * 100)
+        data = random.randbytes(1024 * 1024)
         payload = Payload(FunctionName="foo", Data=data, Key="", IsXDT=False)
         try:
             InvokeWithXDT(URL=config['LBAddr'], xdtPayload=payload,
