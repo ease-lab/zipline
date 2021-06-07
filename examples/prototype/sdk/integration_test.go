@@ -212,9 +212,11 @@ func TestParallel_FanIn(t *testing.T) {
 	// start server at sQP
 	sQPAddr := 50009
 	for i := 0; i < *numConcurrentFunctions; i += 1 {
-		config.SQPServerAddr = ":" + fmt.Sprint(sQPAddr+i)
-		go sqp.StartServer(config)
-		time.Sleep(time.Second * 5)
+		tmpConfig := utils.LoadConfig
+		tmpConfig.SQPServerAddr = ":" + fmt.Sprint(sQPAddr+i)
+		log.Infof("starting sQP server no. %d", i+1)
+		go sqp.StartServer(tmpConfig)
+		time.Sleep(time.Second * 10)
 	}
 	go dqp.StartServer(config)
 	time.Sleep(time.Second * 2)
@@ -262,10 +264,14 @@ func TestParallel_FanOut(t *testing.T) {
 	for i := 0; i < *numConcurrentFunctions; i += 1 {
 		config.DstServerAddr = ":" + fmt.Sprint(dQPAddr+i)
 		config.DQPServerAddr = ":" + fmt.Sprint(dQPAddr+i+*numConcurrentFunctions)
-		go sdk.StartDstServer(config, handler)
-		time.Sleep(time.Second * 5)
-		go dqp.StartServer(config)
-		time.Sleep(time.Second * 5)
+		tmpDstConfig := config
+		log.Infof("starting Dst server no. %d", i+1)
+		go sdk.StartDstServer(tmpDstConfig, handler)
+		time.Sleep(time.Second * 10)
+		tmpDQPConfig := config
+		log.Infof("starting dQP server no. %d", i+1)
+		go dqp.StartServer(tmpDQPConfig)
+		time.Sleep(time.Second * 10)
 	}
 	time.Sleep(time.Second * 5)
 	go sqp.StartServer(config)

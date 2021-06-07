@@ -242,7 +242,7 @@ func PullDataFromSrcQP(ctx context.Context, key string, sQPAddr string, chunkSiz
 func StartServer(receivedConfig utils.Config) {
 
 	config = receivedConfig
-	bufferPool.Init()
+	bufferPool.Init(config)
 
 	lis, err := net.Listen("tcp", config.DQPServerAddr)
 	if err != nil {

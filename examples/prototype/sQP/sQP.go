@@ -134,7 +134,7 @@ func (s crossXDTServer) ServeData(in *crossXDT.Request, srv crossXDT.StreamData_
 func StartServer(receivedConfig utils.Config) {
 
 	config = receivedConfig
-	bufferPool.Init()
+	bufferPool.Init(config)
 
 	lis, err := net.Listen("tcp", config.SQPServerAddr)
 	if err != nil {

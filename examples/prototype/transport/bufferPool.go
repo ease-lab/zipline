@@ -38,28 +38,28 @@ type buffer struct {
 	totalChunks int64
 }
 
-func (b *BufferPool) Init() {
+func (b *BufferPool) Init(config utils.Config) {
 
-	b.bufferChannels = make(chan chan []byte, utils.LoadConfig.NumberOfBuffers)
+	b.bufferChannels = make(chan chan []byte, config.NumberOfBuffers)
 
 	var bufferSize int
 
-	if utils.LoadConfig.Routing == utils.CUT_THROUGH {
-		bufferSize = utils.LoadConfig.CTBufferSize
-	} else if utils.LoadConfig.Routing == utils.STORE_FORWARD {
-		bufferSize = utils.LoadConfig.StAndFwBufferSize
+	if config.Routing == utils.CUT_THROUGH {
+		bufferSize = config.CTBufferSize
+	} else if config.Routing == utils.STORE_FORWARD {
+		bufferSize = config.StAndFwBufferSize
 	} else {
 		log.Fatalf("transport: Invalid route type. Check config.json")
 	}
 
-	for i := 0; i < utils.LoadConfig.NumberOfBuffers; i++ {
+	for i := 0; i < config.NumberOfBuffers; i++ {
 		tmpChannel := make(chan []byte, bufferSize)
 		b.bufferChannels <- tmpChannel
 	}
 }
 
 func (b *BufferPool) CreateChannel() chan []byte {
-	log.Infof("%d free channels available", cap(b.bufferChannels)-len(b.bufferChannels))
+	log.Infof("%d free channels available", len(b.bufferChannels))
 	channel := <-b.bufferChannels
 	return channel
 }
