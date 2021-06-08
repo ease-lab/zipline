@@ -101,9 +101,9 @@ jobs:
       fail-fast: false
       matrix:
         test-type: [ unit, integ, timeout]
-        python-version: [3.6, 3.7, 3.8, 3.9]
+        python-version: [3.7, 3.8, 3.9]
     steps:
-      - name: Set up Python 3.9
+      - name: Set up Python
         uses: actions/setup-python@v2
         with:
           python-version: ${{ matrix.python-version }}

@@ -23,8 +23,8 @@
 from utils import Payload, loadConfig
 from source import splitPayload, PushData, InvokeWithXDT
 import logging as log
-import random
 import grpc
+import os
 import unittest
 
 config = loadConfig()
@@ -45,13 +45,13 @@ class UnitTest(unittest.TestCase):
 
 class IntegTest(unittest.TestCase):
     def test_Invoke_XDT(self):
-        data = random.randbytes(1024 * 1024 *100)
+        data = bytes(os.urandom(1024 * 1024 * 100))
         payload = Payload(FunctionName="foo", Data=data, Key="", IsXDT=False)
         InvokeWithXDT(URL=config['LBAddr'], xdtPayload=payload,
                       sQPAddr=config['SQPServerAddr'], chunkSizeInBytes=65536)
 
     def test_Timeout(self):
-        data = random.randbytes(1024 * 1024)
+        data = bytes(os.urandom(1024 * 1024))
         payload = Payload(FunctionName="foo", Data=data, Key="", IsXDT=False)
         try:
             InvokeWithXDT(URL=config['LBAddr'], xdtPayload=payload,

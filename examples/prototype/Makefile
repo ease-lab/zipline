@@ -128,7 +128,7 @@ install_python_modules:
 python-unit-test: install_python_modules
 	sed -i '/Routing/c\  "Routing": "Store&Forward",' ./config.json
 	cd sdk && go test ./integration_test.go -run TestPython_SDK $(GO_TEST_FLAGS) &
-	sleep 20
+	sleep 30
 	cd python-sdk && python -m unittest -v test.UnitTest
 	# kill the process bound to the given port.
 	-fuser -k 50005/tcp
@@ -138,7 +138,7 @@ python-integ-test: install_python_modules python-integ-test_CT python-integ-test
 python-integ-test_CT:
 	sed -i '/Routing/c\  "Routing": "CutThrough",' ./config.json
 	cd sdk && go test ./integration_test.go -run TestPython_SDK $(GO_TEST_FLAGS) &
-	sleep 20
+	sleep 30
 	cd python-sdk && python destination.py &
 	sleep 5
 	cd python-sdk && python -m unittest -v test.IntegTest.test_Invoke_XDT
@@ -148,7 +148,7 @@ python-integ-test_CT:
 python-integ-test_SF:
 	sed -i '/Routing/c\  "Routing": "Store&Forward",' ./config.json
 	cd sdk && go test ./integration_test.go -run TestPython_SDK $(GO_TEST_FLAGS) &
-	sleep 20
+	sleep 30
 	cd python-sdk && python destination.py &
 	sleep 5
 	cd python-sdk && python -m unittest -v test.IntegTest.test_Invoke_XDT
@@ -160,13 +160,13 @@ python-timeout-test: install_python_modules python-timeout-test_CT python-timeou
 python-timeout-test_CT:
 	sed -i '/Routing/c\  "Routing": "CutThrough",' ./config.json
 	cd sdk && go test ./integration_test.go -run TestPython_SDKTimeout $(GO_TEST_FLAGS) &
-	sleep 20
+	sleep 30
 	cd python-sdk && python -m unittest -v test.IntegTest.test_Timeout
 	-fuser -k 50005/tcp
 
 python-timeout-test_SF:
 	sed -i '/Routing/c\  "Routing": "Store&Forward",' ./config.json
 	cd sdk && go test ./integration_test.go -run TestPython_SDKTimeout $(GO_TEST_FLAGS) &
-	sleep 20
+	sleep 30
 	cd python-sdk && python -m unittest -v test.IntegTest.test_Timeout
 	-fuser -k 50005/tcp

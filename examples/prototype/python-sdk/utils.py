@@ -20,16 +20,20 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 
-from dataclasses import dataclass
 import json
 
 
-@dataclass
 class Payload:
     FunctionName: str
     Data: bytes
     Key: str
     IsXDT: bool
+
+    def __init__(self, FunctionName, Data, Key, IsXDT):
+        self.FunctionName = FunctionName
+        self.Data = Data
+        self.Key = Key
+        self.IsXDT = IsXDT
 
     def tobytes(self):
         objectDict = dict()
