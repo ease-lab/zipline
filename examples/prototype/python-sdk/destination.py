@@ -40,7 +40,9 @@ class XDTtoFnServicer(downXDT_pb2_grpc.XDTtoFnServicer):
         log.info("DST: received invocation call %s", request.XDTJSON)
         xdtPayload = Payload.loadFromBytes(request.XDTJSON)
         key = xdtPayload.Key
-        chunkSizeInBytes = 65536
+
+        global config
+        chunkSizeInBytes = config['ChunkSizeInBytes']
 
         # fetch data from dQP
         payloadBytes = FetchFromDQP(key, chunkSizeInBytes)
@@ -69,13 +71,13 @@ def FetchFromDQP(key, chunkSizeInBytes):
 
 
 # StartDstServer starts DstQP server
-def StartDstServer(serverAddr, handler):
+def StartDstServer(config, handler):
     global dstHandler
     dstHandler = handler
-    server = grpc.server(futures.ThreadPoolExecutor(max_workers=10))
+    server = grpc.server(futures.ThreadPoolExecutor(max_workers=config['MaxDstServerThreadsPython']))
     downXDT_pb2_grpc.add_XDTtoFnServicer_to_server(
         XDTtoFnServicer(), server)
-    server.add_insecure_port(serverAddr)
+    server.add_insecure_port(config['DstServerAddr'])
     server.start()
     server.wait_for_termination()
 
@@ -90,4 +92,4 @@ if __name__ == '__main__':
         log.info("destination received payload of length %d", len(payload))
 
 
-    StartDstServer(config['DstServerAddr'], handler)
+    StartDstServer(config, handler)

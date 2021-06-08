@@ -58,10 +58,6 @@ class IntegTest(unittest.TestCase):
                           sQPAddr=config['SQPServerAddr'], chunkSizeInBytes=65536)
         except grpc.RpcError as e:
             log.info("Test: Push data timed out")
-            # log.info(e.details())
-            # status_code = e.code()
-            # log.info(status_code.name)
-            # log.info(status_code.value)
         except grpc.FutureTimeoutError:
             log.error("DQP/LB offline")
             # raise e

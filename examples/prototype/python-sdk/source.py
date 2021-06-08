@@ -62,6 +62,7 @@ def InvokeWithXDT(URL, xdtPayload, sQPAddr, chunkSizeInBytes):
     config = utils.loadConfig()
     mpQueue = mp.Queue()
     p = mp.Process(target=PushData, args=(key, payloadData, sQPAddr, chunkSizeInBytes, mpQueue,))
+
     if config['Routing'] == utils.CUT_THROUGH:
         log.info("SDK: using CutThrough routing")
         p.start()
@@ -145,7 +146,3 @@ def PushData(key, payload, sQPAddr, chunkSizeInBytes, mpQueue=None):
         if mpQueue is not None:
             mpQueue.put(None)
         return
-
-
-if __name__ == '__main__':
-    log.basicConfig()
