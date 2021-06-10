@@ -1,6 +1,6 @@
 # MIT License
 #
-# Copyright (c) 2020 Dmitrii Ustiugov, Plamen Petrov and EASE lab
+# Copyright (c) 2021 Dmitrii Ustiugov and EASE lab
 #
 # Permission is hereby granted, free of charge, to any person obtaining a copy
 # of this software and associated documentation files (the "Software"), to deal
@@ -20,123 +20,153 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 
-SUBDIRS:=ctriface taps misc profile
-EXTRAGOARGS:=-v -race -cover
-EXTRAGOARGS_NORACE:=-v
-EXTRATESTFILES:=vhive_test.go stats.go vhive.go functions.go
-WITHUPF:=-upfTest
-WITHLAZY:=-lazyTest
-WITHSNAPSHOTS:=-snapshotsTest
-CTRDLOGDIR:=/tmp/ctrd-logs
+all: local
 
-vhive: proto
-	go install github.com/ease-lab/vhive
+.PHONY: proto_gen proto_install
 
-protobuf:
-	protoc -I proto/ proto/orchestrator.proto --go_out=plugins=grpc:proto
+PROTO_FILES:=crossXDT fnInvocation downXDT upXDT
+ROUTING_MODES:=Store&Forward CutThrough
+GO_TEST_FLAGS:=-race -v -cover
+
+proto_install:
+	pip install grpcio-tools --user
+	GO111MODULE="on" go get google.golang.org/protobuf/cmd/protoc-gen-go \
+            google.golang.org/grpc/cmd/protoc-gen-go-grpc
+proto_gen: $(PROTO_FILES)
+
+$(PROTO_FILES):
+	python -m grpc_tools.protoc -I./proto --python_out=./proto/$@ --grpc_python_out=./proto/$@ proto/$@.proto
+	GO111MODULE="on" PATH="$$PATH:$$(go env GOPATH)/bin" protoc proto/$@.proto \
+	    --proto_path=./proto \
+	    --go_out=./proto/$@ --go-grpc_out=./proto/$@ \
+	    --go_opt=paths=source_relative --go-grpc_opt=paths=source_relative
+
+local: proto_install proto_gen build_local
+
+build_local:
+	mkdir -p bins
+	cd dQP && go build -o ../bins/dqp
+	cd sdk && go build -o ../bins/sdk
+	cd sQP && go build -o ../bins/sqp
+	cd user-functions/fx && go build -o ../../bins/fx
+	cd user-functions/gx && go build -o ../../bins/gx
 
 clean:
-	rm proto/orchestrator.pb.go
+	rm -rf bins
 
-test-all: test-subdirs test-orch
+unit-test:
+	sed -i '/Routing/c\  "Routing": "Store&Forward",' ./config.json
+	cd sdk && go test unit_test.go -race -v -cover
 
-test-orch: test test-man
+integ-test_CT:
+	sed -i '/Routing/c\  "Routing": "CutThrough",' ./config.json
+	cd sdk && go test ./integration_test.go -run TestSdk_InvokeWithXDT $(GO_TEST_FLAGS)
 
-test:
-	sudo mkdir -m777 -p $(CTRDLOGDIR) && sudo env "PATH=$(PATH)" /usr/local/bin/firecracker-containerd --config /etc/firecracker-containerd/config.toml 1>$(CTRDLOGDIR)/fccd_orch_noupf_log.out 2>$(CTRDLOGDIR)/fccd_orch_noupf_log.err &
-	sudo env "PATH=$(PATH)" go test $(EXTRATESTFILES) -short $(EXTRAGOARGS)
-	sudo env "PATH=$(PATH)" go test $(EXTRATESTFILES) -short $(EXTRAGOARGS) -args $(WITHSNAPSHOTS)
-	./scripts/clean_fcctr.sh
-	sudo mkdir -m777 -p $(CTRDLOGDIR) && sudo env "PATH=$(PATH)" /usr/local/bin/firecracker-containerd --config /etc/firecracker-containerd/config.toml 1>$(CTRDLOGDIR)/fccd_orch_upf_log.out 2>$(CTRDLOGDIR)/fccd_orch_upf_log.err &
-	sudo env "PATH=$(PATH)" go test $(EXTRATESTFILES) -short $(EXTRAGOARGS) -args $(WITHSNAPSHOTS) $(WITHUPF)
-	./scripts/clean_fcctr.sh
-	sudo mkdir -m777 -p $(CTRDLOGDIR) && sudo env "PATH=$(PATH)" /usr/local/bin/firecracker-containerd --config /etc/firecracker-containerd/config.toml 1>$(CTRDLOGDIR)/fccd_orch_upf_lazy_log.out 2>$(CTRDLOGDIR)/fccd_orch_upf_lazy_log.err &
-	sudo env "PATH=$(PATH)" go test $(EXTRATESTFILES) -short $(EXTRAGOARGS) -args $(WITHSNAPSHOTS) $(WITHUPF) $(WITHLAZY)
-	./scripts/clean_fcctr.sh
-	sudo mkdir -m777 -p $(CTRDLOGDIR) && sudo env "PATH=$(PATH)" /usr/local/bin/firecracker-containerd --config /etc/firecracker-containerd/config.toml 1>$(CTRDLOGDIR)/fccd_orch_noupf_log_bench.out 2>$(CTRDLOGDIR)/fccd_orch_noupf_log_bench.err &
-	sudo env "PATH=$(PATH)" go test -short $(EXTRAGOARGS) -run TestProfileSingleConfiguration -args -test -loadStep 100 && sudo rm -rf bench_results
-	sudo env "PATH=$(PATH)" go test -short $(EXTRAGOARGS) -run TestProfileIncrementConfiguration -args -test -vmIncrStep 4 -maxVMNum 4 -loadStep 100 && sudo rm -rf bench_results
-	sudo env "PATH=$(PATH)" go test -short $(EXTRAGOARGS) -run TestBindSocket
-	./scripts/clean_fcctr.sh
 
-test-man:
-	sudo mkdir -m777 -p $(CTRDLOGDIR) && sudo env "PATH=$(PATH)" /usr/local/bin/firecracker-containerd --config /etc/firecracker-containerd/config.toml 1>$(CTRDLOGDIR)/fccd_orch_noupf_log_man_travis.out 2>$(CTRDLOGDIR)/fccd_orch_noupf_log_man_travis.err &
-	sudo env "PATH=$(PATH)" go test $(EXTRAGOARGS_NORACE) -run TestParallelServe
-	sudo env "PATH=$(PATH)" go test $(EXTRAGOARGS) -run TestServeThree
-	sudo env "PATH=$(PATH)" go test $(EXTRAGOARGS) -run TestServeThree -args $(WITHSNAPSHOTS)
-	./scripts/clean_fcctr.sh
-	sudo mkdir -m777 -p $(CTRDLOGDIR) && sudo env "PATH=$(PATH)" /usr/local/bin/firecracker-containerd --config /etc/firecracker-containerd/config.toml 1>$(CTRDLOGDIR)/fccd_orch_both_log_man_travis.out 2>$(CTRDLOGDIR)/fccd_orch_both_log_man_travis.err &
-	sudo env "PATH=$(PATH)" go test $(EXTRAGOARGS) -run TestServeThree -args $(WITHSNAPSHOTS) $(WITHUPF)
-	./scripts/clean_fcctr.sh
-	sudo mkdir -m777 -p $(CTRDLOGDIR) && sudo env "PATH=$(PATH)" /usr/local/bin/firecracker-containerd --config /etc/firecracker-containerd/config.toml 1>$(CTRDLOGDIR)/fccd_orch_both_lazy_log_man_travis.out 2>$(CTRDLOGDIR)/fccd_orch_both_lazy_log_man_travis.err &
-	sudo env "PATH=$(PATH)" go test $(EXTRAGOARGS) -run TestServeThree -args $(WITHSNAPSHOTS) $(WITHUPF) $(WITHLAZY)
-	./scripts/clean_fcctr.sh
+integ-test_SF:
+	sed -i '/Routing/c\  "Routing": "Store&Forward",' ./config.json
+	cd sdk && go test ./integration_test.go -run TestSdk_InvokeWithXDT $(GO_TEST_FLAGS)
 
-test-skip:
-	sudo mkdir -m777 -p $(CTRDLOGDIR) && sudo env "PATH=$(PATH)" /usr/local/bin/firecracker-containerd --config /etc/firecracker-containerd/config.toml 1>$(CTRDLOGDIR)/fccd_orch_noupf_log_man_skip.out 2>$(CTRDLOGDIR)/fccd_orch_noupf_log_man_skip.err &
-	sudo env "PATH=$(PATH)" go test $(EXTRAGOARGS_NORACE) -run TestParallelServe -args $(WITHSNAPSHOTS)
-	./scripts/clean_fcctr.sh
-	sudo mkdir -m777 -p $(CTRDLOGDIR) && sudo env "PATH=$(PATH)" /usr/local/bin/firecracker-containerd --config /etc/firecracker-containerd/config.toml 1>$(CTRDLOGDIR)/fccd_orch_both_log_man_skip.out 2>$(CTRDLOGDIR)/fccd_orch_both_log_man_skip.err &
-	sudo env "PATH=$(PATH)" go test $(EXTRAGOARGS_NORACE) -run TestParallelServe -args $(WITHSNAPSHOTS) $(WITHUPF)
-	./scripts/clean_fcctr.sh
-	sudo mkdir -m777 -p $(CTRDLOGDIR) && sudo env "PATH=$(PATH)" /usr/local/bin/firecracker-containerd --config /etc/firecracker-containerd/config.toml 1>$(CTRDLOGDIR)/fccd_orch_both_lazy_log_man_skip.out 2>$(CTRDLOGDIR)/fccd_orch_both_lazy_log_man_skip.err &
-	sudo env "PATH=$(PATH)" go test $(EXTRAGOARGS_NORACE) -run TestParallelServe -args $(WITHSNAPSHOTS) $(WITHUPF) $(WITHLAZY)
-	./scripts/clean_fcctr.sh
+integ-test: integ-test_CT integ-test_SF
 
-bench:
-	sudo mkdir -m777 -p $(CTRDLOGDIR) && sudo env "PATH=$(PATH)" /usr/local/bin/firecracker-containerd --config /etc/firecracker-containerd/config.toml 1>$(CTRDLOGDIR)/fccd_orch_noupf_log_bench.out 2>$(CTRDLOGDIR)/fccd_orch_noupf_log_bench.err &
-	sudo env "PATH=$(PATH)" go test $(EXTRAGOARGS) -run TestBenchServe -args -iter 1 $(WITHSNAPSHOTS) -benchDirTest configBase -metricsTest -funcName helloworld && sudo rm -rf configBase
-	./scripts/clean_fcctr.sh
-	sudo mkdir -m777 -p $(CTRDLOGDIR) && sudo env "PATH=$(PATH)" /usr/local/bin/firecracker-containerd --config /etc/firecracker-containerd/config.toml 1>$(CTRDLOGDIR)/fccd_orch_noupf_log_bench.out 2>$(CTRDLOGDIR)/fccd_orch_noupf_log_bench.err &
-	sudo env "PATH=$(PATH)" go test $(EXTRAGOARGS) -run TestBenchServe -args -iter 1 $(WITHSNAPSHOTS) $(WITHUPF) -benchDirTest configREAP -metricsTest -funcName helloworld && sudo rm -rf configREAP
-	./scripts/clean_fcctr.sh
-	sudo mkdir -m777 -p $(CTRDLOGDIR) && sudo env "PATH=$(PATH)" /usr/local/bin/firecracker-containerd --config /etc/firecracker-containerd/config.toml 1>$(CTRDLOGDIR)/fccd_orch_noupf_log_bench.out 2>$(CTRDLOGDIR)/fccd_orch_noupf_log_bench.err &
-	sudo env "PATH=$(PATH)" go test $(EXTRAGOARGS) -run TestBenchServe -args -iter 1 $(WITHSNAPSHOTS) $(WITHLAZY) -benchDirTest configLazy -metricsTest -funcName helloworld && sudo rm -rf configLazy
-	./scripts/clean_fcctr.sh
+timeout-test_CT:
+	sed -i '/Routing/c\  "Routing": "CutThrough",' ./config.json
+	sleep 60
+	cd sdk && go test ./integration_test.go -run TestErr_DSTTimeout $(GO_TEST_FLAGS)
+	cd sdk && go test ./integration_test.go -run TestErr_DQPTimeout $(GO_TEST_FLAGS)
 
-	sudo mkdir -m777 -p $(CTRDLOGDIR) && sudo env "PATH=$(PATH)" /usr/local/bin/firecracker-containerd --config /etc/firecracker-containerd/config.toml 1>$(CTRDLOGDIR)/fccd_orch_noupf_log_bench.out 2>$(CTRDLOGDIR)/fccd_orch_noupf_log_bench.err &
-	sudo env "PATH=$(PATH)" go test $(EXTRAGOARGS) -run TestBenchParallelServe -args $(WITHSNAPSHOTS) -benchDirTest configBase -metricsTest -funcName helloworld && sudo rm -rf configBase
-	./scripts/clean_fcctr.sh
-	sudo mkdir -m777 -p $(CTRDLOGDIR) && sudo env "PATH=$(PATH)" /usr/local/bin/firecracker-containerd --config /etc/firecracker-containerd/config.toml 1>$(CTRDLOGDIR)/fccd_orch_noupf_log_bench.out 2>$(CTRDLOGDIR)/fccd_orch_noupf_log_bench.err &
-	sudo env "PATH=$(PATH)" go test $(EXTRAGOARGS) -run TestBenchParallelServe -args $(WITHSNAPSHOTS) $(WITHUPF) -benchDirTest configREAP -metricsTest -funcName helloworld && sudo rm -rf configREAP
-	./scripts/clean_fcctr.sh
-	sudo mkdir -m777 -p $(CTRDLOGDIR) && sudo env "PATH=$(PATH)" /usr/local/bin/firecracker-containerd --config /etc/firecracker-containerd/config.toml 1>$(CTRDLOGDIR)/fccd_orch_noupf_log_bench.out 2>$(CTRDLOGDIR)/fccd_orch_noupf_log_bench.err &
-	sudo env "PATH=$(PATH)" go test $(EXTRAGOARGS) -run TestBenchParallelServe -args $(WITHSNAPSHOTS) $(WITHLAZY) -benchDirTest configLazy -metricsTest -funcName helloworld && sudo rm -rf configLazy
-	./scripts/clean_fcctr.sh
+timeout-test_SF:
+	sed -i '/Routing/c\  "Routing": "Store&Forward",' ./config.json
+	sleep 60
+	cd sdk && go test ./integration_test.go -run TestErr_DSTTimeout $(GO_TEST_FLAGS)
+	cd sdk && go test ./integration_test.go -run TestErr_DQPTimeout $(GO_TEST_FLAGS)
 
-test-man-bench:
-	$(MAKE) test-man
-	$(MAKE) bench
+timeout-test: timeout-test_SF timeout-test_CT
 
-nightly-test:
-	sudo mkdir -m777 -p $(CTRDLOGDIR) && sudo env "PATH=$(PATH)" /usr/local/bin/firecracker-containerd --config /etc/firecracker-containerd/config.toml 1>$(CTRDLOGDIR)/fccd_orch_noupf_log.out 2>$(CTRDLOGDIR)/fccd_orch_noupf_log.err &
-	sudo env "PATH=$(PATH)" go test $(EXTRATESTFILES) -run TestAllFunctions $(EXTRAGOARGS)
-	sudo env "PATH=$(PATH)" go test $(EXTRATESTFILES) -run TestAllFunctions $(EXTRAGOARGS) -args $(WITHSNAPSHOTS)
-	./scripts/clean_fcctr.sh
-	sudo mkdir -m777 -p $(CTRDLOGDIR) && sudo env "PATH=$(PATH)" /usr/local/bin/firecracker-containerd --config /etc/firecracker-containerd/config.toml 1>$(CTRDLOGDIR)/fccd_orch_upf_log.out 2>$(CTRDLOGDIR)/fccd_orch_upf_log.err &
-	sudo env "PATH=$(PATH)" go test $(EXTRATESTFILES) -run TestAllFunctions $(EXTRAGOARGS) -args $(WITHSNAPSHOTS) $(WITHUPF)
-	./scripts/clean_fcctr.sh
-	sudo mkdir -m777 -p $(CTRDLOGDIR) && sudo env "PATH=$(PATH)" /usr/local/bin/firecracker-containerd --config /etc/firecracker-containerd/config.toml 1>$(CTRDLOGDIR)/fccd_orch_upf_lazy_log.out 2>$(CTRDLOGDIR)/fccd_orch_upf_lazy_log.err &
-	sudo env "PATH=$(PATH)" go test $(EXTRATESTFILES) -run TestAllFunctions $(EXTRAGOARGS) -args $(WITHSNAPSHOTS) $(WITHUPF) $(WITHLAZY)
-	./scripts/clean_fcctr.sh
+parallel-invoke-test:
+	cd sdk && go test ./integration_test.go -run TestParallel_Invoke -concurrentCalls 1 $(GO_TEST_FLAGS)
+	cd sdk && go test ./integration_test.go -run TestParallel_Invoke -concurrentCalls 2 $(GO_TEST_FLAGS)
+	cd sdk && go test ./integration_test.go -run TestParallel_Invoke -concurrentCalls 5 $(GO_TEST_FLAGS)
 
-test-skip-all:
-	$(MAKE) test-skip
-	$(MAKE) -C ctriface test-skip
+fan-out-test: fan-out_SF fan-out_CT
+fan-in-test: fan-in_SF fan-in_CT
 
-log-clean:
-	sudo rm -rf $(CTRDLOGDIR)
+fan-out_SF:
+	sed -i '/Routing/c\  "Routing": "Store&Forward",' ./config.json
+	cd sdk && go test ./integration_test.go -run TestParallel_FanOut -concurrentCalls 1 $(GO_TEST_FLAGS)
+	sleep 2
+	cd sdk && go test ./integration_test.go -run TestParallel_FanOut -concurrentCalls 2 $(GO_TEST_FLAGS)
+	sleep 2
+	cd sdk && go test ./integration_test.go -run TestParallel_FanOut -concurrentCalls 5 $(GO_TEST_FLAGS)
+fan-out_CT:
+	sed -i '/Routing/c\  "Routing": "CutThrough",' ./config.json
+	cd sdk && go test ./integration_test.go -run TestParallel_FanOut -concurrentCalls 1 $(GO_TEST_FLAGS)
+	sleep 2
+	cd sdk && go test ./integration_test.go -run TestParallel_FanOut -concurrentCalls 2 $(GO_TEST_FLAGS)
+	sleep 2
+	cd sdk && go test ./integration_test.go -run TestParallel_FanOut -concurrentCalls 5 $(GO_TEST_FLAGS)
 
-$(SUBDIRS):
-	$(MAKE) -C $@ test
-	$(MAKE) -C $@ test-man
+fan-in_SF:
+	sed -i '/Routing/c\  "Routing": "Store&Forward",' ./config.json
+	cd sdk && go test ./integration_test.go -run TestParallel_FanIn -concurrentCalls 1 $(GO_TEST_FLAGS)
+	sleep 2
+	cd sdk && go test ./integration_test.go -run TestParallel_FanIn -concurrentCalls 2 $(GO_TEST_FLAGS)
+	sleep 2
+	cd sdk && go test ./integration_test.go -run TestParallel_FanIn -concurrentCalls 5 $(GO_TEST_FLAGS)
+fan-in_CT:
+	sed -i '/Routing/c\  "Routing": "CutThrough",' ./config.json
+	cd sdk && go test ./integration_test.go -run TestParallel_FanIn -concurrentCalls 1 $(GO_TEST_FLAGS)
+	sleep 2
+	cd sdk && go test ./integration_test.go -run TestParallel_FanIn -concurrentCalls 2 $(GO_TEST_FLAGS)
+	sleep 2
+	cd sdk && go test ./integration_test.go -run TestParallel_FanIn -concurrentCalls 5 $(GO_TEST_FLAGS)
 
-test-subdirs: $(SUBDIRS)
+install_python_modules:
+	pip install grpcio --user
+	pip install grpcio-tools --user
 
-test-cri:
-	$(MAKE) -C cri test
+python-unit-test: install_python_modules
+	sed -i '/Routing/c\  "Routing": "Store&Forward",' ./config.json
+	cd sdk && go test ./integration_test.go -run TestPython_SDK $(GO_TEST_FLAGS) &
+	sleep 30
+	cd python-sdk && python -m unittest -v test.UnitTest
+	# kill the process bound to the given port.
+	-fuser -k 50005/tcp
 
-test-cri-travis: # Testing in travis is deprecated
-	$(MAKE) -C cri test-travis
+python-integ-test: install_python_modules python-integ-test_CT python-integ-test_SF
 
-.PHONY: test-orch $(SUBDIRS) test-subdirs
+python-integ-test_CT:
+	sed -i '/Routing/c\  "Routing": "CutThrough",' ./config.json
+	cd sdk && go test ./integration_test.go -run TestPython_SDK $(GO_TEST_FLAGS) &
+	sleep 30
+	cd python-sdk && python destination.py &
+	sleep 5
+	cd python-sdk && python -m unittest -v test.IntegTest.test_Invoke_XDT
+	-fuser -k 50005/tcp
+	-fuser -k 50007/tcp
+
+python-integ-test_SF:
+	sed -i '/Routing/c\  "Routing": "Store&Forward",' ./config.json
+	cd sdk && go test ./integration_test.go -run TestPython_SDK $(GO_TEST_FLAGS) &
+	sleep 30
+	cd python-sdk && python destination.py &
+	sleep 5
+	cd python-sdk && python -m unittest -v test.IntegTest.test_Invoke_XDT
+	-fuser -k 50005/tcp
+	-fuser -k 50007/tcp
+
+python-timeout-test: install_python_modules python-timeout-test_CT python-timeout-test_SF
+
+python-timeout-test_CT:
+	sed -i '/Routing/c\  "Routing": "CutThrough",' ./config.json
+	cd sdk && go test ./integration_test.go -run TestPython_SDKTimeout $(GO_TEST_FLAGS) &
+	sleep 30
+	cd python-sdk && python -m unittest -v test.IntegTest.test_Timeout
+	-fuser -k 50005/tcp
+
+python-timeout-test_SF:
+	sed -i '/Routing/c\  "Routing": "Store&Forward",' ./config.json
+	cd sdk && go test ./integration_test.go -run TestPython_SDKTimeout $(GO_TEST_FLAGS) &
+	sleep 30
+	cd python-sdk && python -m unittest -v test.IntegTest.test_Timeout
+	-fuser -k 50005/tcp

@@ -1,4 +1,0 @@
-futures
-pillow
-urllib3
-minio

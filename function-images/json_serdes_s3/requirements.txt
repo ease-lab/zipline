@@ -1,3 +1,0 @@
-futures
-urllib3
-minio
