@@ -25,12 +25,13 @@ package tracing
 import (
 	"context"
 	"flag"
+	stockLogger "log"
+	"os"
+
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/exporters/trace/zipkin"
 	"go.opentelemetry.io/otel/propagation"
 	sdktrace "go.opentelemetry.io/otel/sdk/trace"
-	stockLogger "log"
-	"os"
 
 	log "github.com/sirupsen/logrus"
 )

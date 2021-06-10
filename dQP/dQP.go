@@ -30,12 +30,13 @@ import (
 	"XDTprototype/utils"
 	"context"
 	"encoding/json"
-	log "github.com/sirupsen/logrus"
-	"go.opentelemetry.io/contrib/instrumentation/google.golang.org/grpc/otelgrpc"
-	"google.golang.org/grpc"
 	"io"
 	"net"
 	"sync"
+
+	log "github.com/sirupsen/logrus"
+	"go.opentelemetry.io/contrib/instrumentation/google.golang.org/grpc/otelgrpc"
+	"google.golang.org/grpc"
 )
 
 var config utils.Config

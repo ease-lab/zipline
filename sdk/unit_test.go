@@ -30,9 +30,9 @@ import (
 	"time"
 
 	"XDTprototype/dqp"
-	"XDTprototype/sdk"
 	"XDTprototype/sqp"
 	"XDTprototype/utils"
+
 	log "github.com/sirupsen/logrus"
 )
 
