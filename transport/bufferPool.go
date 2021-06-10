@@ -24,8 +24,9 @@ package transport
 
 import (
 	"XDTprototype/utils"
-	log "github.com/sirupsen/logrus"
 	"sync"
+
+	log "github.com/sirupsen/logrus"
 )
 
 type BufferPool struct {

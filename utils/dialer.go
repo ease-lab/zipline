@@ -24,15 +24,16 @@ package utils
 
 import (
 	"context"
+	"net"
+	"os"
+	"syscall"
+	"time"
+
 	"github.com/pkg/errors"
 	log "github.com/sirupsen/logrus"
 	"go.opentelemetry.io/contrib/instrumentation/google.golang.org/grpc/otelgrpc"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/backoff"
-	"net"
-	"os"
-	"syscall"
-	"time"
 )
 
 func GetGopts() []grpc.DialOption {

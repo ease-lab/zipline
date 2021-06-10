@@ -25,12 +25,14 @@ package sqp
 import (
 	"XDTprototype/transport"
 	"XDTprototype/utils"
-	"go.opentelemetry.io/contrib/instrumentation/google.golang.org/grpc/otelgrpc"
 	"io"
 	"sync"
 
-	log "github.com/sirupsen/logrus"
+	"go.opentelemetry.io/contrib/instrumentation/google.golang.org/grpc/otelgrpc"
+
 	"net"
+
+	log "github.com/sirupsen/logrus"
 
 	"XDTprototype/proto/crossXDT"
 	"XDTprototype/proto/upXDT"

@@ -24,25 +24,27 @@ package utils
 
 import (
 	"encoding/json"
-	log "github.com/sirupsen/logrus"
 	"io/ioutil"
 	"os"
+
+	log "github.com/sirupsen/logrus"
 )
 
 type Config struct {
-	ChunkSizeInBytes     int
-	DQPServerAddr        string
-	LBAddr               string
-	DstServerAddr        string
-	SQPServerAddr        string
-	CTBufferSize         int
-	NumberOfBuffers      int
-	StAndFwBufferSize    int
-	Routing              string
-	TracingEnabled       bool
-	RPCTimeoutMaxBackoff int
-	RPCTimeoutDuration   int
-	RPCRetryDelay        int
+	ChunkSizeInBytes          int
+	DQPServerAddr             string
+	LBAddr                    string
+	DstServerAddr             string
+	SQPServerAddr             string
+	CTBufferSize              int
+	NumberOfBuffers           int
+	StAndFwBufferSize         int
+	Routing                   string
+	TracingEnabled            bool
+	RPCTimeoutMaxBackoff      int
+	RPCTimeoutDuration        int
+	RPCRetryDelay             int
+	MaxDstServerThreadsPython int
 }
 
 type Payload struct {
@@ -63,7 +65,23 @@ func readConfig(file string) Config {
 	log.Debugf("Opening JSON file with config: %s\n", file)
 	jsonFile, err := os.Open(file)
 	if err != nil {
-		log.Fatal(err)
+		log.Error("Config file not found. Using defaults")
+		return Config{
+			ChunkSizeInBytes:          65536,
+			DQPServerAddr:             "localhost:50008",
+			LBAddr:                    "localhost:50008",
+			DstServerAddr:             "localhost:50007",
+			SQPServerAddr:             "localhost:50005",
+			NumberOfBuffers:           2,
+			CTBufferSize:              25,
+			StAndFwBufferSize:         1600,
+			Routing:                   "CutThrough",
+			TracingEnabled:            false,
+			RPCTimeoutMaxBackoff:      1000,
+			RPCTimeoutDuration:        60000,
+			RPCRetryDelay:             1,
+			MaxDstServerThreadsPython: 10,
+		}
 	}
 	defer func() {
 		err = jsonFile.Close()

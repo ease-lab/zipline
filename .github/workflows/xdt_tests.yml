@@ -2,15 +2,15 @@ name: XDT tests
 
 on:
   push:
-    branches: [ main_xdt ]
-    paths:
-      - 'examples/prototype/**'
-      - '.github/workflows/xdt_tests.yml'
+    branches: [ main ]
+    paths-ignore:
+      - 'docs/**'
+      - '**.md'
   pull_request:
-    branches: [ main_xdt ]
-    paths:
-      - 'examples/prototype/**'
-      - '.github/workflows/xdt_tests.yml'
+    branches: [ main ]
+    paths-ignore:
+      - 'docs/**'
+      - '**.md'
   workflow_dispatch:
 
 env:
@@ -33,7 +33,7 @@ jobs:
     - name: Check out code into the Go module directory
       uses: actions/checkout@v2
     - name: Run test
-      run: cd examples/prototype && make ${{ matrix.test-type }}-test
+      run: make ${{ matrix.test-type }}-test
   
   CodeLint:
     name: Test Code quality
@@ -45,32 +45,32 @@ jobs:
         if: ${{ always() }}
         uses: golangci/golangci-lint-action@v2
         with:
-          working-directory: examples/prototype/sdk
+          working-directory: sdk
           args: --timeout 5m
       - name: Check dQP code
         if: ${{ always() }}
         env:
-          DIR: examples/prototype/dQP
+          DIR: dQP
         run: cd $DIR && golangci-lint run --out-format=github-actions --path-prefix=$DIR --timeout 5m
       - name: Check plotter code
         if: ${{ always() }}
         env:
-          DIR: examples/prototype/plotter
+          DIR: plotter
         run: cd $DIR && golangci-lint run --out-format=github-actions --path-prefix=$DIR --timeout 5m
       - name: Check sQP code
         if: ${{ always() }}
         env:
-          DIR: examples/prototype/sQP
+          DIR: sQP
         run: cd $DIR && golangci-lint run --out-format=github-actions --path-prefix=$DIR --timeout 5m
       - name: Check user-functions/fx code
         if: ${{ always() }}
         env:
-          DIR: examples/prototype/user-functions/fx
+          DIR: user-functions/fx
         run: cd $DIR && golangci-lint run --out-format=github-actions --path-prefix=$DIR --timeout 5m
       - name: Check user-functions/gx code
         if: ${{ always() }}
         env:
-          DIR: examples/prototype/user-functions/gx
+          DIR: user-functions/gx
         run: cd $DIR && golangci-lint run --out-format=github-actions --path-prefix=$DIR --timeout 5m
   Benchmark:
     name: Benchmark XDT
@@ -84,15 +84,15 @@ jobs:
         uses: actions/checkout@v2
       - name: Run benchmarks
         run: |
-          sed -i '/Routing/c\  "Routing": "CutThrough",' examples/prototype/config.json
-          cd examples/prototype/sdk && go test ./integration_test.go -run TestBenchmark_XDT -v
+          sed -i '/Routing/c\  "Routing": "CutThrough",' config.json
+          cd sdk && go test ./integration_test.go ./source.go ./destination.go -run TestBenchmark_XDT -v
       - name: Archive log artifacts
         if: ${{ always() }}
         uses: actions/upload-artifact@v2
         with:
           name: XDT benchmarks
           path: |
-            examples/prototype/sdk/*.png
+            sdk/*.png
 
   Python-SDK-Test:
     name: Python SDK Test
@@ -116,4 +116,4 @@ jobs:
       - name: Check out code into the Go module directory
         uses: actions/checkout@v2
       - name: Run test
-        run: cd examples/prototype && make python-${{ matrix.test-type }}-test
+        run: make python-${{ matrix.test-type }}-test
