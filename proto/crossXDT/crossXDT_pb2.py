@@ -17,9 +17,9 @@ DESCRIPTOR = _descriptor.FileDescriptor(
   name='crossXDT.proto',
   package='crossXDT',
   syntax='proto3',
-  serialized_options=b'Z\033XDTprototype/proto/crossXDT',
+  serialized_options=b'Z&github.com/ease-lab/xdt/proto/crossXDT',
   create_key=_descriptor._internal_create_key,
-  serialized_pb=b'\n\x0e\x63rossXDT.proto\x12\x08\x63rossXDT\")\n\x07Request\x12\x0b\n\x03key\x18\x01 \x01(\t\x12\x11\n\tChunkSize\x18\x02 \x01(\x03\".\n\x08Response\x12\r\n\x05\x63hunk\x18\x01 \x01(\x0c\x12\x13\n\x0bTotalChunks\x18\x03 \x01(\x03\x32\x44\n\nStreamData\x12\x36\n\tServeData\x12\x11.crossXDT.Request\x1a\x12.crossXDT.Response\"\x00\x30\x01\x42\x1dZ\x1bXDTprototype/proto/crossXDTb\x06proto3'
+  serialized_pb=b'\n\x0e\x63rossXDT.proto\x12\x08\x63rossXDT\")\n\x07Request\x12\x0b\n\x03key\x18\x01 \x01(\t\x12\x11\n\tChunkSize\x18\x02 \x01(\x03\".\n\x08Response\x12\r\n\x05\x63hunk\x18\x01 \x01(\x0c\x12\x13\n\x0bTotalChunks\x18\x03 \x01(\x03\x32\x44\n\nStreamData\x12\x36\n\tServeData\x12\x11.crossXDT.Request\x1a\x12.crossXDT.Response\"\x00\x30\x01\x42(Z&github.com/ease-lab/xdt/proto/crossXDTb\x06proto3'
 )
 
 

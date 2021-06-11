@@ -1,4 +1,4 @@
-module upXDT
+module github.com/ease-lab/xdt/proto/upXDT
 
 go 1.16
 

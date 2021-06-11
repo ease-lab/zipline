@@ -1,4 +1,4 @@
-module fnInvocation
+module github.com/ease-lab/xdt/proto/fnInvocation
 
 go 1.16
 

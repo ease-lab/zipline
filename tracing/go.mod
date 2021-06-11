@@ -1,4 +1,4 @@
-module tracing
+module github.com/ease-lab/xdt/tracing
 
 go 1.16
 

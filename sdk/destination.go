@@ -23,13 +23,14 @@
 package sdk
 
 import (
-	"XDTprototype/proto/downXDT"
-	"XDTprototype/utils"
 	"context"
 	"encoding/json"
 	"io"
 	"net"
 	"sync"
+
+	"github.com/ease-lab/xdt/proto/downXDT"
+	"github.com/ease-lab/xdt/utils"
 
 	log "github.com/sirupsen/logrus"
 	"go.opentelemetry.io/contrib/instrumentation/google.golang.org/grpc/otelgrpc"

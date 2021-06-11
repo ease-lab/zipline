@@ -23,13 +23,14 @@
 package main
 
 import (
-	"XDTprototype/utils"
 	"crypto/rand"
 	"time"
 
+	"github.com/ease-lab/xdt/utils"
+
 	log "github.com/sirupsen/logrus"
 
-	"XDTprototype/sdk"
+	"github.com/ease-lab/xdt/sdk"
 )
 
 func main() {

@@ -23,11 +23,11 @@
 package main
 
 import (
-	"XDTprototype/sdk"
+	"github.com/ease-lab/xdt/sdk"
 
 	log "github.com/sirupsen/logrus"
 
-	"XDTprototype/utils"
+	"github.com/ease-lab/xdt/utils"
 )
 
 var handler = func(data []byte) {
