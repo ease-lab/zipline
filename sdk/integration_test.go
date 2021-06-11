@@ -33,8 +33,8 @@ import (
 	"time"
 
 	"XDTgRPC_stream/plotter"
-	"XDTprototype/dqp"
-	"XDTprototype/sqp"
+	"XDTprototype/dQP"
+	"XDTprototype/sQP"
 	"XDTprototype/tracing"
 	"XDTprototype/utils"
 
@@ -80,8 +80,8 @@ func TestSdk_InvokeWithXDT(t *testing.T) {
 		defer shutdown()
 	}
 	// start server at sQP
-	go sqp.StartServer(config)
-	go dqp.StartServer(config)
+	go sQP.StartServer(config)
+	go dQP.StartServer(config)
 	go StartDstServer(config, handler)
 
 	time.Sleep(time.Second * 1)
@@ -109,7 +109,7 @@ func TestErr_DQPTimeout(t *testing.T) {
 	}
 
 	// start server at sQP
-	go sqp.StartServer(config)
+	go sQP.StartServer(config)
 	time.Sleep(time.Second)
 	go StartDstServer(config, handler)
 
@@ -140,9 +140,9 @@ func TestErr_DSTTimeout(t *testing.T) {
 	}
 
 	// start server at sQP
-	go dqp.StartServer(config)
+	go dQP.StartServer(config)
 	time.Sleep(time.Second * 1)
-	go sqp.StartServer(config)
+	go sQP.StartServer(config)
 
 	time.Sleep(time.Second * 1)
 
@@ -171,8 +171,8 @@ func TestParallel_Invoke(t *testing.T) {
 	}
 
 	// start server at sQP
-	go sqp.StartServer(config)
-	go dqp.StartServer(config)
+	go sQP.StartServer(config)
+	go dQP.StartServer(config)
 	go StartDstServer(config, handler)
 
 	time.Sleep(time.Second * 1)
@@ -215,10 +215,10 @@ func TestParallel_FanIn(t *testing.T) {
 		tmpConfig := utils.LoadConfig
 		tmpConfig.SQPServerAddr = ":" + fmt.Sprint(sQPAddr+i)
 		log.Infof("starting sQP server no. %d", i+1)
-		go sqp.StartServer(tmpConfig)
+		go sQP.StartServer(tmpConfig)
 		time.Sleep(time.Second * 10)
 	}
-	go dqp.StartServer(config)
+	go dQP.StartServer(config)
 	time.Sleep(time.Second * 2)
 	go StartDstServer(config, handler)
 	time.Sleep(time.Second * 2)
@@ -270,11 +270,11 @@ func TestParallel_FanOut(t *testing.T) {
 		time.Sleep(time.Second * 10)
 		tmpDQPConfig := config
 		log.Infof("starting dQP server no. %d", i+1)
-		go dqp.StartServer(tmpDQPConfig)
+		go dQP.StartServer(tmpDQPConfig)
 		time.Sleep(time.Second * 10)
 	}
 	time.Sleep(time.Second * 5)
-	go sqp.StartServer(config)
+	go sQP.StartServer(config)
 
 	time.Sleep(time.Second * 1)
 
@@ -306,8 +306,8 @@ func TestPython_SDK(t *testing.T) {
 
 	config := utils.LoadConfig
 	// start servers
-	go sqp.StartServer(config)
-	dqp.StartServer(config)
+	go sQP.StartServer(config)
+	dQP.StartServer(config)
 
 }
 
@@ -315,7 +315,7 @@ func TestPython_SDKTimeout(t *testing.T) {
 
 	config := utils.LoadConfig
 	// start servers
-	sqp.StartServer(config)
+	sQP.StartServer(config)
 
 }
 
@@ -326,8 +326,8 @@ func TestBenchmark_XDT(t *testing.T) {
 		log.Fatal("invalid sample size. Acceptable input is integers >= 10")
 	}
 
-	go sqp.StartServer(config)
-	go dqp.StartServer(config)
+	go sQP.StartServer(config)
+	go dQP.StartServer(config)
 	go StartDstServer(config, handler)
 
 	payloadSizes := []int{10, 100, 1000, 10000, 100000}
