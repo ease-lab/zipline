@@ -1,4 +1,4 @@
-module dqp
+module dQP
 
 go 1.16
 

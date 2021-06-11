@@ -29,8 +29,8 @@ import (
 	"testing"
 	"time"
 
-	"XDTprototype/dqp"
-	"XDTprototype/sqp"
+	"XDTprototype/dQP"
+	"XDTprototype/sQP"
 	"XDTprototype/utils"
 
 	log "github.com/sirupsen/logrus"
@@ -40,8 +40,8 @@ func init() {
 	log.SetLevel(log.InfoLevel)
 	log.SetFormatter(&log.TextFormatter{TimestampFormat: "2006-01-02 15:04:05.000000", FullTimestamp: true})
 
-	go sqp.StartServer(utils.LoadConfig)
-	go dqp.StartServer(utils.LoadConfig)
+	go sQP.StartServer(utils.LoadConfig)
+	go dQP.StartServer(utils.LoadConfig)
 }
 
 func TestSDK_to_sQP_data_transfer(t *testing.T) {
@@ -84,7 +84,7 @@ func TestSQP_to_dQP_data_transfer(t *testing.T) {
 
 	log.Infof("transferred %d bytes from SrcFn to sQP in %s", len(payloadData), duration)
 
-	err := dqp.PullDataFromSrcQP(context.Background(), key, utils.LoadConfig.SQPServerAddr, chunkSizeInBytes)
+	err := dQP.PullDataFromSrcQP(context.Background(), key, utils.LoadConfig.SQPServerAddr, chunkSizeInBytes)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -112,7 +112,7 @@ func TestDQP_to_DstFn_data_transfer(t *testing.T) {
 	log.Infof("transferred %d bytes from SrcFn to sQP in %s", len(payloadData), duration)
 
 	start = time.Now()
-	err := dqp.PullDataFromSrcQP(context.Background(), key, utils.LoadConfig.SQPServerAddr, chunkSizeInBytes)
+	err := dQP.PullDataFromSrcQP(context.Background(), key, utils.LoadConfig.SQPServerAddr, chunkSizeInBytes)
 	if err != nil {
 		log.Fatal(err)
 	}

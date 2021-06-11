@@ -4,13 +4,13 @@ go 1.16
 
 replace (
 	XDTgRPC_stream/plotter => ../../plotter
-	XDTprototype/dqp => ../../dQP
+	XDTprototype/dQP => ../../dQP
 	XDTprototype/proto/crossXDT => ../../proto/crossXDT
 	XDTprototype/proto/downXDT => ../../proto/downXDT
 	XDTprototype/proto/fnInvocation => ../../proto/fnInvocation
 	XDTprototype/proto/upXDT => ../../proto/upXDT
 	XDTprototype/sdk => ../../sdk
-	XDTprototype/sqp => ../../sQP
+	XDTprototype/sQP => ../../sQP
 	XDTprototype/tracing => ../../tracing
 	XDTprototype/transport => ../../transport
 	XDTprototype/utils => ../../utils

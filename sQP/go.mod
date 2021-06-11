@@ -1,4 +1,4 @@
-module sqp
+module sQP
 
 go 1.16
 
