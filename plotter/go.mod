@@ -1,4 +1,4 @@
-module plotter
+module github.com/ease-lab/xdt/plotter
 
 go 1.16
 

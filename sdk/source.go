@@ -23,16 +23,17 @@
 package sdk
 
 import (
-	"XDTprototype/utils"
 	"context"
 	"encoding/json"
 	"strconv"
 	"time"
 
+	"github.com/ease-lab/xdt/utils"
+
 	log "github.com/sirupsen/logrus"
 
-	"XDTprototype/proto/fnInvocation"
-	"XDTprototype/proto/upXDT"
+	"github.com/ease-lab/xdt/proto/fnInvocation"
+	"github.com/ease-lab/xdt/proto/upXDT"
 
 	"google.golang.org/grpc"
 )

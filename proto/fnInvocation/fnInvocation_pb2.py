@@ -17,9 +17,9 @@ DESCRIPTOR = _descriptor.FileDescriptor(
   name='fnInvocation.proto',
   package='fnInvocation',
   syntax='proto3',
-  serialized_options=b'Z\037XDTprototype/proto/fnInvocation',
+  serialized_options=b'Z*github.com/ease-lab/xdt/proto/fnInvocation',
   create_key=_descriptor._internal_create_key,
-  serialized_pb=b'\n\x12\x66nInvocation.proto\x12\x0c\x66nInvocation\"5\n\x11InvocationRequest\x12\x0f\n\x07XDTJSON\x18\x01 \x01(\x0c\x12\x0f\n\x07SQPAddr\x18\x02 \x01(\t\"\x07\n\x05\x45mpty2W\n\nInvocation\x12I\n\x0fRouteInvocation\x12\x1f.fnInvocation.InvocationRequest\x1a\x13.fnInvocation.Empty\"\x00\x42!Z\x1fXDTprototype/proto/fnInvocationb\x06proto3'
+  serialized_pb=b'\n\x12\x66nInvocation.proto\x12\x0c\x66nInvocation\"5\n\x11InvocationRequest\x12\x0f\n\x07XDTJSON\x18\x01 \x01(\x0c\x12\x0f\n\x07SQPAddr\x18\x02 \x01(\t\"\x07\n\x05\x45mpty2W\n\nInvocation\x12I\n\x0fRouteInvocation\x12\x1f.fnInvocation.InvocationRequest\x1a\x13.fnInvocation.Empty\"\x00\x42,Z*github.com/ease-lab/xdt/proto/fnInvocationb\x06proto3'
 )
 
 

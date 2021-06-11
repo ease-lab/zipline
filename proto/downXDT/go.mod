@@ -1,4 +1,4 @@
-module downXDT
+module github.com/ease-lab/xdt/proto/downXDT
 
 go 1.16
 

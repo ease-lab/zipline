@@ -23,16 +23,17 @@
 package dQP
 
 import (
-	"XDTprototype/proto/crossXDT"
-	"XDTprototype/proto/downXDT"
-	"XDTprototype/proto/fnInvocation"
-	"XDTprototype/transport"
-	"XDTprototype/utils"
 	"context"
 	"encoding/json"
 	"io"
 	"net"
 	"sync"
+
+	"github.com/ease-lab/xdt/proto/crossXDT"
+	"github.com/ease-lab/xdt/proto/downXDT"
+	"github.com/ease-lab/xdt/proto/fnInvocation"
+	"github.com/ease-lab/xdt/transport"
+	"github.com/ease-lab/xdt/utils"
 
 	log "github.com/sirupsen/logrus"
 	"go.opentelemetry.io/contrib/instrumentation/google.golang.org/grpc/otelgrpc"

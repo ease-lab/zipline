@@ -4,20 +4,20 @@ go 1.16
 
 replace (
 	XDTgRPC_stream/plotter => ../../plotter
-	XDTprototype/dQP => ../../dQP
-	XDTprototype/proto/crossXDT => ../../proto/crossXDT
-	XDTprototype/proto/downXDT => ../../proto/downXDT
-	XDTprototype/proto/fnInvocation => ../../proto/fnInvocation
-	XDTprototype/proto/upXDT => ../../proto/upXDT
-	XDTprototype/sdk => ../../sdk
-	XDTprototype/sQP => ../../sQP
-	XDTprototype/tracing => ../../tracing
-	XDTprototype/transport => ../../transport
-	XDTprototype/utils => ../../utils
+	github.com/ease-lab/xdt/dQP => ../../dQP
+	github.com/ease-lab/xdt/proto/crossXDT => ../../proto/crossXDT
+	github.com/ease-lab/xdt/proto/downXDT => ../../proto/downXDT
+	github.com/ease-lab/xdt/proto/fnInvocation => ../../proto/fnInvocation
+	github.com/ease-lab/xdt/proto/upXDT => ../../proto/upXDT
+	github.com/ease-lab/xdt/sdk => ../../sdk
+	github.com/ease-lab/xdt/sQP => ../../sQP
+	github.com/ease-lab/xdt/tracing => ../../tracing
+	github.com/ease-lab/xdt/transport => ../../transport
+	github.com/ease-lab/xdt/utils => ../../utils
 )
 
 require (
-	XDTprototype/sdk v0.0.0-00010101000000-000000000000
-	XDTprototype/utils v0.0.0-00010101000000-000000000000
+	github.com/ease-lab/xdt/sdk v0.0.0-00010101000000-000000000000
+	github.com/ease-lab/xdt/utils v0.0.0-00010101000000-000000000000
 	github.com/sirupsen/logrus v1.8.1
 )

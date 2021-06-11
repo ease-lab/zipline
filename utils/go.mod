@@ -1,4 +1,4 @@
-module utils
+module github.com/ease-lab/xdt/utils
 
 go 1.16
 

@@ -33,10 +33,11 @@ import (
 	"time"
 
 	"XDTgRPC_stream/plotter"
-	"XDTprototype/dQP"
-	"XDTprototype/sQP"
-	"XDTprototype/tracing"
-	"XDTprototype/utils"
+
+	"github.com/ease-lab/xdt/dQP"
+	"github.com/ease-lab/xdt/sQP"
+	"github.com/ease-lab/xdt/tracing"
+	"github.com/ease-lab/xdt/utils"
 
 	log "github.com/sirupsen/logrus"
 )
