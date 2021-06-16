@@ -32,10 +32,12 @@ import (
 
 type Config struct {
 	ChunkSizeInBytes          int
-	DQPServerAddr             string
-	LBAddr                    string
-	DstServerAddr             string
-	SQPServerAddr             string
+	DQPServerPort             string
+	DstServerPort             string
+	SQPServerPort             string
+	DQPServerHostname         string
+	DstServerHostname         string
+	SQPServerHostname         string
 	CTBufferSize              int
 	NumberOfBuffers           int
 	StAndFwBufferSize         int
@@ -68,14 +70,16 @@ func readConfig(file string) Config {
 		log.Error("Config file not found. Using defaults")
 		return Config{
 			ChunkSizeInBytes:          65536,
-			DQPServerAddr:             "localhost:50008",
-			LBAddr:                    "localhost:50008",
-			DstServerAddr:             "localhost:50007",
-			SQPServerAddr:             "localhost:50005",
+			DQPServerPort:             ":50006",
+			DstServerPort:             ":50007",
+			SQPServerPort:             ":50005",
+			DQPServerHostname:         "localhost",
+			DstServerHostname:         "localhost",
+			SQPServerHostname:         "localhost",
 			NumberOfBuffers:           2,
 			CTBufferSize:              25,
 			StAndFwBufferSize:         1600,
-			Routing:                   "CutThrough",
+			Routing:                   "Store&Forward",
 			TracingEnabled:            false,
 			RPCTimeoutMaxBackoff:      1000,
 			RPCTimeoutDuration:        60000,

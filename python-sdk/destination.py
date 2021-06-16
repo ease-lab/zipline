@@ -56,7 +56,7 @@ class XDTtoFnServicer(downXDT_pb2_grpc.XDTtoFnServicer):
 # FetchFromDQP fetches data from dQP to DstFn
 def FetchFromDQP(key, chunkSizeInBytes):
     global config
-    serverAddr = config['DQPServerAddr']
+    serverAddr = config['DQPServerHostname']+config['DQPServerPort']
 
     request = downXDT_pb2.DataRequest(key=key, ChunkSize=chunkSizeInBytes)
     with grpc.insecure_channel(serverAddr) as channel:
@@ -77,7 +77,7 @@ def StartDstServer(config, handler):
     server = grpc.server(futures.ThreadPoolExecutor(max_workers=config['MaxDstServerThreadsPython']))
     downXDT_pb2_grpc.add_XDTtoFnServicer_to_server(
         XDTtoFnServicer(), server)
-    server.add_insecure_port(config['DstServerAddr'])
+    server.add_insecure_port("[::]"+config['DstServerPort'])
     server.start()
     server.wait_for_termination()
 

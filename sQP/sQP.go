@@ -139,7 +139,7 @@ func StartServer(receivedConfig utils.Config) {
 	config = receivedConfig
 	bufferPool.Init(config)
 
-	lis, err := net.Listen("tcp", config.SQPServerAddr)
+	lis, err := net.Listen("tcp", config.SQPServerPort)
 	if err != nil {
 		log.Fatalf("sQP: failed to listen: %v", err)
 	}

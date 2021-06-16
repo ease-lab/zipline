@@ -93,7 +93,7 @@ func invokeDestinationHandler(ctx context.Context, XDTJSON []byte) error {
 	errorRouteInvocation := make(chan error, 1)
 
 	go func() {
-		conn, err := grpc.DialContext(ctx, config.DstServerAddr, utils.GetGopts()...)
+		conn, err := grpc.DialContext(ctx, config.DstServerHostname+config.DstServerPort, utils.GetGopts()...)
 		if err != nil {
 			log.Errorf("dQP: RouteInvocation: did not connect: %v", err)
 			errorRouteInvocation <- err
@@ -246,7 +246,7 @@ func StartServer(receivedConfig utils.Config) {
 	config = receivedConfig
 	bufferPool.Init(config)
 
-	lis, err := net.Listen("tcp", config.DQPServerAddr)
+	lis, err := net.Listen("tcp", config.DQPServerPort)
 	if err != nil {
 		log.Fatalf("dQP: failed to listen: %v", err)
 	}

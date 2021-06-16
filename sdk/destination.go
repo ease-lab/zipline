@@ -61,7 +61,7 @@ func (s downXDTServer) XDTFnCall(ctx context.Context, in *downXDT.InvocationRequ
 	chunkSizeInBytes := config.ChunkSizeInBytes
 
 	// fetch data from dQP
-	payloadBytes, err := FetchFromDQP(ctx, key, config.DQPServerAddr, chunkSizeInBytes)
+	payloadBytes, err := FetchFromDQP(ctx, key, config.DQPServerHostname+config.DQPServerPort, chunkSizeInBytes)
 	if err != nil {
 		log.Errorf("DST: FetchFromDQP failed %v", err)
 		return &downXDT.Empty{}, err
@@ -125,7 +125,7 @@ func StartDstServer(receivedConfig utils.Config, handler func([]byte)) {
 	config = receivedConfig
 	DestinationHandler = handler
 
-	lis, err := net.Listen("tcp", config.DstServerAddr)
+	lis, err := net.Listen("tcp", config.DstServerPort)
 	if err != nil {
 		log.Fatalf("DST: failed to listen: %v", err)
 	}
