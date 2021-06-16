@@ -129,7 +129,7 @@ install_python_modules:
 python-unit-test: install_python_modules
 	sed -i '/Routing/c\  "Routing": "Store&Forward",' ./config.json
 	cd sdk && go test ./integration_test.go $(SDK_GO_FILES) -run TestPython_SDK $(GO_TEST_FLAGS) &
-	sleep 30
+	sleep 60
 	cd python-sdk && python -m unittest -v test.UnitTest
 	# kill the process bound to the given port.
 	-fuser -k 50005/tcp
