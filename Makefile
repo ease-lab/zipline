@@ -46,10 +46,9 @@ local: proto_install proto_gen build_local
 
 build_local:
 	mkdir -p bins
-	cd dQP && go build -o ../bins/dQP
-	cd sdk && go build -o ../bins/sdk
-	cd sQP && go build -o ../bins/sqp
 	cd user-functions/fx && go build -o ../../bins/fx
+	cd user-functions/dQP && go build -o ../../bins/dQP
+	cd user-functions/sQP && go build -o ../../bins/sQP
 	cd user-functions/gx && go build -o ../../bins/gx
 
 clean:
