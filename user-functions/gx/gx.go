@@ -23,6 +23,8 @@
 package main
 
 import (
+	"os"
+
 	"github.com/ease-lab/xdt/sdk"
 
 	log "github.com/sirupsen/logrus"
@@ -35,5 +37,6 @@ var handler = func(data []byte) {
 }
 
 func main() {
-	sdk.StartDstServer(utils.LoadConfig, handler)
+	config := utils.ReadConfig(os.Getenv("KO_DATA_PATH") + "/config.json")
+	sdk.StartDstServer(config, handler)
 }

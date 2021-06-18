@@ -24,6 +24,8 @@ package main
 
 import (
 	"crypto/rand"
+	"flag"
+	"os"
 	"time"
 
 	"github.com/ease-lab/xdt/utils"
@@ -34,12 +36,17 @@ import (
 )
 
 func main() {
+	url := flag.String("url", "dQP", "Dst Function URL")
+	sQPAddr := flag.String("sQPAddr", "sQP", "sQP address")
+
+	flag.Parse()
+
 	payloadData := make([]byte, 10*1024*1024) // 10MiB
 	if _, err := rand.Read(payloadData); err != nil {
 		log.Fatal(err)
 	}
 
-	config := utils.LoadConfig
+	config := utils.ReadConfig(os.Getenv("KO_DATA_PATH") + "/config.json")
 	chunkSizeInBytes := config.ChunkSizeInBytes
 
 	payloadToSend := utils.Payload{
@@ -50,8 +57,7 @@ func main() {
 
 	start := time.Now()
 	log.Infof("starting XDT call")
-	url := config.DQPServerHostname + config.DQPServerPort
-	if err := sdk.InvokeWithXDT(url, payloadToSend, config.SQPServerHostname+config.SQPServerPort, chunkSizeInBytes); err != nil {
+	if err := sdk.InvokeWithXDT(*url, payloadToSend, *sQPAddr, chunkSizeInBytes); err != nil {
 		log.Fatalf("TestSQP_to_dQP_data_transfer failed %v", err)
 	}
 	elapsed := time.Since(start)

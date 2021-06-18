@@ -303,13 +303,31 @@ func TestParallel_FanOut(t *testing.T) {
 	log.Infof("completed TestFan_In in %s", elapsed)
 }
 
+func TestDst(t *testing.T) {
+
+	config := utils.LoadConfig
+	StartDstServer(config, handler)
+}
+
+func TestSrc(t *testing.T) {
+
+	config := utils.LoadConfig
+	start := time.Now()
+	log.Infof("starting integ test")
+	url := "192.168.0.28:50006"
+	if err := InvokeWithXDT(url, preparePayload(), config.SQPServerHostname+config.SQPServerPort, chunkSizeInBytes); err != nil {
+		log.Fatalf("TestSdk_InvokeWithXDT failed %v", err)
+	}
+	elapsed := time.Since(start)
+	log.Infof("completed XDT in %s", elapsed)
+}
+
 func TestPython_SDK(t *testing.T) {
 
 	config := utils.LoadConfig
 	// start servers
 	go sQP.StartServer(config)
 	dQP.StartServer(config)
-
 }
 
 func TestPython_SDKTimeout(t *testing.T) {
@@ -317,7 +335,6 @@ func TestPython_SDKTimeout(t *testing.T) {
 	config := utils.LoadConfig
 	// start servers
 	sQP.StartServer(config)
-
 }
 
 func TestBenchmark_XDT(t *testing.T) {

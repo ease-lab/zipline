@@ -138,7 +138,7 @@ python-integ-test: install_python_modules python-integ-test_CT python-integ-test
 python-integ-test_CT:
 	sed -i '/Routing/c\  "Routing": "CutThrough",' ./config.json
 	cd sdk && go test ./integration_test.go $(SDK_GO_FILES) -run TestPython_SDK $(GO_TEST_FLAGS) &
-	sleep 30
+	sleep 60
 	cd python-sdk && python destination.py &
 	sleep 5
 	cd python-sdk && python -m unittest -v test.IntegTest.test_Invoke_XDT
@@ -148,7 +148,7 @@ python-integ-test_CT:
 python-integ-test_SF:
 	sed -i '/Routing/c\  "Routing": "Store&Forward",' ./config.json
 	cd sdk && go test ./integration_test.go $(SDK_GO_FILES) -run TestPython_SDK $(GO_TEST_FLAGS) &
-	sleep 30
+	sleep 60
 	cd python-sdk && python destination.py &
 	sleep 5
 	cd python-sdk && python -m unittest -v test.IntegTest.test_Invoke_XDT
@@ -160,13 +160,19 @@ python-timeout-test: install_python_modules python-timeout-test_CT python-timeou
 python-timeout-test_CT:
 	sed -i '/Routing/c\  "Routing": "CutThrough",' ./config.json
 	cd sdk && go test ./integration_test.go $(SDK_GO_FILES) -run TestPython_SDKTimeout $(GO_TEST_FLAGS) &
-	sleep 30
+	sleep 60
 	cd python-sdk && python -m unittest -v test.IntegTest.test_Timeout
 	-fuser -k 50005/tcp
 
 python-timeout-test_SF:
 	sed -i '/Routing/c\  "Routing": "Store&Forward",' ./config.json
 	cd sdk && go test ./integration_test.go $(SDK_GO_FILES) -run TestPython_SDKTimeout $(GO_TEST_FLAGS) &
-	sleep 30
+	sleep 60
 	cd python-sdk && python -m unittest -v test.IntegTest.test_Timeout
 	-fuser -k 50005/tcp
+
+docker-images-push:
+	cd user-functions/fx && ko publish ./ -B
+	cd user-functions/dQP && ko publish ./ -B
+	cd user-functions/sQP && ko publish ./ -B
+	cd user-functions/gx && ko publish ./ -B

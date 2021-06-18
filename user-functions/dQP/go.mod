@@ -1,4 +1,4 @@
-module main
+module github.com/ease-lab/xdt/user-functions/dQP
 
 go 1.16
 

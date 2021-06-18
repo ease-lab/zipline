@@ -61,9 +61,9 @@ const (
 	CUT_THROUGH   = "CutThrough"
 )
 
-var LoadConfig = readConfig("../config.json")
+var LoadConfig = ReadConfig("../config.json")
 
-func readConfig(file string) Config {
+func ReadConfig(file string) Config {
 	log.Debugf("Opening JSON file with config: %s\n", file)
 	jsonFile, err := os.Open(file)
 	if err != nil {
