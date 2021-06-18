@@ -23,6 +23,8 @@
 package main
 
 import (
+	"os"
+
 	"github.com/ease-lab/xdt/sQP"
 	"github.com/ease-lab/xdt/tracing"
 	"github.com/ease-lab/xdt/utils"
@@ -33,7 +35,7 @@ func main() {
 	log.SetLevel(log.InfoLevel)
 	log.SetFormatter(&log.TextFormatter{TimestampFormat: "2006-01-02 15:04:05.000000", FullTimestamp: true, ForceColors: true})
 
-	config := utils.LoadConfig
+	config := utils.ReadConfig(os.Getenv("KO_DATA_PATH") + "/config.json")
 	if config.TracingEnabled {
 		shutdown, err := tracing.InitTracer()
 		if err != nil {
