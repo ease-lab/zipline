@@ -70,12 +70,12 @@ func readConfig(file string) Config {
 		log.Error("Config file not found. Using defaults")
 		return Config{
 			ChunkSizeInBytes:          65536,
-			DQPServerPort:             ":50006",
-			DstServerPort:             ":50007",
-			SQPServerPort:             ":50005",
-			DQPServerHostname:         "localhost",
-			DstServerHostname:         "localhost",
 			SQPServerHostname:         "localhost",
+			DQPServerPort:             ":50006",
+			DQPServerHostname:         "localhost",
+			DstServerPort:             ":50007",
+			DstServerHostname:         "localhost",
+			SQPServerPort:             ":50005",
 			NumberOfBuffers:           2,
 			CTBufferSize:              25,
 			StAndFwBufferSize:         1600,
