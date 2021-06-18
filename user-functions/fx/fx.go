@@ -36,8 +36,10 @@ import (
 )
 
 func main() {
-	url := flag.String("url", "dQP", "Dst Function URL")
-	sQPAddr := flag.String("sQPAddr", "sQP", "sQP address")
+	config := utils.ReadConfig(os.Getenv("KO_DATA_PATH") + "/config.json")
+
+	url := flag.String("url", "dQP:50006", "Dst Function URL")
+	sQPAddr := flag.String("sQPAddr", "sQP:50005", "sQP address")
 
 	flag.Parse()
 
@@ -46,7 +48,6 @@ func main() {
 		log.Fatal(err)
 	}
 
-	config := utils.ReadConfig(os.Getenv("KO_DATA_PATH") + "/config.json")
 	chunkSizeInBytes := config.ChunkSizeInBytes
 
 	payloadToSend := utils.Payload{
@@ -58,7 +59,7 @@ func main() {
 	start := time.Now()
 	log.Infof("starting XDT call")
 	if err := sdk.InvokeWithXDT(*url, payloadToSend, *sQPAddr, chunkSizeInBytes); err != nil {
-		log.Fatalf("TestSQP_to_dQP_data_transfer failed %v", err)
+		log.Fatalf("SQP_to_dQP_data_transfer failed %v", err)
 	}
 	elapsed := time.Since(start)
 
