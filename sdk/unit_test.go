@@ -38,7 +38,12 @@ import (
 
 func init() {
 	log.SetLevel(log.InfoLevel)
-	log.SetFormatter(&log.TextFormatter{TimestampFormat: "2006-01-02 15:04:05.000000", FullTimestamp: true})
+	// TimestampFormat RFC3339NanoFixed is time.RFC3339Nano with nanoseconds padded using zeros to
+	// ensure the formatted time is always the same number of characters.
+	log.SetFormatter(&log.TextFormatter{
+		TimestampFormat: "2006-01-02T15:04:05.000000000Z07:00",
+		FullTimestamp:   true,
+		ForceColors:     true})
 
 	go sQP.StartServer(utils.LoadConfig)
 	go dQP.StartServer(utils.LoadConfig)
