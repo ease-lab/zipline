@@ -72,6 +72,16 @@ jobs:
         env:
           DIR: user-functions/gx
         run: cd $DIR && golangci-lint run --out-format=github-actions --path-prefix=$DIR --timeout 5m
+      - name: Check user-functions/dQP code
+        if: ${{ always() }}
+        env:
+          DIR: user-functions/dQP
+        run: cd $DIR && golangci-lint run --out-format=github-actions --path-prefix=$DIR --timeout 5m
+      - name: Check user-functions/sQP code
+        if: ${{ always() }}
+        env:
+          DIR: user-functions/sQP
+        run: cd $DIR && golangci-lint run --out-format=github-actions --path-prefix=$DIR --timeout 5m
   Benchmark:
     name: Benchmark XDT
     runs-on: [self-hosted]
