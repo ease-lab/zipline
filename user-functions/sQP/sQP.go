@@ -23,16 +23,19 @@
 package main
 
 import (
+	"flag"
 	"os"
 
 	ctrdlog "github.com/containerd/containerd/log"
+	tracing "github.com/ease-lab/vhive/utils/tracing/go"
 	"github.com/ease-lab/xdt/sQP"
-	"github.com/ease-lab/xdt/tracing"
 	"github.com/ease-lab/xdt/utils"
 	log "github.com/sirupsen/logrus"
 )
 
 func main() {
+	zipkinURL := flag.String("zipkin", "http://zipkin.istio-system.svc.cluster.local:9411/api/v2/spans", "zipkin url")
+	flag.Parse()
 	log.SetLevel(log.InfoLevel)
 	log.SetFormatter(&log.TextFormatter{
 		TimestampFormat: ctrdlog.RFC3339NanoFixed,
@@ -41,9 +44,9 @@ func main() {
 
 	config := utils.ReadConfig(os.Getenv("KO_DATA_PATH") + "/config.json")
 	if config.TracingEnabled {
-		shutdown, err := tracing.InitTracer()
+		shutdown, err := tracing.InitBasicTracer(*zipkinURL, "dQP")
 		if err != nil {
-			log.Fatal(err)
+			log.Warn(err)
 		}
 		defer shutdown()
 	}
