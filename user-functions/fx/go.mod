@@ -9,8 +9,8 @@ replace (
 	github.com/ease-lab/xdt/proto/downXDT => ../../proto/downXDT
 	github.com/ease-lab/xdt/proto/fnInvocation => ../../proto/fnInvocation
 	github.com/ease-lab/xdt/proto/upXDT => ../../proto/upXDT
-	github.com/ease-lab/xdt/sdk => ../../sdk
 	github.com/ease-lab/xdt/sQP => ../../sQP
+	github.com/ease-lab/xdt/sdk => ../../sdk
 	github.com/ease-lab/xdt/tracing => ../../tracing
 	github.com/ease-lab/xdt/transport => ../../transport
 	github.com/ease-lab/xdt/utils => ../../utils

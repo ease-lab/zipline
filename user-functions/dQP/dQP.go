@@ -25,6 +25,7 @@ package main
 import (
 	"os"
 
+	ctrdlog "github.com/containerd/containerd/log"
 	"github.com/ease-lab/xdt/dQP"
 	"github.com/ease-lab/xdt/tracing"
 	"github.com/ease-lab/xdt/utils"
@@ -33,10 +34,8 @@ import (
 
 func main() {
 	log.SetLevel(log.InfoLevel)
-	// TimestampFormat RFC3339NanoFixed is time.RFC3339Nano with nanoseconds padded using zeros to
-	// ensure the formatted time is always the same number of characters.
 	log.SetFormatter(&log.TextFormatter{
-		TimestampFormat: "2006-01-02T15:04:05.000000000Z07:00",
+		TimestampFormat: ctrdlog.RFC3339NanoFixed,
 		FullTimestamp:   true,
 		ForceColors:     true})
 

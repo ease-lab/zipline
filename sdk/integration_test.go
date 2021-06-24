@@ -34,6 +34,7 @@ import (
 
 	"XDTgRPC_stream/plotter"
 
+	ctrdlog "github.com/containerd/containerd/log"
 	"github.com/ease-lab/xdt/dQP"
 	"github.com/ease-lab/xdt/sQP"
 	"github.com/ease-lab/xdt/tracing"
@@ -49,10 +50,8 @@ var chunkSizeInBytes = utils.LoadConfig.ChunkSizeInBytes
 
 func init() {
 	log.SetLevel(log.InfoLevel)
-	// TimestampFormat RFC3339NanoFixed is time.RFC3339Nano with nanoseconds padded using zeros to
-	// ensure the formatted time is always the same number of characters.
 	log.SetFormatter(&log.TextFormatter{
-		TimestampFormat: "2006-01-02T15:04:05.000000000Z07:00",
+		TimestampFormat: ctrdlog.RFC3339NanoFixed,
 		FullTimestamp:   true,
 		ForceColors:     true})
 }
@@ -319,8 +318,7 @@ func TestSrc(t *testing.T) {
 	config := utils.LoadConfig
 	start := time.Now()
 	log.Infof("starting integ test")
-	url := "192.168.0.28:50006"
-	if err := InvokeWithXDT(url, preparePayload(), config.SQPServerHostname+config.SQPServerPort, chunkSizeInBytes); err != nil {
+	if err := InvokeWithXDT(*URL, preparePayload(), config.SQPServerHostname+config.SQPServerPort, chunkSizeInBytes); err != nil {
 		log.Fatalf("TestSdk_InvokeWithXDT failed %v", err)
 	}
 	elapsed := time.Since(start)
