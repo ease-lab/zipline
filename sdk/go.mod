@@ -17,6 +17,7 @@ replace (
 
 require (
 	XDTgRPC_stream/plotter v0.0.0-00010101000000-000000000000
+	github.com/containerd/containerd v1.5.2
 	github.com/ease-lab/xdt/dQP v0.0.0-00010101000000-000000000000
 	github.com/ease-lab/xdt/proto/downXDT v0.0.0-00010101000000-000000000000
 	github.com/ease-lab/xdt/proto/fnInvocation v0.0.0-00010101000000-000000000000
