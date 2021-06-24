@@ -35,9 +35,9 @@ import (
 	"XDTgRPC_stream/plotter"
 
 	ctrdlog "github.com/containerd/containerd/log"
+	tracing "github.com/ease-lab/vhive/utils/tracing/go"
 	"github.com/ease-lab/xdt/dQP"
 	"github.com/ease-lab/xdt/sQP"
-	"github.com/ease-lab/xdt/tracing"
 	"github.com/ease-lab/xdt/utils"
 
 	log "github.com/sirupsen/logrus"
@@ -45,6 +45,7 @@ import (
 
 var sampleSize = flag.Int("sample", 10, "sampleSize")
 var URL = flag.String("url", "helloworld.default.192.168.1.240.nip.io", "Function URL")
+var zipkinURL = flag.String("zipkin", "http://zipkin.istio-system.svc.cluster.local:9411/api/v2/spans", "zipkin url")
 var numConcurrentFunctions = flag.Int("concurrentCalls", 5, "num of simultaneous calls")
 var chunkSizeInBytes = utils.LoadConfig.ChunkSizeInBytes
 
@@ -78,9 +79,9 @@ func TestSdk_InvokeWithXDT(t *testing.T) {
 
 	config := utils.LoadConfig
 	if config.TracingEnabled {
-		shutdown, err := tracing.InitTracer()
+		shutdown, err := tracing.InitBasicTracer(*zipkinURL, "dQP")
 		if err != nil {
-			log.Fatal(err)
+			log.Warn(err)
 		}
 		defer shutdown()
 	}
@@ -106,9 +107,9 @@ func TestErr_DQPTimeout(t *testing.T) {
 
 	config := utils.LoadConfig
 	if config.TracingEnabled {
-		shutdown, err := tracing.InitTracer()
+		shutdown, err := tracing.InitBasicTracer(*zipkinURL, "dQP")
 		if err != nil {
-			log.Fatal(err)
+			log.Warn(err)
 		}
 		defer shutdown()
 	}
@@ -137,9 +138,9 @@ func TestErr_DSTTimeout(t *testing.T) {
 
 	config := utils.LoadConfig
 	if config.TracingEnabled {
-		shutdown, err := tracing.InitTracer()
+		shutdown, err := tracing.InitBasicTracer(*zipkinURL, "dQP")
 		if err != nil {
-			log.Fatal(err)
+			log.Warn(err)
 		}
 		defer shutdown()
 	}
@@ -168,9 +169,9 @@ func TestParallel_Invoke(t *testing.T) {
 
 	config := utils.LoadConfig
 	if config.TracingEnabled {
-		shutdown, err := tracing.InitTracer()
+		shutdown, err := tracing.InitBasicTracer(*zipkinURL, "dQP")
 		if err != nil {
-			log.Fatal(err)
+			log.Warn(err)
 		}
 		defer shutdown()
 	}
@@ -207,9 +208,9 @@ func TestParallel_FanIn(t *testing.T) {
 
 	config := utils.LoadConfig
 	if config.TracingEnabled {
-		shutdown, err := tracing.InitTracer()
+		shutdown, err := tracing.InitBasicTracer(*zipkinURL, "dQP")
 		if err != nil {
-			log.Fatal(err)
+			log.Warn(err)
 		}
 		defer shutdown()
 	}
@@ -257,9 +258,9 @@ func TestParallel_FanOut(t *testing.T) {
 
 	config := utils.LoadConfig
 	if config.TracingEnabled {
-		shutdown, err := tracing.InitTracer()
+		shutdown, err := tracing.InitBasicTracer(*zipkinURL, "dQP")
 		if err != nil {
-			log.Fatal(err)
+			log.Warn(err)
 		}
 		defer shutdown()
 	}
