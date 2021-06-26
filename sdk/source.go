@@ -28,13 +28,15 @@ import (
 	"strconv"
 	"time"
 
+	"google.golang.org/grpc/metadata"
+
+	"github.com/ease-lab/xdt/proto/downXDT"
+
 	"github.com/ease-lab/xdt/utils"
 
 	log "github.com/sirupsen/logrus"
 
-	"github.com/ease-lab/xdt/proto/fnInvocation"
 	"github.com/ease-lab/xdt/proto/upXDT"
-
 	"google.golang.org/grpc"
 )
 
@@ -54,16 +56,22 @@ func splitPayload(xdtPayload *utils.Payload) (string, []byte) {
 // InvokeWithXDT invokes the RPC call with XDT
 func InvokeWithXDT(URL string, xdtPayload utils.Payload, sQPAddr string, chunkSizeInBytes int) error {
 
-	//  This timeout must be large enough for the request to complete
-	timeoutDuration := time.Duration(utils.LoadConfig.RPCTimeoutDuration) * time.Millisecond
-	ctx, cancel := context.WithTimeout(context.Background(), timeoutDuration)
-	defer cancel()
-
 	key, payloadData := splitPayload(&xdtPayload)
 	serialisedPayload, err := json.Marshal(xdtPayload)
 	if err != nil {
 		return err
 	}
+
+	httpMetadata := map[string]string{
+		"is_xdt":   "true",
+		"key":      key,
+		"sqp_addr": sQPAddr,
+	}
+	ctx := metadata.NewOutgoingContext(context.Background(), metadata.New(httpMetadata))
+	//  This timeout must be large enough for the request to complete
+	timeoutDuration := time.Duration(utils.LoadConfig.RPCTimeoutDuration) * time.Millisecond
+	ctx, cancel := context.WithTimeout(ctx, timeoutDuration)
+	defer cancel()
 
 	errorPushData := make(chan error, 1)
 	go func() { errorPushData <- PushData(ctx, key, payloadData, sQPAddr, chunkSizeInBytes) }()
@@ -126,9 +134,9 @@ func fnInvocationCall(ctx context.Context, URL string, serialisedPayload []byte,
 			errorChannel <- err
 			return
 		}
-		c := fnInvocation.NewInvocationClient(conn)
+		c := downXDT.NewXDTtoFnClient(conn)
 		log.Infof("SDK: Fn invocation start")
-		_, err = c.RouteInvocation(ctx, &fnInvocation.InvocationRequest{XDTJSON: serialisedPayload, SQPAddr: sQPAddr})
+		_, err = c.XDTFnCall(ctx, &downXDT.InvocationRequest{XDTJSON: serialisedPayload})
 		if err != nil {
 			errorChannel <- err
 			return

@@ -38,5 +38,6 @@ var handler = func(data []byte) {
 
 func main() {
 	config := utils.ReadConfig(os.Getenv("KO_DATA_PATH") + "/config.json")
+	config.DQPServerHostname = "localhost"
 	sdk.StartDstServer(config, handler)
 }

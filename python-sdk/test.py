@@ -47,14 +47,14 @@ class IntegTest(unittest.TestCase):
     def test_Invoke_XDT(self):
         data = bytes(os.urandom(1024 * 1024 * 10))
         payload = Payload(FunctionName="foo", Data=data, Key="", IsXDT=False)
-        InvokeWithXDT(URL=config['DQPServerHostname']+config['DQPServerPort'], xdtPayload=payload,
+        InvokeWithXDT(URL=config['ProxyHostname']+config['ProxyPort'], xdtPayload=payload,
                       sQPAddr=config['SQPServerHostname']+config['SQPServerPort'], chunkSizeInBytes=65536)
 
     def test_Timeout(self):
         data = bytes(os.urandom(1024 * 1024))
         payload = Payload(FunctionName="foo", Data=data, Key="", IsXDT=False)
         try:
-            InvokeWithXDT(URL=config['DQPServerHostname']+config['DQPServerPort'], xdtPayload=payload,
+            InvokeWithXDT(URL=config['ProxyHostname']+config['ProxyPort'], xdtPayload=payload,
                           sQPAddr=config['SQPServerHostname']+config['SQPServerPort'], chunkSizeInBytes=65536)
         except grpc.RpcError as e:
             log.info("Test: Push data timed out")

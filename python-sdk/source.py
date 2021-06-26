@@ -23,15 +23,15 @@
 import os
 import sys
 # adding gRPC sources to the system path
-sys.path.insert(0, os.getcwd()+'/../proto/fnInvocation')
+sys.path.insert(0, os.getcwd()+'/../proto/downXDT')
 sys.path.insert(0, os.getcwd()+'/../proto/upXDT')
 
 import grpc
 import logging as log
 import upXDT_pb2_grpc
 import upXDT_pb2
-import fnInvocation_pb2_grpc
-import fnInvocation_pb2
+import downXDT_pb2_grpc
+import downXDT_pb2
 import time
 import multiprocessing as mp
 import utils
@@ -58,6 +58,12 @@ def InvokeWithXDT(URL, xdtPayload, sQPAddr, chunkSizeInBytes):
     key, payloadData, xdtPayload = splitPayload(xdtPayload)
     serialisedPayload = xdtPayload.tobytes()
 
+    metadata = (
+        ('is_xdt', 'true'),
+        ('key', key),
+        ('sqp_addr', sQPAddr),
+    )
+
     global config
     config = utils.loadConfig()
     mpQueue = mp.Queue()
@@ -72,7 +78,7 @@ def InvokeWithXDT(URL, xdtPayload, sQPAddr, chunkSizeInBytes):
     else:
         log.fatal("SDK: invalid routing specified in config")
 
-    fnInvocationCall(URL, serialisedPayload, sQPAddr)
+    fnInvocationCall(URL, serialisedPayload, metadata)
     if config['Routing'] == utils.CUT_THROUGH:
         try:
             err = mpQueue.get(block=True, timeout=config['RPCTimeoutDuration']/1000)
@@ -85,7 +91,7 @@ def InvokeWithXDT(URL, xdtPayload, sQPAddr, chunkSizeInBytes):
 
 
 # fnInvocationCall makes fn invocation call to dQP with xdt payload
-def fnInvocationCall(URL, serialisedPayload, sQPAddr):
+def fnInvocationCall(URL, serialisedPayload, metadata):
 
     channel = grpc.insecure_channel(URL)
     channel_ready_future = grpc.channel_ready_future(channel)
@@ -96,9 +102,9 @@ def fnInvocationCall(URL, serialisedPayload, sQPAddr):
         log.error("SRC: connection to LB/DQP timed out")
         raise e
     else:
-        stub = fnInvocation_pb2_grpc.InvocationStub(channel)
-        stub.RouteInvocation(fnInvocation_pb2.InvocationRequest(
-            XDTJSON=serialisedPayload, SQPAddr=sQPAddr), timeout=config['RPCTimeoutDuration']/1000)
+        stub = downXDT_pb2_grpc.XDTtoFnStub(channel)
+        stub.XDTFnCall(downXDT_pb2.InvocationRequest(
+            XDTJSON=serialisedPayload), metadata=metadata, timeout=config['RPCTimeoutDuration']/1000)
     return
 
 

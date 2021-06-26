@@ -60,66 +60,66 @@ unit-test:
 
 integ-test_CT:
 	sed -i '/Routing/c\  "Routing": "CutThrough",' ./config.json
-	cd sdk && go test ./integration_test.go $(SDK_GO_FILES) -run TestSdk_InvokeWithXDT $(GO_TEST_FLAGS)
+	cd integration-tests && go test ./integration_test.go -run TestSdk_InvokeWithXDT $(GO_TEST_FLAGS)
 
 
 integ-test_SF:
 	sed -i '/Routing/c\  "Routing": "Store&Forward",' ./config.json
-	cd sdk && go test ./integration_test.go $(SDK_GO_FILES) -run TestSdk_InvokeWithXDT $(GO_TEST_FLAGS)
+	cd integration-tests && go test ./integration_test.go -run TestSdk_InvokeWithXDT $(GO_TEST_FLAGS)
 
 integ-test: integ-test_CT integ-test_SF
 
 timeout-test_CT:
 	sed -i '/Routing/c\  "Routing": "CutThrough",' ./config.json
 	sleep 60
-	cd sdk && go test ./integration_test.go $(SDK_GO_FILES) -run TestErr_DSTTimeout $(GO_TEST_FLAGS)
-	cd sdk && go test ./integration_test.go $(SDK_GO_FILES) -run TestErr_DQPTimeout $(GO_TEST_FLAGS)
+	cd integration-tests && go test ./integration_test.go -run TestErr_DSTTimeout $(GO_TEST_FLAGS)
+	cd integration-tests && go test ./integration_test.go -run TestErr_DQPTimeout $(GO_TEST_FLAGS)
 
 timeout-test_SF:
 	sed -i '/Routing/c\  "Routing": "Store&Forward",' ./config.json
 	sleep 60
-	cd sdk && go test ./integration_test.go $(SDK_GO_FILES) -run TestErr_DSTTimeout $(GO_TEST_FLAGS)
-	cd sdk && go test ./integration_test.go $(SDK_GO_FILES) -run TestErr_DQPTimeout $(GO_TEST_FLAGS)
+	cd integration-tests && go test ./integration_test.go -run TestErr_DSTTimeout $(GO_TEST_FLAGS)
+	cd integration-tests && go test ./integration_test.go -run TestErr_DQPTimeout $(GO_TEST_FLAGS)
 
 timeout-test: timeout-test_SF timeout-test_CT
 
 parallel-invoke-test:
-	cd sdk && go test ./integration_test.go $(SDK_GO_FILES) -run TestParallel_Invoke -concurrentCalls 1 $(GO_TEST_FLAGS)
-	cd sdk && go test ./integration_test.go $(SDK_GO_FILES) -run TestParallel_Invoke -concurrentCalls 2 $(GO_TEST_FLAGS)
-	cd sdk && go test ./integration_test.go $(SDK_GO_FILES) -run TestParallel_Invoke -concurrentCalls 5 $(GO_TEST_FLAGS)
+	cd integration-tests && go test ./integration_test.go -run TestParallel_Invoke -concurrentCalls 1 $(GO_TEST_FLAGS)
+	cd integration-tests && go test ./integration_test.go -run TestParallel_Invoke -concurrentCalls 2 $(GO_TEST_FLAGS)
+	cd integration-tests && go test ./integration_test.go -run TestParallel_Invoke -concurrentCalls 5 $(GO_TEST_FLAGS)
 
 fan-out-test: fan-out_SF fan-out_CT
 fan-in-test: fan-in_SF fan-in_CT
 
 fan-out_SF:
 	sed -i '/Routing/c\  "Routing": "Store&Forward",' ./config.json
-	cd sdk && go test ./integration_test.go $(SDK_GO_FILES) -run TestParallel_FanOut -concurrentCalls 1 $(GO_TEST_FLAGS)
+	cd integration-tests && go test ./integration_test.go -run TestParallel_FanOut -concurrentCalls 1 $(GO_TEST_FLAGS)
 	sleep 2
-	cd sdk && go test ./integration_test.go $(SDK_GO_FILES) -run TestParallel_FanOut -concurrentCalls 2 $(GO_TEST_FLAGS)
+	cd integration-tests && go test ./integration_test.go -run TestParallel_FanOut -concurrentCalls 2 $(GO_TEST_FLAGS)
 	sleep 2
-	cd sdk && go test ./integration_test.go $(SDK_GO_FILES) -run TestParallel_FanOut -concurrentCalls 5 $(GO_TEST_FLAGS)
+	cd integration-tests && go test ./integration_test.go -run TestParallel_FanOut -concurrentCalls 5 $(GO_TEST_FLAGS)
 fan-out_CT:
 	sed -i '/Routing/c\  "Routing": "CutThrough",' ./config.json
-	cd sdk && go test ./integration_test.go $(SDK_GO_FILES) -run TestParallel_FanOut -concurrentCalls 1 $(GO_TEST_FLAGS)
+	cd integration-tests && go test ./integration_test.go -run TestParallel_FanOut -concurrentCalls 1 $(GO_TEST_FLAGS)
 	sleep 2
-	cd sdk && go test ./integration_test.go $(SDK_GO_FILES) -run TestParallel_FanOut -concurrentCalls 2 $(GO_TEST_FLAGS)
+	cd integration-tests && go test ./integration_test.go -run TestParallel_FanOut -concurrentCalls 2 $(GO_TEST_FLAGS)
 	sleep 2
-	cd sdk && go test ./integration_test.go $(SDK_GO_FILES) -run TestParallel_FanOut -concurrentCalls 5 $(GO_TEST_FLAGS)
+	cd integration-tests && go test ./integration_test.go -run TestParallel_FanOut -concurrentCalls 5 $(GO_TEST_FLAGS)
 
 fan-in_SF:
 	sed -i '/Routing/c\  "Routing": "Store&Forward",' ./config.json
-	cd sdk && go test ./integration_test.go $(SDK_GO_FILES) -run TestParallel_FanIn -concurrentCalls 1 $(GO_TEST_FLAGS)
+	cd integration-tests && go test ./integration_test.go -run TestParallel_FanIn -concurrentCalls 1 $(GO_TEST_FLAGS)
 	sleep 2
-	cd sdk && go test ./integration_test.go $(SDK_GO_FILES) -run TestParallel_FanIn -concurrentCalls 2 $(GO_TEST_FLAGS)
+	cd integration-tests && go test ./integration_test.go -run TestParallel_FanIn -concurrentCalls 2 $(GO_TEST_FLAGS)
 	sleep 2
-	cd sdk && go test ./integration_test.go $(SDK_GO_FILES) -run TestParallel_FanIn -concurrentCalls 5 $(GO_TEST_FLAGS)
+	cd integration-tests && go test ./integration_test.go -run TestParallel_FanIn -concurrentCalls 5 $(GO_TEST_FLAGS)
 fan-in_CT:
 	sed -i '/Routing/c\  "Routing": "CutThrough",' ./config.json
-	cd sdk && go test ./integration_test.go $(SDK_GO_FILES) -run TestParallel_FanIn -concurrentCalls 1 $(GO_TEST_FLAGS)
+	cd integration-tests && go test ./integration_test.go -run TestParallel_FanIn -concurrentCalls 1 $(GO_TEST_FLAGS)
 	sleep 2
-	cd sdk && go test ./integration_test.go $(SDK_GO_FILES) -run TestParallel_FanIn -concurrentCalls 2 $(GO_TEST_FLAGS)
+	cd integration-tests && go test ./integration_test.go -run TestParallel_FanIn -concurrentCalls 2 $(GO_TEST_FLAGS)
 	sleep 2
-	cd sdk && go test ./integration_test.go $(SDK_GO_FILES) -run TestParallel_FanIn -concurrentCalls 5 $(GO_TEST_FLAGS)
+	cd integration-tests && go test ./integration_test.go -run TestParallel_FanIn -concurrentCalls 5 $(GO_TEST_FLAGS)
 
 install_python_modules:
 	pip install grpcio --user
@@ -127,7 +127,7 @@ install_python_modules:
 
 python-unit-test: install_python_modules
 	sed -i '/Routing/c\  "Routing": "Store&Forward",' ./config.json
-	cd sdk && go test ./integration_test.go $(SDK_GO_FILES) -run TestPython_SDK $(GO_TEST_FLAGS) &
+	cd integration-tests && go test ./integration_test.go -run TestPython_SDK $(GO_TEST_FLAGS) &
 	sleep 60
 	cd python-sdk && python -m unittest -v test.UnitTest
 	# kill the process bound to the given port.
@@ -137,7 +137,7 @@ python-integ-test: install_python_modules python-integ-test_CT python-integ-test
 
 python-integ-test_CT:
 	sed -i '/Routing/c\  "Routing": "CutThrough",' ./config.json
-	cd sdk && go test ./integration_test.go $(SDK_GO_FILES) -run TestPython_SDK $(GO_TEST_FLAGS) &
+	cd integration-tests && go test ./integration_test.go -run TestPython_SDK $(GO_TEST_FLAGS) &
 	sleep 60
 	cd python-sdk && python destination.py &
 	sleep 5
@@ -147,7 +147,7 @@ python-integ-test_CT:
 
 python-integ-test_SF:
 	sed -i '/Routing/c\  "Routing": "Store&Forward",' ./config.json
-	cd sdk && go test ./integration_test.go $(SDK_GO_FILES) -run TestPython_SDK $(GO_TEST_FLAGS) &
+	cd integration-tests && go test ./integration_test.go -run TestPython_SDK $(GO_TEST_FLAGS) &
 	sleep 60
 	cd python-sdk && python destination.py &
 	sleep 5
@@ -159,14 +159,14 @@ python-timeout-test: install_python_modules python-timeout-test_CT python-timeou
 
 python-timeout-test_CT:
 	sed -i '/Routing/c\  "Routing": "CutThrough",' ./config.json
-	cd sdk && go test ./integration_test.go $(SDK_GO_FILES) -run TestPython_SDKTimeout $(GO_TEST_FLAGS) &
+	cd integration-tests && go test ./integration_test.go -run TestPython_SDKTimeout $(GO_TEST_FLAGS) &
 	sleep 60
 	cd python-sdk && python -m unittest -v test.IntegTest.test_Timeout
 	-fuser -k 50005/tcp
 
 python-timeout-test_SF:
 	sed -i '/Routing/c\  "Routing": "Store&Forward",' ./config.json
-	cd sdk && go test ./integration_test.go $(SDK_GO_FILES) -run TestPython_SDKTimeout $(GO_TEST_FLAGS) &
+	cd integration-tests && go test ./integration_test.go -run TestPython_SDKTimeout $(GO_TEST_FLAGS) &
 	sleep 60
 	cd python-sdk && python -m unittest -v test.IntegTest.test_Timeout
 	-fuser -k 50005/tcp

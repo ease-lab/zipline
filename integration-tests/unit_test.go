@@ -20,7 +20,7 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 
-package sdk
+package integration_tests
 
 import (
 	"context"
@@ -28,6 +28,8 @@ import (
 	"strconv"
 	"testing"
 	"time"
+
+	"github.com/ease-lab/xdt/sdk"
 
 	ctrdlog "github.com/containerd/containerd/log"
 
@@ -58,12 +60,12 @@ func TestSDK_to_sQP_data_transfer(t *testing.T) {
 	if _, err := rand.Read(payloadData); err != nil {
 		log.Fatal(err)
 	}
-	config = utils.LoadConfig
+	config := utils.LoadConfig
 	chunkSizeInBytes := config.ChunkSizeInBytes
 
 	start := time.Now()
 
-	if err := PushData(context.Background(), key, payloadData, config.SQPServerHostname+config.SQPServerPort, chunkSizeInBytes); err != nil {
+	if err := sdk.PushData(context.Background(), key, payloadData, config.SQPServerHostname+config.SQPServerPort, chunkSizeInBytes); err != nil {
 		log.Fatalf("TestSDK_to_sQP_data_transfer failed %v", err)
 	}
 	duration := time.Since(start)
@@ -79,12 +81,12 @@ func TestSQP_to_dQP_data_transfer(t *testing.T) {
 	if _, err := rand.Read(payloadData); err != nil {
 		log.Fatal(err)
 	}
-	config = utils.LoadConfig
+	config := utils.LoadConfig
 	chunkSizeInBytes := config.ChunkSizeInBytes
 
 	start := time.Now()
 
-	if err := PushData(context.Background(), key, payloadData, config.SQPServerHostname+config.SQPServerPort, chunkSizeInBytes); err != nil {
+	if err := sdk.PushData(context.Background(), key, payloadData, config.SQPServerHostname+config.SQPServerPort, chunkSizeInBytes); err != nil {
 		log.Fatalf("TestSDK_to_sQP_data_transfer failed %v", err)
 	}
 	duration := time.Since(start)
@@ -109,11 +111,11 @@ func TestDQP_to_DstFn_data_transfer(t *testing.T) {
 	if _, err := rand.Read(payloadData); err != nil {
 		log.Fatal(err)
 	}
-	config = utils.LoadConfig
+	config := utils.LoadConfig
 	chunkSizeInBytes := config.ChunkSizeInBytes
 
 	start := time.Now()
-	if err := PushData(context.Background(), key, payloadData, config.SQPServerHostname+config.SQPServerPort, chunkSizeInBytes); err != nil {
+	if err := sdk.PushData(context.Background(), key, payloadData, config.SQPServerHostname+config.SQPServerPort, chunkSizeInBytes); err != nil {
 		log.Fatalf("TestDQP_to_DstFn_data_transfer failed %v", err)
 	}
 	duration := time.Since(start)
@@ -130,7 +132,7 @@ func TestDQP_to_DstFn_data_transfer(t *testing.T) {
 	log.Infof("transferred packet from sQP to dQP in %s", duration)
 
 	start = time.Now()
-	payloadBytes, err := FetchFromDQP(context.Background(), key, config.DQPServerHostname+config.DQPServerPort, chunkSizeInBytes)
+	payloadBytes, err := sdk.FetchFromDQP(context.Background(), key, config.DQPServerHostname+config.DQPServerPort, chunkSizeInBytes)
 	if err != nil {
 		log.Fatalf("FetchFromDQP failed %v", err)
 	}
