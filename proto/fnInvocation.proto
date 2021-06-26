@@ -35,7 +35,6 @@ service Invocation {
 message InvocationRequest {
   bytes XDTJSON = 1;
   string SQPAddr = 2;
-
 }
 
 message Empty {

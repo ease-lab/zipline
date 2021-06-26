@@ -17,4 +17,7 @@ require (
 	github.com/ease-lab/xdt/dQP v0.0.0-00010101000000-000000000000
 	github.com/ease-lab/xdt/utils v0.0.0-00010101000000-000000000000
 	github.com/sirupsen/logrus v1.8.1
+	golang.org/x/net v0.0.0-20210614182718-04defd469f4e // indirect
+	knative.dev/pkg v0.0.0-20210625194144-4cdacd04734a // indirect
+	knative.dev/serving v0.23.1 // indirect
 )

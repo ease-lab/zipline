@@ -6,6 +6,8 @@
   "DstServerPort": ":50007",
   "DstServerHostname": "localhost",
   "SQPServerPort": ":50005",
+  "ProxyHostname": "localhost",
+  "ProxyPort": ":50008",
   "NumberOfBuffers": 2,
   "CTBufferSize": 25,
   "StAndFwBufferSize": 1600,

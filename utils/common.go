@@ -35,6 +35,8 @@ type Config struct {
 	DQPServerPort             string
 	DstServerPort             string
 	SQPServerPort             string
+	ProxyPort                 string
+	ProxyHostname             string
 	DQPServerHostname         string
 	DstServerHostname         string
 	SQPServerHostname         string
@@ -76,6 +78,8 @@ func ReadConfig(file string) Config {
 			DstServerPort:             ":50007",
 			DstServerHostname:         "localhost",
 			SQPServerPort:             ":50005",
+			ProxyHostname:             "localhost",
+			ProxyPort:                 ":50008",
 			NumberOfBuffers:           2,
 			CTBufferSize:              25,
 			StAndFwBufferSize:         1600,

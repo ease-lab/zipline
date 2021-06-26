@@ -24,14 +24,14 @@ package dQP
 
 import (
 	"context"
-	"encoding/json"
 	"io"
 	"net"
 	"sync"
 
 	"github.com/ease-lab/xdt/proto/crossXDT"
 	"github.com/ease-lab/xdt/proto/downXDT"
-	"github.com/ease-lab/xdt/proto/fnInvocation"
+
+	//"github.com/ease-lab/xdt/proto/fnInvocation"
 	"github.com/ease-lab/xdt/transport"
 	"github.com/ease-lab/xdt/utils"
 
@@ -45,9 +45,9 @@ var config utils.Config
 // bufferPool is responsible for managing bounded buffers of channels to store data
 var bufferPool transport.BufferPool
 
-type fnInvocationServer struct {
-	fnInvocation.UnimplementedInvocationServer
-}
+//type fnInvocationServer struct {
+//	fnInvocation.UnimplementedInvocationServer
+//}
 
 type downXDTServer struct {
 	downXDT.UnimplementedXDTtoFnServer
@@ -89,101 +89,101 @@ func (s downXDTServer) XDTDataServe(in *downXDT.DataRequest, srv downXDT.XDTtoFn
 	}
 }
 
-func invokeDestinationHandler(ctx context.Context, XDTJSON []byte) error {
-	errorRouteInvocation := make(chan error, 1)
-
-	go func() {
-		conn, err := grpc.DialContext(ctx, config.DstServerHostname+config.DstServerPort, utils.GetGopts()...)
-		if err != nil {
-			log.Errorf("dQP: RouteInvocation: did not connect: %v", err)
-			errorRouteInvocation <- err
-			return
-		}
-		c := downXDT.NewXDTtoFnClient(conn)
-		log.Infof("dQP: DST invocation start")
-		_, err = c.XDTFnCall(ctx, &downXDT.InvocationRequest{XDTJSON: XDTJSON})
-		if err != nil {
-			log.Errorf("dQP: Fn invocation route unsuccessful")
-			errorRouteInvocation <- err
-			return
-		}
-		log.Infof("dQP: Fn invocation route successful")
-		// need some help in closing this connection in case of an error.
-		err = conn.Close()
-		if err != nil {
-			log.Errorf("dQP: Error closing the connection to Dest")
-			errorRouteInvocation <- err
-			return
-		}
-		errorRouteInvocation <- nil
-	}()
-	select {
-	case <-ctx.Done():
-		log.Errorf("SDK: context expired at RouteInvocation@dQP")
-		<-errorRouteInvocation
-		return ctx.Err()
-	case err := <-errorRouteInvocation:
-		if err != nil {
-			log.Infof("dQP: Fn invocation route unsuccessful err: %v", err)
-			return err
-		} else {
-			log.Infof("dQP: Fn invocation route successful")
-			return nil
-		}
-	}
-}
+//func invokeDestinationHandler(ctx context.Context, XDTJSON []byte) error {
+//	errorRouteInvocation := make(chan error, 1)
+//
+//	go func() {
+//		conn, err := grpc.DialContext(ctx, config.DstServerHostname+config.DstServerPort, utils.GetGopts()...)
+//		if err != nil {
+//			log.Errorf("dQP: RouteInvocation: did not connect: %v", err)
+//			errorRouteInvocation <- err
+//			return
+//		}
+//		c := downXDT.NewXDTtoFnClient(conn)
+//		log.Infof("dQP: DST invocation start")
+//		_, err = c.XDTFnCall(ctx, &downXDT.InvocationRequest{XDTJSON: XDTJSON})
+//		if err != nil {
+//			log.Errorf("dQP: Fn invocation route unsuccessful")
+//			errorRouteInvocation <- err
+//			return
+//		}
+//		log.Infof("dQP: Fn invocation route successful")
+//		// need some help in closing this connection in case of an error.
+//		err = conn.Close()
+//		if err != nil {
+//			log.Errorf("dQP: Error closing the connection to Dest")
+//			errorRouteInvocation <- err
+//			return
+//		}
+//		errorRouteInvocation <- nil
+//	}()
+//	select {
+//	case <-ctx.Done():
+//		log.Errorf("SDK: context expired at RouteInvocation@dQP")
+//		<-errorRouteInvocation
+//		return ctx.Err()
+//	case err := <-errorRouteInvocation:
+//		if err != nil {
+//			log.Infof("dQP: Fn invocation route unsuccessful err: %v", err)
+//			return err
+//		} else {
+//			log.Infof("dQP: Fn invocation route successful")
+//			return nil
+//		}
+//	}
+//}
 
 // RouteInvocation is a gRPC server to route the function call from SrcFn to the DstFn
-func (s fnInvocationServer) RouteInvocation(ctx context.Context, in *fnInvocation.InvocationRequest) (*fnInvocation.Empty, error) {
-
-	log.Infof("dQP: received serialised json: %s", in.XDTJSON)
-
-	var xdtPayload utils.Payload
-	if err := json.Unmarshal(in.XDTJSON, &xdtPayload); err != nil {
-		log.Error("dQP: RouteInvocation", err)
-		return &fnInvocation.Empty{}, err
-	}
-
-	log.Infof("dQP: fetched data from sQP using key : %s", xdtPayload.Key)
-
-	errorPullDataFromSrcQP := make(chan error, 1)
-	go func() {
-		errorPullDataFromSrcQP <- PullDataFromSrcQP(ctx, xdtPayload.Key, in.SQPAddr, config.ChunkSizeInBytes)
-	}()
-	if config.Routing == utils.STORE_FORWARD {
-		log.Infof("dQP: [Store & Forward]: pulling data from sQP")
-		select {
-		case <-ctx.Done():
-			<-errorPullDataFromSrcQP // Wait for f to return.
-			return &fnInvocation.Empty{}, ctx.Err()
-		case err := <-errorPullDataFromSrcQP:
-			if err != nil {
-				log.Errorf("dQP: [Store & Forward] Pull data failed")
-				return &fnInvocation.Empty{}, err
-			}
-		}
-	}
-
-	err := invokeDestinationHandler(ctx, in.XDTJSON)
-	if err != nil {
-		return &fnInvocation.Empty{}, err
-	}
-
-	if config.Routing == utils.CUT_THROUGH {
-		log.Infof("dQP: [cut-through]: pulling data from sQP")
-		select {
-		case <-ctx.Done():
-			<-errorPullDataFromSrcQP
-			return &fnInvocation.Empty{}, ctx.Err()
-		case err := <-errorPullDataFromSrcQP:
-			if err != nil {
-				log.Errorf("dQP: [cut-through]: pulling data from sQP failed")
-				return &fnInvocation.Empty{}, err
-			}
-		}
-	}
-	return &fnInvocation.Empty{}, nil
-}
+//func (s fnInvocationServer) RouteInvocation(ctx context.Context, in *fnInvocation.InvocationRequest) (*fnInvocation.Empty, error) {
+//
+//	log.Infof("dQP: received serialised json: %s", in.XDTJSON)
+//
+//	var xdtPayload utils.Payload
+//	if err := json.Unmarshal(in.XDTJSON, &xdtPayload); err != nil {
+//		log.Error("dQP: RouteInvocation", err)
+//		return &fnInvocation.Empty{}, err
+//	}
+//
+//	log.Infof("dQP: fetched data from sQP using key : %s", xdtPayload.Key)
+//
+//	errorPullDataFromSrcQP := make(chan error, 1)
+//	go func() {
+//		errorPullDataFromSrcQP <- PullDataFromSrcQP(ctx, xdtPayload.Key, in.SQPAddr, config.ChunkSizeInBytes)
+//	}()
+//	if config.Routing == utils.STORE_FORWARD {
+//		log.Infof("dQP: [Store & Forward]: pulling data from sQP")
+//		select {
+//		case <-ctx.Done():
+//			<-errorPullDataFromSrcQP // Wait for f to return.
+//			return &fnInvocation.Empty{}, ctx.Err()
+//		case err := <-errorPullDataFromSrcQP:
+//			if err != nil {
+//				log.Errorf("dQP: [Store & Forward] Pull data failed")
+//				return &fnInvocation.Empty{}, err
+//			}
+//		}
+//	}
+//
+//	err := invokeDestinationHandler(ctx, in.XDTJSON)
+//	if err != nil {
+//		return &fnInvocation.Empty{}, err
+//	}
+//
+//	if config.Routing == utils.CUT_THROUGH {
+//		log.Infof("dQP: [cut-through]: pulling data from sQP")
+//		select {
+//		case <-ctx.Done():
+//			<-errorPullDataFromSrcQP
+//			return &fnInvocation.Empty{}, ctx.Err()
+//		case err := <-errorPullDataFromSrcQP:
+//			if err != nil {
+//				log.Errorf("dQP: [cut-through]: pulling data from sQP failed")
+//				return &fnInvocation.Empty{}, err
+//			}
+//		}
+//	}
+//	return &fnInvocation.Empty{}, nil
+//}
 
 // PullDataFromSrcQP pulls data from src QP to dst QP
 func PullDataFromSrcQP(ctx context.Context, key string, sQPAddr string, chunkSizeInBytes int) error {
@@ -229,7 +229,7 @@ func PullDataFromSrcQP(ctx context.Context, key string, sQPAddr string, chunkSiz
 			} else if config.Routing == utils.STORE_FORWARD {
 				channel = bufferPool.CreateChannel()
 			} else {
-				log.Errorf("dQP: Invalid route type. Check config.json")
+				log.Errorf("dQP: Invalid route type %s. Check config.json", config.Routing)
 			}
 			log.Debugf("dQP: channel allocated")
 			log.Infof("dQP: chunkTotal = %d", chunk.TotalChunks)
@@ -254,7 +254,7 @@ func StartServer(receivedConfig utils.Config) {
 	server := grpc.NewServer(grpc.UnaryInterceptor(otelgrpc.UnaryServerInterceptor()),
 		grpc.StreamInterceptor(otelgrpc.StreamServerInterceptor()))
 	downXDT.RegisterXDTtoFnServer(server, downXDTServer{})
-	fnInvocation.RegisterInvocationServer(server, fnInvocationServer{})
+	//fnInvocation.RegisterInvocationServer(server, fnInvocationServer{})
 
 	log.Infoln("dQP: start server")
 	if err := server.Serve(lis); err != nil {

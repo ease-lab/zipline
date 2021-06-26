@@ -24,13 +24,20 @@ package main
 
 import (
 	"flag"
+	"net/http"
+	"net/http/httputil"
 	"os"
+
+	"golang.org/x/net/http2"
+	"golang.org/x/net/http2/h2c"
 
 	ctrdlog "github.com/containerd/containerd/log"
 	tracing "github.com/ease-lab/vhive/utils/tracing/go"
 	"github.com/ease-lab/xdt/dQP"
 	"github.com/ease-lab/xdt/utils"
 	log "github.com/sirupsen/logrus"
+	pkgnet "knative.dev/pkg/network"
+	"knative.dev/serving/pkg/queue"
 )
 
 func main() {
@@ -50,5 +57,50 @@ func main() {
 		}
 		defer shutdown()
 	}
-	dQP.StartServer(config)
+	go dQP.StartServer(config)
+
+	httpProxy := func(target string) *httputil.ReverseProxy {
+		return &httputil.ReverseProxy{
+			Director: func(req *http.Request) {
+				req.URL.Scheme = "http"
+				req.URL.Host = target
+
+				// Copied from httputil.NewSingleHostReverseProxy.
+				if _, ok := req.Header["User-Agent"]; !ok {
+					// explicitly disable User-Agent so it's not set to default value
+					req.Header.Set("User-Agent", "")
+				}
+			},
+		}
+	}(config.DstServerHostname + config.DstServerPort)
+	httpProxy.Transport = pkgnet.NewProxyAutoTransport(10 /* max-idle */, 5 /* max-idle-per-host */)
+
+	var composedHandler http.Handler = httpProxy
+
+	composedHandler = func(h http.Handler) http.Handler {
+		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			defer h.ServeHTTP(w, r)
+
+			isXDT := r.Header.Get("isXDT")
+			if isXDT == "true" {
+				log.Infof("pulling from sQP using key %s addr %s", r.Header.Get("key"), r.Header.Get("sQPAddr"))
+				dQP.PullDataFromSrcQP(r.Context(), r.Header.Get("key"), r.Header.Get("sQPAddr"), config.ChunkSizeInBytes)
+			}
+
+		})
+	}(composedHandler)
+
+	composedHandler = queue.ForwardedShimHandler(composedHandler)
+
+	h2s := &http2.Server{}
+	// start server
+	server := &http.Server{
+		Addr:    config.ProxyPort,
+		Handler: h2c.NewHandler(composedHandler, h2s),
+	}
+	log.Infof("Listening [:50005]...\n")
+	err := server.ListenAndServe()
+	if err != nil {
+		log.Errorf("failed to start proxy server")
+	}
 }
