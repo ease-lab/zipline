@@ -143,9 +143,13 @@ func StartServer(receivedConfig utils.Config) {
 	if err != nil {
 		log.Fatalf("sQP: failed to listen: %v", err)
 	}
-
-	server := grpc.NewServer(grpc.UnaryInterceptor(otelgrpc.UnaryServerInterceptor()),
-		grpc.StreamInterceptor(otelgrpc.StreamServerInterceptor()))
+	var server *grpc.Server
+	if config.TracingEnabled {
+		server = grpc.NewServer(grpc.UnaryInterceptor(otelgrpc.UnaryServerInterceptor()),
+			grpc.StreamInterceptor(otelgrpc.StreamServerInterceptor()))
+	} else {
+		server = grpc.NewServer()
+	}
 	upXDT.RegisterStreamDataServer(server, upXDTServer{})
 	crossXDT.RegisterStreamDataServer(server, crossXDTServer{})
 

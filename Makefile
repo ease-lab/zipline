@@ -24,7 +24,7 @@ all: local
 
 .PHONY: proto_gen proto_install
 
-PROTO_FILES:=crossXDT fnInvocation downXDT upXDT
+PROTO_FILES:=crossXDT downXDT upXDT
 ROUTING_MODES:=Store&Forward CutThrough
 GO_TEST_FLAGS:=-race -v -cover
 SDK_GO_FILES:=./source.go ./destination.go
@@ -56,7 +56,7 @@ clean:
 
 unit-test:
 	sed -i '/Routing/c\  "Routing": "Store&Forward",' ./config.json
-	cd sdk && go test unit_test.go $(SDK_GO_FILES) -race -v -cover
+	cd integration-tests && go test unit_test.go $(GO_TEST_FLAGS)
 
 integ-test_CT:
 	sed -i '/Routing/c\  "Routing": "CutThrough",' ./config.json
@@ -72,13 +72,11 @@ integ-test: integ-test_CT integ-test_SF
 timeout-test_CT:
 	sed -i '/Routing/c\  "Routing": "CutThrough",' ./config.json
 	sleep 60
-	cd integration-tests && go test ./integration_test.go -run TestErr_DSTTimeout $(GO_TEST_FLAGS)
 	cd integration-tests && go test ./integration_test.go -run TestErr_DQPTimeout $(GO_TEST_FLAGS)
 
 timeout-test_SF:
 	sed -i '/Routing/c\  "Routing": "Store&Forward",' ./config.json
 	sleep 60
-	cd integration-tests && go test ./integration_test.go -run TestErr_DSTTimeout $(GO_TEST_FLAGS)
 	cd integration-tests && go test ./integration_test.go -run TestErr_DQPTimeout $(GO_TEST_FLAGS)
 
 timeout-test: timeout-test_SF timeout-test_CT

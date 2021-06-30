@@ -84,7 +84,10 @@ func main() {
 			isXDT := r.Header.Get("isXDT")
 			if isXDT == "true" {
 				log.Infof("pulling from sQP using key %s addr %s", r.Header.Get("key"), r.Header.Get("sQPAddr"))
-				dQP.PullDataFromSrcQP(r.Context(), r.Header.Get("key"), r.Header.Get("sQPAddr"), config.ChunkSizeInBytes)
+				err := dQP.PullDataFromSrcQP(r.Context(), r.Header.Get("key"), r.Header.Get("sQPAddr"), config.ChunkSizeInBytes)
+				if err != nil {
+					log.Errorf("Proxy: unable to pull data from sQP: %v", err)
+				}
 			}
 
 		})

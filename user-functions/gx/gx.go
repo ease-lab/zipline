@@ -23,10 +23,12 @@
 package main
 
 import (
+	"flag"
 	"os"
 
 	"github.com/ease-lab/xdt/sdk"
 
+	ctrdlog "github.com/containerd/containerd/log"
 	log "github.com/sirupsen/logrus"
 
 	"github.com/ease-lab/xdt/utils"
@@ -37,7 +39,21 @@ var handler = func(data []byte) {
 }
 
 func main() {
-	config := utils.ReadConfig(os.Getenv("KO_DATA_PATH") + "/config.json")
-	config.DQPServerHostname = "localhost"
+	dockerCompose := flag.Bool("docker-compose", false, "Set to true when used with docker compose")
+	flag.Parse()
+
+	log.SetLevel(log.InfoLevel)
+	log.SetFormatter(&log.TextFormatter{
+		TimestampFormat: ctrdlog.RFC3339NanoFixed,
+		FullTimestamp:   true,
+		ForceColors:     true})
+
+	var config utils.Config
+	if *dockerCompose {
+		config = utils.ReadConfig(os.Getenv("KO_DATA_PATH") + "/config.json")
+	} else {
+		// Load default config
+		config = utils.ReadConfig("")
+	}
 	sdk.StartDstServer(config, handler)
 }

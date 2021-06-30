@@ -39,8 +39,8 @@ services:
   fx:
     image: vhiveease/fx
     command:
-      - -sQPAddr=sQP:50005
       - -url=dQP:50006
+      - -dockerCompose
     depends_on:
       - gx
       - sQP
