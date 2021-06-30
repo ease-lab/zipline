@@ -7,7 +7,6 @@ replace (
 	github.com/ease-lab/xdt/dQP => ../dQP
 	github.com/ease-lab/xdt/proto/crossXDT => ../proto/crossXDT
 	github.com/ease-lab/xdt/proto/downXDT => ../proto/downXDT
-	github.com/ease-lab/xdt/proto/fnInvocation => ../proto/fnInvocation
 	github.com/ease-lab/xdt/proto/upXDT => ../proto/upXDT
 	github.com/ease-lab/xdt/sQP => ../sQP
 	github.com/ease-lab/xdt/sdk => ../sdk

@@ -95,7 +95,7 @@ jobs:
       - name: Run benchmarks
         run: |
           sed -i '/Routing/c\  "Routing": "CutThrough",' config.json
-          cd integration-tests && go test ./integration_test.go -run TestBenchmark_XDT -v
+          cd tests && go test ./integration_test.go -run TestBenchmark_XDT -v
       - name: Archive log artifacts
         if: ${{ always() }}
         uses: actions/upload-artifact@v2
