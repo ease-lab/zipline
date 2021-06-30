@@ -73,7 +73,8 @@ func main() {
 			},
 		}
 	}(config.DstServerHostname + config.DstServerPort)
-	httpProxy.Transport = pkgnet.NewProxyAutoTransport(10 /* max-idle */, 5 /* max-idle-per-host */)
+	maxIdleConns := 1000 // TODO: somewhat arbitrary value for CC=0, needs experimental validation.
+	httpProxy.Transport = pkgnet.NewProxyAutoTransport(maxIdleConns /* max-idle */, maxIdleConns /* max-idle-per-host */)
 
 	var composedHandler http.Handler = httpProxy
 

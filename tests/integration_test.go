@@ -20,7 +20,7 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 
-package integration_tests
+package tests
 
 import (
 	"context"
@@ -85,7 +85,15 @@ func knativeQP(config utils.Config) {
 			},
 		}
 	}(config.DstServerHostname + config.DstServerPort)
-	httpProxy.Transport = pkgnet.NewProxyAutoTransport(10 /* max-idle */, 5 /* max-idle-per-host */)
+
+	maxIdleConns := 1000 // TODO: somewhat arbitrary value for CC=0, needs experimental validation.
+	// MaxIdleConns controls the maximum number of idle (keep-alive)
+	// connections across all hosts. Zero means no limit.
+
+	// MaxIdleConnsPerHost, if non-zero, controls the maximum idle
+	// (keep-alive) connections to keep per-host. If zero,
+	// DefaultMaxIdleConnsPerHost is used.
+	httpProxy.Transport = pkgnet.NewProxyAutoTransport(maxIdleConns /* max-idle */, maxIdleConns /* max-idle-per-host */)
 
 	var composedHandler http.Handler = httpProxy
 
@@ -97,6 +105,7 @@ func knativeQP(config utils.Config) {
 			if isXDT == "true" {
 				log.Infof("pulling from sQP using key %s addr %s", r.Header.Get("key"), r.Header.Get("sqp_addr"))
 				go func() {
+					// FIXME: support many payloads per invocation
 					err := dQP.PullDataFromSrcQP(r.Context(), r.Header.Get("key"), r.Header.Get("sqp_addr"), config.ChunkSizeInBytes)
 					if err != nil {
 						log.Fatalf("Proxy: Failed to pull data from sQP: %v", err)
@@ -110,7 +119,7 @@ func knativeQP(config utils.Config) {
 	composedHandler = queue.ForwardedShimHandler(composedHandler)
 
 	h2s := &http2.Server{}
-	// start server
+
 	server := &http.Server{
 		Addr:    config.ProxyPort,
 		Handler: h2c.NewHandler(composedHandler, h2s),
