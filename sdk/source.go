@@ -91,7 +91,7 @@ func InvokeWithXDT(URL string, xdtPayload utils.Payload, sQPAddr string, chunkSi
 
 	errorFnInvocationCall := make(chan error, 1)
 	go func() {
-		errorFnInvocationCall <- fnInvocationCall(ctx, URL, serialisedPayload, sQPAddr)
+		errorFnInvocationCall <- fnInvocationCall(ctx, URL, serialisedPayload)
 	}()
 	select {
 	case <-ctx.Done():
@@ -124,7 +124,7 @@ func InvokeWithXDT(URL string, xdtPayload utils.Payload, sQPAddr string, chunkSi
 }
 
 // fnInvocationCall makes fn invocation call to dQP with xdt payload
-func fnInvocationCall(ctx context.Context, URL string, serialisedPayload []byte, sQPAddr string) error {
+func fnInvocationCall(ctx context.Context, URL string, serialisedPayload []byte) error {
 
 	errorChannel := make(chan error, 1)
 

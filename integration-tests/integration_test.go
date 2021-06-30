@@ -25,7 +25,6 @@ package integration_tests
 import (
 	"context"
 	"crypto/rand"
-	"errors"
 	"flag"
 	"fmt"
 	"net/http"
@@ -53,7 +52,7 @@ import (
 
 var sampleSize = flag.Int("sample", 10, "sampleSize")
 var URL = flag.String("url", "helloworld.default.192.168.1.240.nip.io", "Function URL")
-var zipkinURL = flag.String("zipkin", "http://zipkin.istio-system.svc.cluster.local:9411/api/v2/spans", "zipkin url")
+var zipkinURL = flag.String("zipkin", "http://localhost:9411/api/v2/spans", "zipkin url")
 var numConcurrentFunctions = flag.Int("concurrentCalls", 5, "num of simultaneous calls")
 var chunkSizeInBytes = utils.LoadConfig.ChunkSizeInBytes
 
@@ -97,7 +96,12 @@ func knativeQP(config utils.Config) {
 			isXDT := r.Header.Get("is_xdt")
 			if isXDT == "true" {
 				log.Infof("pulling from sQP using key %s addr %s", r.Header.Get("key"), r.Header.Get("sqp_addr"))
-				go dQP.PullDataFromSrcQP(r.Context(), r.Header.Get("key"), r.Header.Get("sqp_addr"), config.ChunkSizeInBytes)
+				go func() {
+					err := dQP.PullDataFromSrcQP(r.Context(), r.Header.Get("key"), r.Header.Get("sqp_addr"), config.ChunkSizeInBytes)
+					if err != nil {
+						log.Fatalf("Proxy: Failed to pull data from sQP: %v", err)
+					}
+				}()
 			}
 
 		})
@@ -111,7 +115,7 @@ func knativeQP(config utils.Config) {
 		Addr:    config.ProxyPort,
 		Handler: h2c.NewHandler(composedHandler, h2s),
 	}
-	log.Infof("Listening [:50005]...\n")
+	log.Infof("Listening to %s...\n", config.ProxyPort)
 	err := server.ListenAndServe()
 	if err != nil {
 		log.Errorf("failed to start proxy server")
@@ -136,7 +140,7 @@ func TestSdk_InvokeWithXDT(t *testing.T) {
 
 	config := utils.LoadConfig
 	if config.TracingEnabled {
-		shutdown, err := tracing.InitBasicTracer(*zipkinURL, "dQP")
+		shutdown, err := tracing.InitBasicTracer(*zipkinURL, "xdt")
 		if err != nil {
 			log.Warn(err)
 		}
@@ -164,7 +168,7 @@ func TestErr_DQPTimeout(t *testing.T) {
 
 	config := utils.LoadConfig
 	if config.TracingEnabled {
-		shutdown, err := tracing.InitBasicTracer(*zipkinURL, "dQP")
+		shutdown, err := tracing.InitBasicTracer(*zipkinURL, "xdt")
 		if err != nil {
 			log.Warn(err)
 		}
@@ -191,42 +195,11 @@ func TestErr_DQPTimeout(t *testing.T) {
 	log.Infof("completed XDT in %s", elapsed)
 }
 
-func TestErr_DSTTimeout(t *testing.T) {
-
-	config := utils.LoadConfig
-	if config.TracingEnabled {
-		shutdown, err := tracing.InitBasicTracer(*zipkinURL, "dQP")
-		if err != nil {
-			log.Warn(err)
-		}
-		defer shutdown()
-	}
-
-	// start server at sQP
-	go knativeQP(config)
-	time.Sleep(time.Second * 1)
-	go sQP.StartServer(config)
-
-	time.Sleep(time.Second * 1)
-
-	start := time.Now()
-	log.Infof("starting integ test")
-	url := config.ProxyHostname + config.ProxyPort
-	if err := sdk.InvokeWithXDT(url, preparePayload(), config.SQPServerHostname+config.SQPServerPort, chunkSizeInBytes); err == context.DeadlineExceeded {
-		log.Errorf("TestSdk_InvokeWithXDT failed predictably")
-	} else {
-		log.Fatalf("Unexpected Error Occured: %v", errors.Unwrap(err))
-	}
-	elapsed := time.Since(start)
-
-	log.Infof("completed XDT in %s", elapsed)
-}
-
 func TestParallel_Invoke(t *testing.T) {
 
 	config := utils.LoadConfig
 	if config.TracingEnabled {
-		shutdown, err := tracing.InitBasicTracer(*zipkinURL, "dQP")
+		shutdown, err := tracing.InitBasicTracer(*zipkinURL, "xdt")
 		if err != nil {
 			log.Warn(err)
 		}
@@ -265,7 +238,7 @@ func TestParallel_FanIn(t *testing.T) {
 
 	config := utils.LoadConfig
 	if config.TracingEnabled {
-		shutdown, err := tracing.InitBasicTracer(*zipkinURL, "dQP")
+		shutdown, err := tracing.InitBasicTracer(*zipkinURL, "xdt")
 		if err != nil {
 			log.Warn(err)
 		}
@@ -315,7 +288,7 @@ func TestParallel_FanOut(t *testing.T) {
 
 	config := utils.LoadConfig
 	if config.TracingEnabled {
-		shutdown, err := tracing.InitBasicTracer(*zipkinURL, "dQP")
+		shutdown, err := tracing.InitBasicTracer(*zipkinURL, "xdt")
 		if err != nil {
 			log.Warn(err)
 		}
@@ -327,13 +300,14 @@ func TestParallel_FanOut(t *testing.T) {
 	for i := 0; i < *numConcurrentFunctions; i += 1 {
 		config.DstServerPort = ":" + fmt.Sprint(dQPPort+i)
 		config.DQPServerPort = ":" + fmt.Sprint(dQPPort+i+*numConcurrentFunctions)
+		config.ProxyPort = ":" + fmt.Sprint(dQPPort+i+*numConcurrentFunctions+*numConcurrentFunctions)
 		tmpDstConfig := config
 		log.Infof("starting Dst server no. %d", i+1)
 		go sdk.StartDstServer(tmpDstConfig, handler)
 		time.Sleep(time.Second * 10)
 		tmpDQPConfig := config
 		log.Infof("starting dQP server no. %d", i+1)
-		go dQP.StartServer(tmpDQPConfig)
+		go knativeQP(tmpDQPConfig)
 		time.Sleep(time.Second * 10)
 	}
 	time.Sleep(time.Second * 5)
@@ -347,7 +321,7 @@ func TestParallel_FanOut(t *testing.T) {
 	errChannel := make(chan error, numberOfSources)
 
 	for i := 0; i < numberOfSources; i += 1 {
-		url := ":" + fmt.Sprint(dQPPort+i+*numConcurrentFunctions)
+		url := ":" + fmt.Sprint(dQPPort+i+*numConcurrentFunctions+*numConcurrentFunctions)
 		go func() {
 			errChannel <- sdk.InvokeWithXDT(url, preparePayload(), config.SQPServerHostname+config.SQPServerPort, chunkSizeInBytes)
 		}()
@@ -363,24 +337,6 @@ func TestParallel_FanOut(t *testing.T) {
 	elapsed := time.Since(start)
 
 	log.Infof("completed TestFan_In in %s", elapsed)
-}
-
-func TestDst(t *testing.T) {
-
-	config := utils.LoadConfig
-	sdk.StartDstServer(config, handler)
-}
-
-func TestSrc(t *testing.T) {
-
-	config := utils.LoadConfig
-	start := time.Now()
-	log.Infof("starting integ test")
-	if err := sdk.InvokeWithXDT(*URL, preparePayload(), config.SQPServerHostname+config.SQPServerPort, chunkSizeInBytes); err != nil {
-		log.Fatalf("TestSdk_InvokeWithXDT failed %v", err)
-	}
-	elapsed := time.Since(start)
-	log.Infof("completed XDT in %s", elapsed)
 }
 
 func TestPython_SDK(t *testing.T) {

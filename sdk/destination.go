@@ -129,8 +129,13 @@ func StartDstServer(receivedConfig utils.Config, handler func([]byte)) {
 	if err != nil {
 		log.Fatalf("DST: failed to listen: %v", err)
 	}
-	server := grpc.NewServer(grpc.UnaryInterceptor(otelgrpc.UnaryServerInterceptor()),
-		grpc.StreamInterceptor(otelgrpc.StreamServerInterceptor()))
+	var server *grpc.Server
+	if config.TracingEnabled {
+		server = grpc.NewServer(grpc.UnaryInterceptor(otelgrpc.UnaryServerInterceptor()),
+			grpc.StreamInterceptor(otelgrpc.StreamServerInterceptor()))
+	} else {
+		server = grpc.NewServer()
+	}
 	downXDT.RegisterXDTtoFnServer(server, downXDTServer{})
 
 	log.Infoln("DST: start server")
