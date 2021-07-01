@@ -40,7 +40,7 @@ import (
 	pb "github.com/ease-lab/vhive/examples/protobuf/helloworld"
 	log "github.com/sirupsen/logrus"
 
-	sdk "github.com/ease-lab/vhive-xdt/sdk/go_sdk"
+	sdk "github.com/ease-lab/vhive-xdt/sdk/golang"
 )
 
 type producerServer struct {

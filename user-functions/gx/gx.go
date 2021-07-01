@@ -29,7 +29,7 @@ import (
 	ctrdlog "github.com/containerd/containerd/log"
 	log "github.com/sirupsen/logrus"
 
-	sdk "github.com/ease-lab/vhive-xdt/sdk/go_sdk"
+	sdk "github.com/ease-lab/vhive-xdt/sdk/golang"
 	"github.com/ease-lab/vhive-xdt/utils"
 )
 
