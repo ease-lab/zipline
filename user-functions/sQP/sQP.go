@@ -28,7 +28,7 @@ import (
 
 	ctrdlog "github.com/containerd/containerd/log"
 	tracing "github.com/ease-lab/vhive/utils/tracing/go"
-	"github.com/ease-lab/xdt/sQP"
+	"github.com/ease-lab/xdt/queue-proxy/sQP"
 	"github.com/ease-lab/xdt/utils"
 	log "github.com/sirupsen/logrus"
 )
