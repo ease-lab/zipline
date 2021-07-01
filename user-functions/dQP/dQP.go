@@ -82,13 +82,16 @@ func main() {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			defer h.ServeHTTP(w, r)
 
-			isXDT := r.Header.Get("isXDT")
+			isXDT := r.Header.Get("is_xdt")
 			if isXDT == "true" {
-				log.Infof("pulling from sQP using key %s addr %s", r.Header.Get("key"), r.Header.Get("sQPAddr"))
-				err := dQP.PullDataFromSrcQP(r.Context(), r.Header.Get("key"), r.Header.Get("sQPAddr"), config.ChunkSizeInBytes)
-				if err != nil {
-					log.Errorf("Proxy: unable to pull data from sQP: %v", err)
-				}
+				log.Infof("pulling from sQP using key %s addr %s", r.Header.Get("key"), r.Header.Get("sqp_addr"))
+				go func() {
+					// FIXME: support many payloads per invocation
+					err := dQP.PullDataFromSrcQP(r.Context(), r.Header.Get("key"), r.Header.Get("sqp_addr"), config.ChunkSizeInBytes)
+					if err != nil {
+						log.Fatalf("Proxy: Failed to pull data from sQP: %v", err)
+					}
+				}()
 			}
 
 		})

@@ -84,7 +84,6 @@ func transferPayload(config utils.Config, url string, sQPAddr string, transferSi
 	payloadToSend := utils.Payload{
 		FunctionName: "HelloXDT",
 		Data:         payloadData,
-		Key:          "",
 	}
 
 	start := time.Now()

@@ -54,8 +54,6 @@ type Config struct {
 type Payload struct {
 	FunctionName string
 	Data         []byte
-	Key          string
-	IsXDT        bool
 }
 
 const (

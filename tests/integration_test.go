@@ -140,7 +140,6 @@ func preparePayload() utils.Payload {
 	payloadToSend := utils.Payload{
 		FunctionName: "HelloXDT",
 		Data:         payloadData,
-		Key:          "",
 	}
 	return payloadToSend
 }
@@ -389,7 +388,6 @@ func TestBenchmark_XDT(t *testing.T) {
 		payloadToSend := utils.Payload{
 			FunctionName: "HelloXDT",
 			Data:         payloadData[:payloadSize],
-			Key:          "",
 		}
 
 		for i := 0; i < sampleSize; i += 1 {
