@@ -1,12 +1,12 @@
-module github.com/ease-lab/xdt/dQP
+module github.com/ease-lab/xdt/queue-proxy/dQP
 
 go 1.16
 
 replace (
-	github.com/ease-lab/xdt/proto/crossXDT => ../proto/crossXDT
-	github.com/ease-lab/xdt/proto/downXDT => ../proto/downXDT
-	github.com/ease-lab/xdt/transport => ../transport
-	github.com/ease-lab/xdt/utils => ../utils
+	github.com/ease-lab/xdt/proto/crossXDT => ../../proto/crossXDT
+	github.com/ease-lab/xdt/proto/downXDT => ../../proto/downXDT
+	github.com/ease-lab/xdt/transport => ../../transport
+	github.com/ease-lab/xdt/utils => ../../utils
 )
 
 require (

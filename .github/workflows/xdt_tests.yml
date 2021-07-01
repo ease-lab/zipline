@@ -50,7 +50,7 @@ jobs:
       - name: Check dQP code
         if: ${{ always() }}
         env:
-          DIR: dQP
+          DIR: queue-proxy/dQP
         run: cd $DIR && golangci-lint run --out-format=github-actions --path-prefix=$DIR --timeout 5m
       - name: Check plotter code
         if: ${{ always() }}
