@@ -60,7 +60,7 @@ jobs:
       - name: Check sQP code
         if: ${{ always() }}
         env:
-          DIR: sQP
+          DIR: queue-proxy/sQP
         run: cd $DIR && golangci-lint run --out-format=github-actions --path-prefix=$DIR --timeout 5m
       - name: Check user-functions/fx code
         if: ${{ always() }}
