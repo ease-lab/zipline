@@ -24,10 +24,11 @@ package golang
 
 import (
 	"context"
-	"encoding/json"
 	"io"
 	"net"
 	"sync"
+
+	"google.golang.org/grpc/metadata"
 
 	"github.com/ease-lab/vhive-xdt/proto/downXDT"
 	"github.com/ease-lab/vhive-xdt/utils"
@@ -50,25 +51,23 @@ func (s downXDTServer) XDTFnCall(ctx context.Context, in *downXDT.InvocationRequ
 
 	log.Infof("DST: received invocation call %s", in.XDTJSON)
 
-	var xdtPayload utils.Payload
-	if err := json.Unmarshal(in.XDTJSON, &xdtPayload); err != nil {
-		log.Error("DST: XDTFnCall", err)
-		return &downXDT.Empty{}, err
+	headers, ok := metadata.FromIncomingContext(ctx)
+
+	if ok && headers["is_xdt"][0] == "true" {
+		key := headers["key"][0]
+		chunkSizeInBytes := config.ChunkSizeInBytes
+
+		// fetch data from dQP
+		payloadBytes, err := FetchFromDQP(ctx, key, config.DQPServerHostname+config.DQPServerPort, chunkSizeInBytes)
+		if err != nil {
+			log.Errorf("DST: FetchFromDQP failed %v", err)
+			return &downXDT.Empty{}, err
+		}
+
+		//call destination function
+		DestinationHandler(payloadBytes)
 	}
 
-	key := xdtPayload.Key
-
-	chunkSizeInBytes := config.ChunkSizeInBytes
-
-	// fetch data from dQP
-	payloadBytes, err := FetchFromDQP(ctx, key, config.DQPServerHostname+config.DQPServerPort, chunkSizeInBytes)
-	if err != nil {
-		log.Errorf("DST: FetchFromDQP failed %v", err)
-		return &downXDT.Empty{}, err
-	}
-
-	//call destination function
-	DestinationHandler(payloadBytes)
 	return &downXDT.Empty{}, nil
 }
 

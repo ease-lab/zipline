@@ -48,8 +48,6 @@ func splitPayload(xdtPayload *utils.Payload) (string, []byte) {
 	payloadData := xdtPayload.Data
 	log.Info(payloadData[0:9], payloadData[len(payloadData)-9:])
 	xdtPayload.Data = []byte("")
-	xdtPayload.Key = key
-	xdtPayload.IsXDT = true
 	return key, payloadData
 }
 
