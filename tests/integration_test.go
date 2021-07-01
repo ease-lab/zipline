@@ -33,7 +33,7 @@ import (
 	"testing"
 	"time"
 
-	sdk "github.com/ease-lab/vhive-xdt/sdk/go_sdk"
+	sdk "github.com/ease-lab/vhive-xdt/sdk/golang"
 	"golang.org/x/net/http2"
 	"golang.org/x/net/http2/h2c"
 	pkgnet "knative.dev/pkg/network"

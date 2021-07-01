@@ -127,7 +127,7 @@ python-unit-test: install_python_modules
 	sed -i '/Routing/c\  "Routing": "Store&Forward",' ./config.json
 	cd tests && go test ./integration_test.go -run TestPython_SDK $(GO_TEST_FLAGS) &
 	sleep 60
-	cd sdk/python_sdk && python -m unittest -v test.UnitTest
+	cd sdk/python && python -m unittest -v test.UnitTest
 	# kill the process bound to the given port.
 	-fuser -k 50005/tcp
 
@@ -137,9 +137,9 @@ python-integ-test_CT:
 	sed -i '/Routing/c\  "Routing": "CutThrough",' ./config.json
 	cd tests && go test ./integration_test.go -run TestPython_SDK $(GO_TEST_FLAGS) &
 	sleep 60
-	cd sdk/python_sdk && python destination.py &
+	cd sdk/python && python destination.py &
 	sleep 5
-	cd sdk/python_sdk && python -m unittest -v test.IntegTest.test_Invoke_XDT
+	cd sdk/python && python -m unittest -v test.IntegTest.test_Invoke_XDT
 	-fuser -k 50005/tcp
 	-fuser -k 50007/tcp
 
@@ -147,9 +147,9 @@ python-integ-test_SF:
 	sed -i '/Routing/c\  "Routing": "Store&Forward",' ./config.json
 	cd tests && go test ./integration_test.go -run TestPython_SDK $(GO_TEST_FLAGS) &
 	sleep 60
-	cd sdk/python_sdk && python destination.py &
+	cd sdk/python && python destination.py &
 	sleep 5
-	cd sdk/python_sdk && python -m unittest -v test.IntegTest.test_Invoke_XDT
+	cd sdk/python && python -m unittest -v test.IntegTest.test_Invoke_XDT
 	-fuser -k 50005/tcp
 	-fuser -k 50007/tcp
 
@@ -159,14 +159,14 @@ python-timeout-test_CT:
 	sed -i '/Routing/c\  "Routing": "CutThrough",' ./config.json
 	cd tests && go test ./integration_test.go -run TestPython_SDKTimeout $(GO_TEST_FLAGS) &
 	sleep 60
-	cd sdk/python_sdk && python -m unittest -v test.IntegTest.test_Timeout
+	cd sdk/python && python -m unittest -v test.IntegTest.test_Timeout
 	-fuser -k 50005/tcp
 
 python-timeout-test_SF:
 	sed -i '/Routing/c\  "Routing": "Store&Forward",' ./config.json
 	cd tests && go test ./integration_test.go -run TestPython_SDKTimeout $(GO_TEST_FLAGS) &
 	sleep 60
-	cd sdk/python_sdk && python -m unittest -v test.IntegTest.test_Timeout
+	cd sdk/python && python -m unittest -v test.IntegTest.test_Timeout
 	-fuser -k 50005/tcp
 
 docker-images-push:

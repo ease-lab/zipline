@@ -45,7 +45,7 @@ jobs:
         if: ${{ always() }}
         uses: golangci/golangci-lint-action@v2
         with:
-          working-directory: sdk/go_sdk
+          working-directory: sdk/golang
           args: --timeout 5m
       - name: Check dQP code
         if: ${{ always() }}

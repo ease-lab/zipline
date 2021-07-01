@@ -1,4 +1,4 @@
-module github.com/ease-lab/vhive-xdt/sdk/go_sdk
+module github.com/ease-lab/vhive-xdt/sdk/golang
 
 go 1.16
 
