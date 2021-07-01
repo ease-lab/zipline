@@ -40,7 +40,7 @@ import (
 	"github.com/ease-lab/xdt/utils"
 	log "github.com/sirupsen/logrus"
 
-	"github.com/ease-lab/xdt/sdk"
+	sdk "github.com/ease-lab/xdt/sdk/go_sdk"
 )
 
 type producerServer struct {

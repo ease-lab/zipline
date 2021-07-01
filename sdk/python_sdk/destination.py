@@ -24,7 +24,7 @@ import sys
 import os
 
 # adding gRPC sources to the system path
-sys.path.insert(0, os.getcwd() + '/../proto/downXDT')
+sys.path.insert(0, os.getcwd() + '/../../proto/downXDT')
 
 from concurrent import futures
 import grpc

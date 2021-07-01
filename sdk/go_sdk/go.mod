@@ -1,11 +1,11 @@
-module github.com/ease-lab/xdt/sdk
+module github.com/ease-lab/xdt/sdk/go_sdk
 
 go 1.16
 
 replace (
-	github.com/ease-lab/xdt/proto/downXDT => ../proto/downXDT
-	github.com/ease-lab/xdt/proto/upXDT => ../proto/upXDT
-	github.com/ease-lab/xdt/utils => ../utils
+	github.com/ease-lab/xdt/proto/downXDT => ./../../proto/downXDT
+	github.com/ease-lab/xdt/proto/upXDT => ./../../proto/upXDT
+	github.com/ease-lab/xdt/utils => ./../../utils
 )
 
 require (
