@@ -52,7 +52,7 @@ class Payload:
 
 
 def loadConfig():
-    with open('../config.json') as json_file:
+    with open('../../config.json') as json_file:
         return json.load(json_file)
 
 

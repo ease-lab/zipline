@@ -23,8 +23,8 @@
 import os
 import sys
 # adding gRPC sources to the system path
-sys.path.insert(0, os.getcwd()+'/../proto/downXDT')
-sys.path.insert(0, os.getcwd()+'/../proto/upXDT')
+sys.path.insert(0, os.getcwd()+'/../../proto/downXDT')
+sys.path.insert(0, os.getcwd()+'/../../proto/upXDT')
 
 import grpc
 import logging as log

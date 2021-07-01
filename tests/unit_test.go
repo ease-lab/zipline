@@ -29,7 +29,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/ease-lab/xdt/sdk"
+	sdk "github.com/ease-lab/xdt/sdk/go_sdk"
 
 	ctrdlog "github.com/containerd/containerd/log"
 
