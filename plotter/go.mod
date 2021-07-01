@@ -1,4 +1,4 @@
-module github.com/ease-lab/xdt/plotter
+module github.com/ease-lab/vhive-xdt/plotter
 
 go 1.16
 

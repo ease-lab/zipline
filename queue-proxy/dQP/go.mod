@@ -1,20 +1,20 @@
-module github.com/ease-lab/xdt/queue-proxy/dQP
+module github.com/ease-lab/vhive-xdt/queue-proxy/dQP
 
 go 1.16
 
 replace (
-	github.com/ease-lab/xdt/proto/crossXDT => ../../proto/crossXDT
-	github.com/ease-lab/xdt/proto/downXDT => ../../proto/downXDT
-	github.com/ease-lab/xdt/transport => ../../transport
-	github.com/ease-lab/xdt/utils => ../../utils
+	github.com/ease-lab/vhive-xdt/proto/crossXDT => ../../proto/crossXDT
+	github.com/ease-lab/vhive-xdt/proto/downXDT => ../../proto/downXDT
+	github.com/ease-lab/vhive-xdt/transport => ../../transport
+	github.com/ease-lab/vhive-xdt/utils => ../../utils
 )
 
 require (
 	cloud.google.com/go v0.54.0 // indirect
-	github.com/ease-lab/xdt/proto/crossXDT v0.0.0-00010101000000-000000000000
-	github.com/ease-lab/xdt/proto/downXDT v0.0.0-00010101000000-000000000000
-	github.com/ease-lab/xdt/transport v0.0.0-00010101000000-000000000000
-	github.com/ease-lab/xdt/utils v0.0.0-00010101000000-000000000000
+	github.com/ease-lab/vhive-xdt/proto/crossXDT v0.0.0-00010101000000-000000000000
+	github.com/ease-lab/vhive-xdt/proto/downXDT v0.0.0-00010101000000-000000000000
+	github.com/ease-lab/vhive-xdt/transport v0.0.0-00010101000000-000000000000
+	github.com/ease-lab/vhive-xdt/utils v0.0.0-00010101000000-000000000000
 	github.com/sirupsen/logrus v1.8.1
 	go.opentelemetry.io/contrib/instrumentation/google.golang.org/grpc/otelgrpc v0.20.0
 	golang.org/x/net v0.0.0-20210226172049-e18ecbb05110 // indirect

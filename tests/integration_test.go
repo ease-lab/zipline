@@ -33,7 +33,7 @@ import (
 	"testing"
 	"time"
 
-	sdk "github.com/ease-lab/xdt/sdk/go_sdk"
+	sdk "github.com/ease-lab/vhive-xdt/sdk/go_sdk"
 	"golang.org/x/net/http2"
 	"golang.org/x/net/http2/h2c"
 	pkgnet "knative.dev/pkg/network"
@@ -42,10 +42,10 @@ import (
 	"XDTgRPC_stream/plotter"
 
 	ctrdlog "github.com/containerd/containerd/log"
+	"github.com/ease-lab/vhive-xdt/queue-proxy/dQP"
+	"github.com/ease-lab/vhive-xdt/queue-proxy/sQP"
+	"github.com/ease-lab/vhive-xdt/utils"
 	tracing "github.com/ease-lab/vhive/utils/tracing/go"
-	"github.com/ease-lab/xdt/queue-proxy/dQP"
-	"github.com/ease-lab/xdt/queue-proxy/sQP"
-	"github.com/ease-lab/xdt/utils"
 
 	log "github.com/sirupsen/logrus"
 )

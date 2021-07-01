@@ -29,8 +29,8 @@ import (
 	ctrdlog "github.com/containerd/containerd/log"
 	log "github.com/sirupsen/logrus"
 
-	sdk "github.com/ease-lab/xdt/sdk/go_sdk"
-	"github.com/ease-lab/xdt/utils"
+	sdk "github.com/ease-lab/vhive-xdt/sdk/go_sdk"
+	"github.com/ease-lab/vhive-xdt/utils"
 )
 
 var handler = func(data []byte) {
