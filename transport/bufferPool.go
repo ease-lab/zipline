@@ -25,7 +25,7 @@ package transport
 import (
 	"sync"
 
-	"github.com/ease-lab/xdt/utils"
+	"github.com/ease-lab/vhive-xdt/utils"
 
 	log "github.com/sirupsen/logrus"
 )

@@ -1,4 +1,4 @@
-module github.com/ease-lab/xdt/proto/upXDT
+module github.com/ease-lab/vhive-xdt/proto/upXDT
 
 go 1.16
 

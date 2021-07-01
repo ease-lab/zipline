@@ -17,9 +17,9 @@ DESCRIPTOR = _descriptor.FileDescriptor(
   name='downXDT.proto',
   package='downXDT',
   syntax='proto3',
-  serialized_options=b'Z%github.com/ease-lab/xdt/proto/downXDT',
+  serialized_options=b'Z+github.com/ease-lab/vhive-xdt/proto/downXDT',
   create_key=_descriptor._internal_create_key,
-  serialized_pb=b'\n\rdownXDT.proto\x12\x07\x64ownXDT\"$\n\x11InvocationRequest\x12\x0f\n\x07XDTJSON\x18\x01 \x01(\x0c\"\x07\n\x05\x45mpty\"*\n\x04\x44\x61ta\x12\r\n\x05\x63hunk\x18\x01 \x01(\x0c\x12\x13\n\x0bTotalChunks\x18\x03 \x01(\x03\"-\n\x0b\x44\x61taRequest\x12\x0b\n\x03key\x18\x01 \x01(\t\x12\x11\n\tChunkSize\x18\x02 \x01(\x03\x32}\n\x07XDTtoFn\x12\x39\n\tXDTFnCall\x12\x1a.downXDT.InvocationRequest\x1a\x0e.downXDT.Empty\"\x00\x12\x37\n\x0cXDTDataServe\x12\x14.downXDT.DataRequest\x1a\r.downXDT.Data\"\x00\x30\x01\x42\'Z%github.com/ease-lab/xdt/proto/downXDTb\x06proto3'
+  serialized_pb=b'\n\rdownXDT.proto\x12\x07\x64ownXDT\"$\n\x11InvocationRequest\x12\x0f\n\x07XDTJSON\x18\x01 \x01(\x0c\"\x07\n\x05\x45mpty\"*\n\x04\x44\x61ta\x12\r\n\x05\x63hunk\x18\x01 \x01(\x0c\x12\x13\n\x0bTotalChunks\x18\x03 \x01(\x03\"-\n\x0b\x44\x61taRequest\x12\x0b\n\x03key\x18\x01 \x01(\t\x12\x11\n\tChunkSize\x18\x02 \x01(\x03\x32}\n\x07XDTtoFn\x12\x39\n\tXDTFnCall\x12\x1a.downXDT.InvocationRequest\x1a\x0e.downXDT.Empty\"\x00\x12\x37\n\x0cXDTDataServe\x12\x14.downXDT.DataRequest\x1a\r.downXDT.Data\"\x00\x30\x01\x42-Z+github.com/ease-lab/vhive-xdt/proto/downXDTb\x06proto3'
 )
 
 

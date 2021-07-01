@@ -1,4 +1,4 @@
-module github.com/ease-lab/xdt/proto/crossXDT
+module github.com/ease-lab/vhive-xdt/proto/crossXDT
 
 go 1.16
 

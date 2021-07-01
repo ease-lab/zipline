@@ -23,7 +23,7 @@
 // control path request
 syntax = "proto3";
 
-option go_package = "github.com/ease-lab/xdt/proto/downXDT";
+option go_package = "github.com/ease-lab/vhive-xdt/proto/downXDT";
 
 package downXDT;
 

@@ -36,11 +36,11 @@ import (
 	"google.golang.org/grpc/reflection"
 
 	ctrdlog "github.com/containerd/containerd/log"
+	"github.com/ease-lab/vhive-xdt/utils"
 	pb "github.com/ease-lab/vhive/examples/protobuf/helloworld"
-	"github.com/ease-lab/xdt/utils"
 	log "github.com/sirupsen/logrus"
 
-	sdk "github.com/ease-lab/xdt/sdk/go_sdk"
+	sdk "github.com/ease-lab/vhive-xdt/sdk/go_sdk"
 )
 
 type producerServer struct {

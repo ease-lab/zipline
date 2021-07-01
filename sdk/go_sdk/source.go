@@ -30,13 +30,13 @@ import (
 
 	"google.golang.org/grpc/metadata"
 
-	"github.com/ease-lab/xdt/proto/downXDT"
+	"github.com/ease-lab/vhive-xdt/proto/downXDT"
 
-	"github.com/ease-lab/xdt/utils"
+	"github.com/ease-lab/vhive-xdt/utils"
 
 	log "github.com/sirupsen/logrus"
 
-	"github.com/ease-lab/xdt/proto/upXDT"
+	"github.com/ease-lab/vhive-xdt/proto/upXDT"
 	"google.golang.org/grpc"
 )
 

@@ -1,18 +1,18 @@
-module github.com/ease-lab/xdt/sdk/go_sdk
+module github.com/ease-lab/vhive-xdt/sdk/go_sdk
 
 go 1.16
 
 replace (
-	github.com/ease-lab/xdt/proto/downXDT => ./../../proto/downXDT
-	github.com/ease-lab/xdt/proto/upXDT => ./../../proto/upXDT
-	github.com/ease-lab/xdt/utils => ./../../utils
+	github.com/ease-lab/vhive-xdt/proto/downXDT => ./../../proto/downXDT
+	github.com/ease-lab/vhive-xdt/proto/upXDT => ./../../proto/upXDT
+	github.com/ease-lab/vhive-xdt/utils => ./../../utils
 )
 
 require (
 	cloud.google.com/go v0.54.0 // indirect
-	github.com/ease-lab/xdt/proto/downXDT v0.0.0-00010101000000-000000000000
-	github.com/ease-lab/xdt/proto/upXDT v0.0.0-00010101000000-000000000000
-	github.com/ease-lab/xdt/utils v0.0.0-00010101000000-000000000000
+	github.com/ease-lab/vhive-xdt/proto/downXDT v0.0.0-00010101000000-000000000000
+	github.com/ease-lab/vhive-xdt/proto/upXDT v0.0.0-00010101000000-000000000000
+	github.com/ease-lab/vhive-xdt/utils v0.0.0-00010101000000-000000000000
 	github.com/sirupsen/logrus v1.8.1
 	go.opentelemetry.io/contrib/instrumentation/google.golang.org/grpc/otelgrpc v0.20.0
 	golang.org/x/net v0.0.0-20210226172049-e18ecbb05110 // indirect

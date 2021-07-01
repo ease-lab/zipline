@@ -29,8 +29,8 @@ import (
 	"net"
 	"sync"
 
-	"github.com/ease-lab/xdt/proto/downXDT"
-	"github.com/ease-lab/xdt/utils"
+	"github.com/ease-lab/vhive-xdt/proto/downXDT"
+	"github.com/ease-lab/vhive-xdt/utils"
 
 	log "github.com/sirupsen/logrus"
 	"go.opentelemetry.io/contrib/instrumentation/google.golang.org/grpc/otelgrpc"

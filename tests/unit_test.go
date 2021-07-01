@@ -29,13 +29,13 @@ import (
 	"testing"
 	"time"
 
-	sdk "github.com/ease-lab/xdt/sdk/go_sdk"
+	sdk "github.com/ease-lab/vhive-xdt/sdk/go_sdk"
 
 	ctrdlog "github.com/containerd/containerd/log"
 
-	"github.com/ease-lab/xdt/queue-proxy/dQP"
-	"github.com/ease-lab/xdt/queue-proxy/sQP"
-	"github.com/ease-lab/xdt/utils"
+	"github.com/ease-lab/vhive-xdt/queue-proxy/dQP"
+	"github.com/ease-lab/vhive-xdt/queue-proxy/sQP"
+	"github.com/ease-lab/vhive-xdt/utils"
 
 	log "github.com/sirupsen/logrus"
 )

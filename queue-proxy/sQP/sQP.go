@@ -26,8 +26,8 @@ import (
 	"io"
 	"sync"
 
-	"github.com/ease-lab/xdt/transport"
-	"github.com/ease-lab/xdt/utils"
+	"github.com/ease-lab/vhive-xdt/transport"
+	"github.com/ease-lab/vhive-xdt/utils"
 
 	"go.opentelemetry.io/contrib/instrumentation/google.golang.org/grpc/otelgrpc"
 
@@ -35,8 +35,8 @@ import (
 
 	log "github.com/sirupsen/logrus"
 
-	"github.com/ease-lab/xdt/proto/crossXDT"
-	"github.com/ease-lab/xdt/proto/upXDT"
+	"github.com/ease-lab/vhive-xdt/proto/crossXDT"
+	"github.com/ease-lab/vhive-xdt/proto/upXDT"
 
 	"google.golang.org/grpc"
 )

@@ -1,4 +1,4 @@
-module github.com/ease-lab/xdt/utils
+module github.com/ease-lab/vhive-xdt/utils
 
 go 1.16
 
