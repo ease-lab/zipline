@@ -41,11 +41,8 @@ class XDTtoFnServicer(downXDT_pb2_grpc.XDTtoFnServicer):
         xdtPayload = Payload.loadFromBytes(request.XDTJSON)
         key = xdtPayload.Key
 
-        global config
-        chunkSizeInBytes = config['ChunkSizeInBytes']
-
         # fetch data from dQP
-        payloadBytes = FetchFromDQP(key, chunkSizeInBytes)
+        payloadBytes = FetchFromDQP(key)
 
         global dstHandler
         # call destination function
@@ -54,11 +51,11 @@ class XDTtoFnServicer(downXDT_pb2_grpc.XDTtoFnServicer):
 
 
 # FetchFromDQP fetches data from dQP to DstFn
-def FetchFromDQP(key, chunkSizeInBytes):
+def FetchFromDQP(key):
     global config
     serverAddr = config['DQPServerHostname']+config['DQPServerPort']
 
-    request = downXDT_pb2.DataRequest(key=key, ChunkSize=chunkSizeInBytes)
+    request = downXDT_pb2.DataRequest(key=key)
     with grpc.insecure_channel(serverAddr) as channel:
         stub = downXDT_pb2_grpc.XDTtoFnStub(channel)
         chunks = stub.XDTDataServe(request)

@@ -28,6 +28,8 @@ import (
 	"net"
 	"sync"
 
+	"google.golang.org/grpc/metadata"
+
 	"github.com/ease-lab/vhive-xdt/proto/crossXDT"
 	"github.com/ease-lab/vhive-xdt/proto/downXDT"
 
@@ -38,8 +40,6 @@ import (
 	"go.opentelemetry.io/contrib/instrumentation/google.golang.org/grpc/otelgrpc"
 	"google.golang.org/grpc"
 )
-
-var config utils.Config
 
 // bufferPool is responsible for managing bounded buffers of channels to store data
 var bufferPool transport.BufferPool
@@ -85,8 +85,12 @@ func (s downXDTServer) XDTDataServe(in *downXDT.DataRequest, srv downXDT.XDTtoFn
 }
 
 // PullDataFromSrcQP pulls data from src QP to dst QP
-func PullDataFromSrcQP(ctx context.Context, key string, sQPAddr string, chunkSizeInBytes int) error {
+func PullDataFromSrcQP(ctx context.Context) error {
 
+	headers, _ := metadata.FromOutgoingContext(ctx)
+	key := headers["key"][0]
+	sQPAddr := headers["sqp_addr"][0]
+	routing := headers["routing"][0]
 	conn, err := utils.GetGRPCConn(ctx, sQPAddr, true)
 	if err != nil {
 		log.Errorf("SRC: can not connect with server %v", err)
@@ -94,7 +98,7 @@ func PullDataFromSrcQP(ctx context.Context, key string, sQPAddr string, chunkSiz
 	}
 
 	client := crossXDT.NewStreamDataClient(conn)
-	in := &crossXDT.Request{Key: key, ChunkSize: int64(chunkSizeInBytes)}
+	in := &crossXDT.Request{Key: key}
 	stream, err := client.ServeData(ctx, in)
 	if err != nil {
 		log.Errorf("dQP: open stream error %v", err)
@@ -109,7 +113,7 @@ func PullDataFromSrcQP(ctx context.Context, key string, sQPAddr string, chunkSiz
 		chunk, err := stream.Recv()
 		if err == io.EOF {
 			log.Infof("dQP: %d chunks received", chunkCount)
-			if config.Routing == utils.STORE_FORWARD {
+			if routing == utils.STORE_FORWARD {
 				bufferPool.StoreChannel(key, totalChunks, channel)
 			}
 			return nil
@@ -122,13 +126,13 @@ func PullDataFromSrcQP(ctx context.Context, key string, sQPAddr string, chunkSiz
 		onlyOnce.Do(func() {
 			totalChunks = chunk.TotalChunks
 			log.Debugf("dQP: requesting a new channel")
-			if config.Routing == utils.CUT_THROUGH {
+			if routing == utils.CUT_THROUGH {
 				channel = bufferPool.CreateChannel()
 				bufferPool.StoreChannel(key, chunk.TotalChunks, channel)
-			} else if config.Routing == utils.STORE_FORWARD {
+			} else if routing == utils.STORE_FORWARD {
 				channel = bufferPool.CreateChannel()
 			} else {
-				log.Errorf("dQP: Invalid route type %s. Check config.json", config.Routing)
+				log.Errorf("dQP: Invalid route type %s. Check config", routing)
 			}
 			log.Debugf("dQP: channel allocated")
 			log.Infof("dQP: chunkTotal = %d", chunk.TotalChunks)
@@ -140,9 +144,8 @@ func PullDataFromSrcQP(ctx context.Context, key string, sQPAddr string, chunkSiz
 }
 
 // StartServer starts DstQP server
-func StartServer(receivedConfig utils.Config) {
+func StartServer(config utils.Config) {
 
-	config = receivedConfig
 	bufferPool.Init(config)
 
 	lis, err := net.Listen("tcp", config.DQPServerPort)

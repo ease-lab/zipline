@@ -48,5 +48,4 @@ message Data {
 
 message DataRequest {
   string key = 1;
-  int64 ChunkSize = 2;
 }

@@ -17,6 +17,7 @@ require (
 	github.com/ease-lab/vhive/utils/tracing/go v0.0.0-20210623161727-460bac97d8c0
 	github.com/sirupsen/logrus v1.8.1
 	golang.org/x/net v0.0.0-20210614182718-04defd469f4e
+	google.golang.org/grpc v1.38.0
 	knative.dev/pkg v0.0.0-20210625194144-4cdacd04734a
 	knative.dev/serving v0.23.1
 )

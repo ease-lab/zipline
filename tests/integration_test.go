@@ -33,9 +33,12 @@ import (
 	"testing"
 	"time"
 
+	"google.golang.org/grpc/metadata"
+
 	sdk "github.com/ease-lab/vhive-xdt/sdk/golang"
 	"golang.org/x/net/http2"
 	"golang.org/x/net/http2/h2c"
+	network "knative.dev/networking/pkg"
 	pkgnet "knative.dev/pkg/network"
 	"knative.dev/serving/pkg/queue"
 
@@ -96,27 +99,33 @@ func knativeQP(config utils.Config) {
 	httpProxy.Transport = pkgnet.NewProxyAutoTransport(maxIdleConns /* max-idle */, maxIdleConns /* max-idle-per-host */)
 
 	var composedHandler http.Handler = httpProxy
+	composedHandler = queue.ForwardedShimHandler(composedHandler)
 
-	composedHandler = func(h http.Handler) http.Handler {
-		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+	composedHandler = func(h http.Handler) http.HandlerFunc {
+		return func(w http.ResponseWriter, r *http.Request) {
 			defer h.ServeHTTP(w, r)
 
-			isXDT := r.Header.Get("is_xdt")
-			if isXDT == "true" {
+			if r.Header.Get("is_xdt") == "true" {
+				httpMetadata := map[string]string{
+					"is_xdt":   r.Header.Get("is_xdt"),
+					"key":      r.Header.Get("key"),
+					"sqp_addr": r.Header.Get("sqp_addr"),
+					"routing":  r.Header.Get("routing"),
+				}
+				ctx := metadata.NewOutgoingContext(r.Context(), metadata.New(httpMetadata))
 				log.Infof("pulling from sQP using key %s addr %s", r.Header.Get("key"), r.Header.Get("sqp_addr"))
 				go func() {
 					// FIXME: support many payloads per invocation
-					err := dQP.PullDataFromSrcQP(r.Context(), r.Header.Get("key"), r.Header.Get("sqp_addr"), config.ChunkSizeInBytes)
+					err := dQP.PullDataFromSrcQP(ctx)
 					if err != nil {
 						log.Fatalf("Proxy: Failed to pull data from sQP: %v", err)
 					}
 				}()
 			}
 
-		})
+		}
 	}(composedHandler)
-
-	composedHandler = queue.ForwardedShimHandler(composedHandler)
+	composedHandler = network.NewProbeHandler(composedHandler)
 
 	h2s := &http2.Server{}
 

@@ -64,6 +64,7 @@ func InvokeWithXDT(URL string, xdtPayload utils.Payload, sQPAddr string, chunkSi
 		"is_xdt":   "true",
 		"key":      key,
 		"sqp_addr": sQPAddr,
+		"routing":  config.Routing,
 	}
 	ctx := metadata.NewOutgoingContext(context.Background(), metadata.New(httpMetadata))
 	//  This timeout must be large enough for the request to complete

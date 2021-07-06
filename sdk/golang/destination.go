@@ -55,10 +55,10 @@ func (s downXDTServer) XDTFnCall(ctx context.Context, in *downXDT.InvocationRequ
 
 	if ok && headers["is_xdt"][0] == "true" {
 		key := headers["key"][0]
-		chunkSizeInBytes := config.ChunkSizeInBytes
+		log.Infof("DST: using %s routing", headers["routing"][0])
 
 		// fetch data from dQP
-		payloadBytes, err := FetchFromDQP(ctx, key, config.DQPServerHostname+config.DQPServerPort, chunkSizeInBytes)
+		payloadBytes, err := FetchFromDQP(ctx, key, config.DQPServerHostname+config.DQPServerPort)
 		if err != nil {
 			log.Errorf("DST: FetchFromDQP failed %v", err)
 			return &downXDT.Empty{}, err
@@ -72,7 +72,7 @@ func (s downXDTServer) XDTFnCall(ctx context.Context, in *downXDT.InvocationRequ
 }
 
 // FetchFromDQP fetches data from dQP to DstFn
-func FetchFromDQP(ctx context.Context, key string, dQPAddr string, chunkSizeInBytes int) ([]byte, error) {
+func FetchFromDQP(ctx context.Context, key string, dQPAddr string) ([]byte, error) {
 
 	conn, err := utils.GetGRPCConn(ctx, dQPAddr, false)
 	if err != nil {
@@ -81,7 +81,7 @@ func FetchFromDQP(ctx context.Context, key string, dQPAddr string, chunkSizeInBy
 	}
 
 	client := downXDT.NewXDTtoFnClient(conn)
-	in := &downXDT.DataRequest{Key: key, ChunkSize: int64(chunkSizeInBytes)}
+	in := &downXDT.DataRequest{Key: key}
 	stream, err := client.XDTDataServe(ctx, in)
 	if err != nil {
 		log.Errorf("DST: open stream error %v", err)

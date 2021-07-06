@@ -28,6 +28,8 @@ import (
 	"net/http/httputil"
 	"os"
 
+	"google.golang.org/grpc/metadata"
+
 	"golang.org/x/net/http2"
 	"golang.org/x/net/http2/h2c"
 
@@ -82,12 +84,18 @@ func main() {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			defer h.ServeHTTP(w, r)
 
-			isXDT := r.Header.Get("is_xdt")
-			if isXDT == "true" {
+			if r.Header.Get("is_xdt") == "true" {
+				httpMetadata := map[string]string{
+					"is_xdt":   r.Header.Get("is_xdt"),
+					"key":      r.Header.Get("key"),
+					"sqp_addr": r.Header.Get("sqp_addr"),
+					"routing":  r.Header.Get("routing"),
+				}
+				ctx := metadata.NewOutgoingContext(r.Context(), metadata.New(httpMetadata))
 				log.Infof("pulling from sQP using key %s addr %s", r.Header.Get("key"), r.Header.Get("sqp_addr"))
 				go func() {
 					// FIXME: support many payloads per invocation
-					err := dQP.PullDataFromSrcQP(r.Context(), r.Header.Get("key"), r.Header.Get("sqp_addr"), config.ChunkSizeInBytes)
+					err := dQP.PullDataFromSrcQP(ctx)
 					if err != nil {
 						log.Fatalf("Proxy: Failed to pull data from sQP: %v", err)
 					}
@@ -96,7 +104,6 @@ func main() {
 
 		})
 	}(composedHandler)
-
 	composedHandler = queue.ForwardedShimHandler(composedHandler)
 
 	h2s := &http2.Server{}
