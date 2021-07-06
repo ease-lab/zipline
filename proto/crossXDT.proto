@@ -33,7 +33,6 @@ service StreamData {
 
 message Request {
   string key = 1;
-  int64 ChunkSize = 2;
 }
 
 message Response {

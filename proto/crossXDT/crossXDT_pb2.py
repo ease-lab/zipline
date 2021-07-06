@@ -19,7 +19,7 @@ DESCRIPTOR = _descriptor.FileDescriptor(
   syntax='proto3',
   serialized_options=b'Z,github.com/ease-lab/vhive-xdt/proto/crossXDT',
   create_key=_descriptor._internal_create_key,
-  serialized_pb=b'\n\x0e\x63rossXDT.proto\x12\x08\x63rossXDT\")\n\x07Request\x12\x0b\n\x03key\x18\x01 \x01(\t\x12\x11\n\tChunkSize\x18\x02 \x01(\x03\".\n\x08Response\x12\r\n\x05\x63hunk\x18\x01 \x01(\x0c\x12\x13\n\x0bTotalChunks\x18\x03 \x01(\x03\x32\x44\n\nStreamData\x12\x36\n\tServeData\x12\x11.crossXDT.Request\x1a\x12.crossXDT.Response\"\x00\x30\x01\x42.Z,github.com/ease-lab/vhive-xdt/proto/crossXDTb\x06proto3'
+  serialized_pb=b'\n\x0e\x63rossXDT.proto\x12\x08\x63rossXDT\"\x16\n\x07Request\x12\x0b\n\x03key\x18\x01 \x01(\t\".\n\x08Response\x12\r\n\x05\x63hunk\x18\x01 \x01(\x0c\x12\x13\n\x0bTotalChunks\x18\x03 \x01(\x03\x32\x44\n\nStreamData\x12\x36\n\tServeData\x12\x11.crossXDT.Request\x1a\x12.crossXDT.Response\"\x00\x30\x01\x42.Z,github.com/ease-lab/vhive-xdt/proto/crossXDTb\x06proto3'
 )
 
 
@@ -40,13 +40,6 @@ _REQUEST = _descriptor.Descriptor(
       message_type=None, enum_type=None, containing_type=None,
       is_extension=False, extension_scope=None,
       serialized_options=None, file=DESCRIPTOR,  create_key=_descriptor._internal_create_key),
-    _descriptor.FieldDescriptor(
-      name='ChunkSize', full_name='crossXDT.Request.ChunkSize', index=1,
-      number=2, type=3, cpp_type=2, label=1,
-      has_default_value=False, default_value=0,
-      message_type=None, enum_type=None, containing_type=None,
-      is_extension=False, extension_scope=None,
-      serialized_options=None, file=DESCRIPTOR,  create_key=_descriptor._internal_create_key),
   ],
   extensions=[
   ],
@@ -60,7 +53,7 @@ _REQUEST = _descriptor.Descriptor(
   oneofs=[
   ],
   serialized_start=28,
-  serialized_end=69,
+  serialized_end=50,
 )
 
 
@@ -98,8 +91,8 @@ _RESPONSE = _descriptor.Descriptor(
   extension_ranges=[],
   oneofs=[
   ],
-  serialized_start=71,
-  serialized_end=117,
+  serialized_start=52,
+  serialized_end=98,
 )
 
 DESCRIPTOR.message_types_by_name['Request'] = _REQUEST
@@ -130,8 +123,8 @@ _STREAMDATA = _descriptor.ServiceDescriptor(
   index=0,
   serialized_options=None,
   create_key=_descriptor._internal_create_key,
-  serialized_start=119,
-  serialized_end=187,
+  serialized_start=100,
+  serialized_end=168,
   methods=[
   _descriptor.MethodDescriptor(
     name='ServeData',

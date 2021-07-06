@@ -29,6 +29,8 @@ import (
 	"testing"
 	"time"
 
+	"google.golang.org/grpc/metadata"
+
 	sdk "github.com/ease-lab/vhive-xdt/sdk/golang"
 
 	ctrdlog "github.com/containerd/containerd/log"
@@ -64,8 +66,14 @@ func TestSDK_to_sQP_data_transfer(t *testing.T) {
 	chunkSizeInBytes := config.ChunkSizeInBytes
 
 	start := time.Now()
-
-	if err := sdk.PushData(context.Background(), key, payloadData, config.SQPServerHostname+config.SQPServerPort, chunkSizeInBytes); err != nil {
+	httpMetadata := map[string]string{
+		"is_xdt":   "true",
+		"key":      key,
+		"sqp_addr": config.SQPServerHostname + config.SQPServerPort,
+		"routing":  config.Routing,
+	}
+	ctx := metadata.NewOutgoingContext(context.Background(), metadata.New(httpMetadata))
+	if err := sdk.PushData(ctx, key, payloadData, config.SQPServerHostname+config.SQPServerPort, chunkSizeInBytes); err != nil {
 		log.Fatalf("TestSDK_to_sQP_data_transfer failed %v", err)
 	}
 	duration := time.Since(start)
@@ -85,8 +93,15 @@ func TestSQP_to_dQP_data_transfer(t *testing.T) {
 	chunkSizeInBytes := config.ChunkSizeInBytes
 
 	start := time.Now()
+	httpMetadata := map[string]string{
+		"is_xdt":   "true",
+		"key":      key,
+		"sqp_addr": config.SQPServerHostname + config.SQPServerPort,
+		"routing":  config.Routing,
+	}
+	ctx := metadata.NewOutgoingContext(context.Background(), metadata.New(httpMetadata))
 
-	if err := sdk.PushData(context.Background(), key, payloadData, config.SQPServerHostname+config.SQPServerPort, chunkSizeInBytes); err != nil {
+	if err := sdk.PushData(ctx, key, payloadData, config.SQPServerHostname+config.SQPServerPort, chunkSizeInBytes); err != nil {
 		log.Fatalf("TestSDK_to_sQP_data_transfer failed %v", err)
 	}
 	duration := time.Since(start)
@@ -94,7 +109,7 @@ func TestSQP_to_dQP_data_transfer(t *testing.T) {
 
 	log.Infof("transferred %d bytes from SrcFn to sQP in %s", len(payloadData), duration)
 
-	err := dQP.PullDataFromSrcQP(context.Background(), key, config.SQPServerHostname+config.SQPServerPort, chunkSizeInBytes)
+	err := dQP.PullDataFromSrcQP(ctx)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -115,7 +130,14 @@ func TestDQP_to_DstFn_data_transfer(t *testing.T) {
 	chunkSizeInBytes := config.ChunkSizeInBytes
 
 	start := time.Now()
-	if err := sdk.PushData(context.Background(), key, payloadData, config.SQPServerHostname+config.SQPServerPort, chunkSizeInBytes); err != nil {
+	httpMetadata := map[string]string{
+		"is_xdt":   "true",
+		"key":      key,
+		"sqp_addr": config.SQPServerHostname + config.SQPServerPort,
+		"routing":  config.Routing,
+	}
+	ctx := metadata.NewOutgoingContext(context.Background(), metadata.New(httpMetadata))
+	if err := sdk.PushData(ctx, key, payloadData, config.SQPServerHostname+config.SQPServerPort, chunkSizeInBytes); err != nil {
 		log.Fatalf("TestDQP_to_DstFn_data_transfer failed %v", err)
 	}
 	duration := time.Since(start)
@@ -123,7 +145,7 @@ func TestDQP_to_DstFn_data_transfer(t *testing.T) {
 	log.Infof("transferred %d bytes from SrcFn to sQP in %s", len(payloadData), duration)
 
 	start = time.Now()
-	err := dQP.PullDataFromSrcQP(context.Background(), key, config.SQPServerHostname+config.SQPServerPort, chunkSizeInBytes)
+	err := dQP.PullDataFromSrcQP(ctx)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -132,7 +154,7 @@ func TestDQP_to_DstFn_data_transfer(t *testing.T) {
 	log.Infof("transferred packet from sQP to dQP in %s", duration)
 
 	start = time.Now()
-	payloadBytes, err := sdk.FetchFromDQP(context.Background(), key, config.DQPServerHostname+config.DQPServerPort, chunkSizeInBytes)
+	payloadBytes, err := sdk.FetchFromDQP(context.Background(), key, config.DQPServerHostname+config.DQPServerPort)
 	if err != nil {
 		log.Fatalf("FetchFromDQP failed %v", err)
 	}

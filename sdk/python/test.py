@@ -39,7 +39,13 @@ class UnitTest(unittest.TestCase):
         assert data == b'0123456789'
 
     def test_Push_data(self):
-        PushData(key='secret', payload=b'01234567890',
+        metadata = (
+            ('is_xdt', 'true'),
+            ('key', 'secret'),
+            ('sqp_addr', config['SQPServerHostname']+config['SQPServerPort']),
+            ('routing', config['Routing']),
+        )
+        PushData(metadata=metadata, key='secret', payload=b'01234567890',
                  sQPAddr=config['SQPServerHostname']+config['SQPServerPort'], chunkSizeInBytes=2)
 
 

@@ -19,7 +19,7 @@ DESCRIPTOR = _descriptor.FileDescriptor(
   syntax='proto3',
   serialized_options=b'Z+github.com/ease-lab/vhive-xdt/proto/downXDT',
   create_key=_descriptor._internal_create_key,
-  serialized_pb=b'\n\rdownXDT.proto\x12\x07\x64ownXDT\"$\n\x11InvocationRequest\x12\x0f\n\x07XDTJSON\x18\x01 \x01(\x0c\"\x07\n\x05\x45mpty\"*\n\x04\x44\x61ta\x12\r\n\x05\x63hunk\x18\x01 \x01(\x0c\x12\x13\n\x0bTotalChunks\x18\x03 \x01(\x03\"-\n\x0b\x44\x61taRequest\x12\x0b\n\x03key\x18\x01 \x01(\t\x12\x11\n\tChunkSize\x18\x02 \x01(\x03\x32}\n\x07XDTtoFn\x12\x39\n\tXDTFnCall\x12\x1a.downXDT.InvocationRequest\x1a\x0e.downXDT.Empty\"\x00\x12\x37\n\x0cXDTDataServe\x12\x14.downXDT.DataRequest\x1a\r.downXDT.Data\"\x00\x30\x01\x42-Z+github.com/ease-lab/vhive-xdt/proto/downXDTb\x06proto3'
+  serialized_pb=b'\n\rdownXDT.proto\x12\x07\x64ownXDT\"$\n\x11InvocationRequest\x12\x0f\n\x07XDTJSON\x18\x01 \x01(\x0c\"\x07\n\x05\x45mpty\"*\n\x04\x44\x61ta\x12\r\n\x05\x63hunk\x18\x01 \x01(\x0c\x12\x13\n\x0bTotalChunks\x18\x03 \x01(\x03\"\x1a\n\x0b\x44\x61taRequest\x12\x0b\n\x03key\x18\x01 \x01(\t2}\n\x07XDTtoFn\x12\x39\n\tXDTFnCall\x12\x1a.downXDT.InvocationRequest\x1a\x0e.downXDT.Empty\"\x00\x12\x37\n\x0cXDTDataServe\x12\x14.downXDT.DataRequest\x1a\r.downXDT.Data\"\x00\x30\x01\x42-Z+github.com/ease-lab/vhive-xdt/proto/downXDTb\x06proto3'
 )
 
 
@@ -136,13 +136,6 @@ _DATAREQUEST = _descriptor.Descriptor(
       message_type=None, enum_type=None, containing_type=None,
       is_extension=False, extension_scope=None,
       serialized_options=None, file=DESCRIPTOR,  create_key=_descriptor._internal_create_key),
-    _descriptor.FieldDescriptor(
-      name='ChunkSize', full_name='downXDT.DataRequest.ChunkSize', index=1,
-      number=2, type=3, cpp_type=2, label=1,
-      has_default_value=False, default_value=0,
-      message_type=None, enum_type=None, containing_type=None,
-      is_extension=False, extension_scope=None,
-      serialized_options=None, file=DESCRIPTOR,  create_key=_descriptor._internal_create_key),
   ],
   extensions=[
   ],
@@ -156,7 +149,7 @@ _DATAREQUEST = _descriptor.Descriptor(
   oneofs=[
   ],
   serialized_start=117,
-  serialized_end=162,
+  serialized_end=143,
 )
 
 DESCRIPTOR.message_types_by_name['InvocationRequest'] = _INVOCATIONREQUEST
@@ -203,8 +196,8 @@ _XDTTOFN = _descriptor.ServiceDescriptor(
   index=0,
   serialized_options=None,
   create_key=_descriptor._internal_create_key,
-  serialized_start=164,
-  serialized_end=289,
+  serialized_start=145,
+  serialized_end=270,
   methods=[
   _descriptor.MethodDescriptor(
     name='XDTFnCall',

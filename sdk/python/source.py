@@ -58,23 +58,24 @@ def InvokeWithXDT(URL, xdtPayload, sQPAddr, chunkSizeInBytes):
     key, payloadData, xdtPayload = splitPayload(xdtPayload)
     serialisedPayload = xdtPayload.tobytes()
 
+    global config
+    config = utils.loadConfig()
     metadata = (
         ('is_xdt', 'true'),
         ('key', key),
         ('sqp_addr', sQPAddr),
+        ('routing', config['Routing']),
     )
 
-    global config
-    config = utils.loadConfig()
     mpQueue = mp.Queue()
-    p = mp.Process(target=PushData, args=(key, payloadData, sQPAddr, chunkSizeInBytes, mpQueue,))
+    p = mp.Process(target=PushData, args=(metadata, key, payloadData, sQPAddr, chunkSizeInBytes, mpQueue,))
 
     if config['Routing'] == utils.CUT_THROUGH:
         log.info("SDK: using CutThrough routing")
         p.start()
     elif config['Routing'] == utils.STORE_FORWARD:
         log.info("SDK: using store & forward routing")
-        PushData(key, payloadData, sQPAddr, chunkSizeInBytes)
+        PushData(metadata, key, payloadData, sQPAddr, chunkSizeInBytes)
     else:
         log.fatal("SDK: invalid routing specified in config")
 
@@ -127,13 +128,13 @@ def generate_chunks(payload, key, chunkSizeInBytes):
 
 
 # PushData to sQP
-def PushData(key, payload, sQPAddr, chunkSizeInBytes, mpQueue=None):
+def PushData(metadata, key, payload, sQPAddr, chunkSizeInBytes, mpQueue=None):
 
     try:
         with grpc.insecure_channel(sQPAddr) as channel:
             stub = upXDT_pb2_grpc.StreamDataStub(channel)
             payload_iterator = generate_chunks(payload, key, chunkSizeInBytes)
-            route_summary = stub.SendData(payload_iterator)
+            route_summary = stub.SendData(payload_iterator, metadata=metadata)
             if route_summary == upXDT_pb2.Empty():
                 log.info("Src: payload pushed successfully")
             else:

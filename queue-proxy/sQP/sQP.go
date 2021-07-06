@@ -26,6 +26,8 @@ import (
 	"io"
 	"sync"
 
+	"google.golang.org/grpc/metadata"
+
 	"github.com/ease-lab/vhive-xdt/transport"
 	"github.com/ease-lab/vhive-xdt/utils"
 
@@ -40,8 +42,6 @@ import (
 
 	"google.golang.org/grpc"
 )
-
-var config utils.Config
 
 // bufferPool is responsible for managing bounded buffers of channels to store data
 var bufferPool transport.BufferPool
@@ -61,11 +61,13 @@ func (s upXDTServer) SendData(srv upXDT.StreamData_SendDataServer) error {
 	var onlyOnce sync.Once
 	var channel chan []byte
 	var totalChunks int64
+	headers, _ := metadata.FromIncomingContext(srv.Context())
+	log.Infof("sQP: using %s routing", headers["routing"][0])
 	for {
 		chunk, err := srv.Recv()
 		if err == io.EOF {
 			log.Infof("sQP: %d chunks received", chunkCount)
-			if config.Routing == utils.STORE_FORWARD {
+			if headers["routing"][0] == utils.STORE_FORWARD {
 				bufferPool.StoreChannel(key, totalChunks, channel)
 			}
 			return srv.SendAndClose(&upXDT.Empty{})
@@ -79,13 +81,13 @@ func (s upXDTServer) SendData(srv upXDT.StreamData_SendDataServer) error {
 			key = chunk.Key
 			totalChunks = chunk.TotalChunks
 			log.Debugf("sQP: requesting a new channel")
-			if config.Routing == utils.CUT_THROUGH {
+			if headers["routing"][0] == utils.CUT_THROUGH {
 				channel = bufferPool.CreateChannel()
 				bufferPool.StoreChannel(key, totalChunks, channel)
-			} else if config.Routing == utils.STORE_FORWARD {
+			} else if headers["routing"][0] == utils.STORE_FORWARD {
 				channel = bufferPool.CreateChannel()
 			} else {
-				log.Errorf("sQP: Invalid route type. Check config.json")
+				log.Errorf("sQP: Invalid route type. Check config")
 			}
 			log.Debugf("sQP: channel allocated")
 			log.Infof("sQP: chunkTotal = %d", totalChunks)
@@ -134,9 +136,8 @@ func (s crossXDTServer) ServeData(in *crossXDT.Request, srv crossXDT.StreamData_
 }
 
 // StartServer starts the SrcQP server
-func StartServer(receivedConfig utils.Config) {
+func StartServer(config utils.Config) {
 
-	config = receivedConfig
 	bufferPool.Init(config)
 
 	lis, err := net.Listen("tcp", config.SQPServerPort)
