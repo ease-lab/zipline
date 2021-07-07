@@ -42,6 +42,6 @@ func main() {
 		FullTimestamp:   true,
 		ForceColors:     true})
 
-	config := utils.LoadConfig
+	config := utils.ReadConfig()
 	sdk.StartDstServer(config, handler)
 }

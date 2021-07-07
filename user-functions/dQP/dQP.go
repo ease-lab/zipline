@@ -50,7 +50,7 @@ func main() {
 		FullTimestamp:   true,
 		ForceColors:     true})
 
-	config := utils.LoadConfig
+	config := utils.ReadConfig()
 	if config.TracingEnabled {
 		shutdown, err := tracing.InitBasicTracer(*zipkinURL, "dQP")
 		if err != nil {

@@ -57,7 +57,7 @@ var sampleSize = flag.Int("sample", 10, "sampleSize")
 var URL = flag.String("url", "helloworld.default.192.168.1.240.nip.io", "Function URL")
 var zipkinURL = flag.String("zipkin", "http://localhost:9411/api/v2/spans", "zipkin url")
 var numConcurrentFunctions = flag.Int("concurrentCalls", 5, "num of simultaneous calls")
-var chunkSizeInBytes = utils.LoadConfig.ChunkSizeInBytes
+var chunkSizeInBytes = utils.ReadConfig().ChunkSizeInBytes
 
 func init() {
 	log.SetLevel(log.InfoLevel)
@@ -155,7 +155,7 @@ func preparePayload() utils.Payload {
 
 func TestSdk_InvokeWithXDT(t *testing.T) {
 
-	config := utils.LoadConfig
+	config := utils.ReadConfig()
 	if config.TracingEnabled {
 		shutdown, err := tracing.InitBasicTracer(*zipkinURL, "xdt")
 		if err != nil {
@@ -183,7 +183,7 @@ func TestSdk_InvokeWithXDT(t *testing.T) {
 
 func TestErr_DQPTimeout(t *testing.T) {
 
-	config := utils.LoadConfig
+	config := utils.ReadConfig()
 	if config.TracingEnabled {
 		shutdown, err := tracing.InitBasicTracer(*zipkinURL, "xdt")
 		if err != nil {
@@ -214,7 +214,7 @@ func TestErr_DQPTimeout(t *testing.T) {
 
 func TestParallel_Invoke(t *testing.T) {
 
-	config := utils.LoadConfig
+	config := utils.ReadConfig()
 	if config.TracingEnabled {
 		shutdown, err := tracing.InitBasicTracer(*zipkinURL, "xdt")
 		if err != nil {
@@ -253,7 +253,7 @@ func TestParallel_Invoke(t *testing.T) {
 
 func TestParallel_FanIn(t *testing.T) {
 
-	config := utils.LoadConfig
+	config := utils.ReadConfig()
 	if config.TracingEnabled {
 		shutdown, err := tracing.InitBasicTracer(*zipkinURL, "xdt")
 		if err != nil {
@@ -265,7 +265,7 @@ func TestParallel_FanIn(t *testing.T) {
 	// start server at sQP
 	sQPPort := 50009
 	for i := 0; i < *numConcurrentFunctions; i += 1 {
-		tmpConfig := utils.LoadConfig
+		tmpConfig := utils.ReadConfig()
 		tmpConfig.SQPServerPort = ":" + fmt.Sprint(sQPPort+i)
 		log.Infof("starting sQP server no. %d", i+1)
 		go sQP.StartServer(tmpConfig)
@@ -304,7 +304,7 @@ func TestParallel_FanIn(t *testing.T) {
 
 func TestParallel_FanOut(t *testing.T) {
 
-	config := utils.LoadConfig
+	config := utils.ReadConfig()
 	if config.TracingEnabled {
 		shutdown, err := tracing.InitBasicTracer(*zipkinURL, "xdt")
 		if err != nil {
@@ -359,7 +359,7 @@ func TestParallel_FanOut(t *testing.T) {
 
 func TestPython_SDK(t *testing.T) {
 
-	config := utils.LoadConfig
+	config := utils.ReadConfig()
 	// start servers
 	go sQP.StartServer(config)
 	knativeQP(config)
@@ -367,14 +367,14 @@ func TestPython_SDK(t *testing.T) {
 
 func TestPython_SDKTimeout(t *testing.T) {
 
-	config := utils.LoadConfig
+	config := utils.ReadConfig()
 	// start servers
 	sQP.StartServer(config)
 }
 
 func TestBenchmark_XDT(t *testing.T) {
 
-	config := utils.LoadConfig
+	config := utils.ReadConfig()
 	if *sampleSize < 10 {
 		log.Fatal("invalid sample size. Acceptable input is integers >= 10")
 	}

@@ -40,11 +40,10 @@ import (
 )
 
 type downXDTServer struct {
+	config  utils.Config
+	handler func([]byte)
 	downXDT.UnimplementedXDTtoFnServer
 }
-
-var config utils.Config
-var DestinationHandler func([]byte)
 
 // XDTFnCall is to be called by dQP to invoke DstFn
 func (s downXDTServer) XDTFnCall(ctx context.Context, in *downXDT.InvocationRequest) (*downXDT.Empty, error) {
@@ -58,23 +57,23 @@ func (s downXDTServer) XDTFnCall(ctx context.Context, in *downXDT.InvocationRequ
 		log.Infof("DST: using %s routing", headers["routing"][0])
 
 		// fetch data from dQP
-		payloadBytes, err := FetchFromDQP(ctx, key, config.DQPServerHostname+config.DQPServerPort)
+		payloadBytes, err := FetchFromDQP(ctx, key, s.config)
 		if err != nil {
 			log.Errorf("DST: FetchFromDQP failed %v", err)
 			return &downXDT.Empty{}, err
 		}
 
 		//call destination function
-		DestinationHandler(payloadBytes)
+		s.handler(payloadBytes)
 	}
 
 	return &downXDT.Empty{}, nil
 }
 
 // FetchFromDQP fetches data from dQP to DstFn
-func FetchFromDQP(ctx context.Context, key string, dQPAddr string) ([]byte, error) {
+func FetchFromDQP(ctx context.Context, key string, config utils.Config) ([]byte, error) {
 
-	conn, err := utils.GetGRPCConn(ctx, dQPAddr, false)
+	conn, err := utils.GetGRPCConn(ctx, config.DQPServerHostname+config.DQPServerPort, false)
 	if err != nil {
 		log.Errorf("DST: can not connect with server %v", err)
 		return []byte{}, err
@@ -108,7 +107,7 @@ func FetchFromDQP(ctx context.Context, key string, dQPAddr string) ([]byte, erro
 		onlyOnce.Do(func() {
 			totalChunks = chunk.TotalChunks
 			log.Infof("DST: creating a new buffer")
-			payloadBytes = make([]byte, utils.LoadConfig.StAndFwBufferSize*utils.LoadConfig.ChunkSizeInBytes)
+			payloadBytes = make([]byte, config.StAndFwBufferSize*config.ChunkSizeInBytes)
 			log.Infof("DST: chunkTotal = %d", totalChunks)
 		})
 		log.Debugf("DST: appending chunk number %d", chunkCount)
@@ -119,10 +118,7 @@ func FetchFromDQP(ctx context.Context, key string, dQPAddr string) ([]byte, erro
 }
 
 // StartDstServer starts DstQP server
-func StartDstServer(receivedConfig utils.Config, handler func([]byte)) {
-
-	config = receivedConfig
-	DestinationHandler = handler
+func StartDstServer(config utils.Config, handler func([]byte)) {
 
 	lis, err := net.Listen("tcp", config.DstServerPort)
 	if err != nil {
@@ -135,7 +131,11 @@ func StartDstServer(receivedConfig utils.Config, handler func([]byte)) {
 	} else {
 		server = grpc.NewServer()
 	}
-	downXDT.RegisterXDTtoFnServer(server, downXDTServer{})
+
+	s := downXDTServer{}
+	s.config = config
+	s.handler = handler
+	downXDT.RegisterXDTtoFnServer(server, s)
 
 	log.Infoln("DST: start server")
 	if err := server.Serve(lis); err != nil {

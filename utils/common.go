@@ -59,8 +59,6 @@ const (
 	CUT_THROUGH   = "CutThrough"
 )
 
-var LoadConfig = ReadConfig()
-
 func ReadConfig() Config {
 	log.Debugf("Loading config from env\n")
 	var config Config
