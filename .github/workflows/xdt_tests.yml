@@ -93,8 +93,26 @@ jobs:
       - name: Check out code into the Go module directory
         uses: actions/checkout@v2
       - name: Run benchmarks
+        env:
+          CHUNKSIZEINBYTES: 65536
+          SQPSERVERHOSTNAME: localhost
+          SQPSERVERPORT: :50005
+          DQPSERVERHOSTNAME: localhost
+          DQPSERVERPORT: :50006
+          DSTSERVERHOSTNAME: localhost
+          DSTSERVERPORT: :50007
+          PROXYHOSTNAME: localhost
+          PROXYPORT: :50008
+          CTBUFFERSIZE: 25
+          NUMBEROFBUFFERS: 2
+          STANDFWBUFFERSIZE: 1600
+          ROUTING: CutThrough
+          TRACINGENABLED: false
+          RPCTIMEOUTMAXBACKOFF: 1000
+          RPCTIMEOUTDURATION: 60000
+          RPCRETRYDELAY: 1
+          MAXDSTSERVERTHREADSPYTHON: 10
         run: |
-          sed -i '/Routing/c\  "Routing": "CutThrough",' config.json
           cd tests && go test ./integration_test.go -run TestBenchmark_XDT -v
       - name: Archive log artifacts
         if: ${{ always() }}
