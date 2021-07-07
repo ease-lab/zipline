@@ -21,6 +21,7 @@
 # SOFTWARE.
 
 import json
+from environs import Env
 
 
 class Payload:
@@ -52,8 +53,27 @@ class Payload:
 
 
 def loadConfig():
-    with open('../../config.json') as json_file:
-        return json.load(json_file)
+    env = Env()
+    config = dict()
+    config["ChunkSizeInBytes"] = env.int("CHUNKSIZEINBYTES", 65536)
+    config["SQPServerHostname"] = env.str("SQPSERVERHOSTNAME", "localhost")
+    config["SQPServerPort"] = env.str("SQPSERVERPORT", ":50005")
+    config["DQPServerHostname"] = env.str("DQPSERVERHOSTNAME", "localhost")
+    config["DQPServerPort"] = env.str("DQPSERVERPORT", ":50006")
+    config["DstServerHostname"] = env.str("DSTSERVERHOSTNAME", "localhost")
+    config["DstServerPort"] = env.str("DSTSERVERPORT", ":50007")
+    config["ProxyHostname"] = env.str("PROXYHOSTNAME", "localhost")
+    config["ProxyPort"] = env.str("PROXYPORT", ":50008")
+    config["CTBufferSize"] = env.int("CTBUFFERSIZE", 25)
+    config["NumberOfBuffers"] = env.int("NUMBEROFBUFFERS", 2)
+    config["StAndFwBufferSize"] = env.int("STANDFWBUFFERSIZE", 1600)
+    config["Routing"] = env.str("ROUTING", "Store&Forward")
+    config["TracingEnabled"] = env.bool("TRACINGENABLED", False)
+    config["RPCTimeoutMaxBackoff"] = env.int("RPCTIMEOUTMAXBACKOFF", 1000)
+    config["RPCTimeoutDuration"] = env.int("RPCTIMEOUTDURATION", 60000)
+    config["RPCRetryDelay"] = env.int("RPCRETRYDELAY", 1)
+    config["MaxDstServerThreadsPython"] = env.int("MAXDSTSERVERTHREADSPYTHON", 10)
+    return config
 
 
 STORE_FORWARD = "Store&Forward"

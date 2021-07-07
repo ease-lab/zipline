@@ -53,13 +53,12 @@ def splitPayload(xdtPayload):
 
 
 # InvokeWithXDT invokes the RPC call with XDT
-def InvokeWithXDT(URL, xdtPayload, sQPAddr, chunkSizeInBytes):
+def InvokeWithXDT(URL, xdtPayload, config):
 
+    sQPAddr = config["SQPServerHostname"]+config["SQPServerPort"]
     key, payloadData, xdtPayload = splitPayload(xdtPayload)
     serialisedPayload = xdtPayload.tobytes()
 
-    global config
-    config = utils.loadConfig()
     metadata = (
         ('is_xdt', 'true'),
         ('key', key),
@@ -68,18 +67,18 @@ def InvokeWithXDT(URL, xdtPayload, sQPAddr, chunkSizeInBytes):
     )
 
     mpQueue = mp.Queue()
-    p = mp.Process(target=PushData, args=(metadata, key, payloadData, sQPAddr, chunkSizeInBytes, mpQueue,))
+    p = mp.Process(target=PushData, args=(metadata, key, payloadData, sQPAddr, config["ChunkSizeInBytes"], mpQueue,))
 
     if config['Routing'] == utils.CUT_THROUGH:
         log.info("SDK: using CutThrough routing")
         p.start()
     elif config['Routing'] == utils.STORE_FORWARD:
         log.info("SDK: using store & forward routing")
-        PushData(metadata, key, payloadData, sQPAddr, chunkSizeInBytes)
+        PushData(metadata, key, payloadData, sQPAddr, config["ChunkSizeInBytes"])
     else:
         log.fatal("SDK: invalid routing specified in config")
 
-    fnInvocationCall(URL, serialisedPayload, metadata)
+    fnInvocationCall(URL, serialisedPayload, metadata, config)
     if config['Routing'] == utils.CUT_THROUGH:
         try:
             err = mpQueue.get(block=True, timeout=config['RPCTimeoutDuration']/1000)
@@ -92,11 +91,10 @@ def InvokeWithXDT(URL, xdtPayload, sQPAddr, chunkSizeInBytes):
 
 
 # fnInvocationCall makes fn invocation call to dQP with xdt payload
-def fnInvocationCall(URL, serialisedPayload, metadata):
+def fnInvocationCall(URL, serialisedPayload, metadata, config):
 
     channel = grpc.insecure_channel(URL)
     channel_ready_future = grpc.channel_ready_future(channel)
-    global config
     try:
         channel_ready_future.result(timeout=config['RPCTimeoutDuration']/1000)
     except grpc.FutureTimeoutError as e:
