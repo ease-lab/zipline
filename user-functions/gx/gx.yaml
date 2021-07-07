@@ -1,0 +1,49 @@
+apiVersion: serving.knative.dev/v1
+kind: Service
+metadata:
+  name: gx
+  namespace: default
+spec:
+  template:
+    spec:
+      containers:
+        - image: docker.io/vhiveease/gx:latest
+          imagePullPolicy: Always
+          env:
+            - name: CHUNKSIZEINBYTES
+              value: "65536"
+            - name: SQPSERVERHOSTNAME
+              value: "localhost"
+            - name: SQPSERVERPORT
+              value: ":50005"
+            - name: DQPSERVERHOSTNAME
+              value: "localhost"
+            - name: DQPSERVERPORT
+              value: ":50006"
+            - name: DSTSERVERHOSTNAME
+              value: "localhost"
+            - name: DSTSERVERPORT
+              value: ":50007"
+            - name: PROXYHOSTNAME
+              value: "localhost"
+            - name: PROXYPORT
+              value: ":50008"
+            - name: CTBUFFERSIZE
+              value: "25"
+            - name: NUMBEROFBUFFERS
+              value: "2"
+            - name: STANDFWBUFFERSIZE
+              value: "1600"
+            - name: TRACINGENABLED
+              value: "false"
+            - name: RPCTIMEOUTMAXBACKOFF
+              value: "1000"
+            - name: RPCTIMEOUTDURATION
+              value: "60000"
+            - name: RPCRETRYDELAY
+              value: "1"
+            - name: MAXDSTSERVERTHREADSPYTHON
+              value: "10"
+          ports:
+            - name: h2c
+              containerPort: 50007

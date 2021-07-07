@@ -24,7 +24,6 @@ package main
 
 import (
 	"flag"
-	"os"
 
 	ctrdlog "github.com/containerd/containerd/log"
 	"github.com/ease-lab/vhive-xdt/queue-proxy/sQP"
@@ -42,7 +41,7 @@ func main() {
 		FullTimestamp:   true,
 		ForceColors:     true})
 
-	config := utils.ReadConfig(os.Getenv("KO_DATA_PATH") + "/config.json")
+	config := utils.LoadConfig
 	if config.TracingEnabled {
 		shutdown, err := tracing.InitBasicTracer(*zipkinURL, "dQP")
 		if err != nil {
