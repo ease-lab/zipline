@@ -29,24 +29,24 @@ import (
 )
 
 type Config struct {
-	ChunkSizeInBytes          int    `default:"65536"`
-	SQPServerHostname         string `default:"localhost"`
-	SQPServerPort             string `default:":50005"`
-	DQPServerHostname         string `default:"localhost"`
-	DQPServerPort             string `default:":50006"`
-	DstServerHostname         string `default:"localhost"`
-	DstServerPort             string `default:":50007"`
-	ProxyHostname             string `default:"localhost"`
-	ProxyPort                 string `default:":50008"`
-	CTBufferSize              int    `default:"25"`
-	NumberOfBuffers           int    `default:"2"`
-	StAndFwBufferSize         int    `default:"1600"`
-	Routing                   string `default:"Store&Forward"`
-	TracingEnabled            bool   `default:"false"`
-	RPCTimeoutMaxBackoff      int    `default:"1000"`
-	RPCTimeoutDuration        int    `default:"60000"`
-	RPCRetryDelay             int    `default:"1"`
-	MaxDstServerThreadsPython int    `default:"10"`
+	ChunkSizeInBytes          int    `default:"65536" envconfig:"CHUNK_SIZE_IN_BYTES"`
+	SQPServerHostname         string `default:"localhost" envconfig:"SQP_SERVER_HOSTNAME"`
+	SQPServerPort             string `default:":50005" envconfig:"SQP_SERVER_PORT"`
+	DQPServerHostname         string `default:"localhost" envconfig:"DQP_SERVER_HOSTNAME"`
+	DQPServerPort             string `default:":50006" envconfig:"DQP_SERVER_PORT"`
+	DstServerHostname         string `default:"localhost" envconfig:"DST_SERVER_HOSTNAME"`
+	DstServerPort             string `default:":50007" envconfig:"DST_SERVER_PORT"`
+	ProxyHostname             string `default:"localhost" envconfig:"PROXY_HOSTNAME"`
+	ProxyPort                 string `default:":50008" envconfig:"PROXY_PORT"`
+	CTBufferSize              int    `default:"25" envconfig:"CT_BUFFER_SIZE"`
+	NumberOfBuffers           int    `default:"2" envconfig:"NUMBER_OF_BUFFERS"`
+	StAndFwBufferSize         int    `default:"1600" envconfig:"ST_AND_FW_BUFFER_SIZE"`
+	Routing                   string `default:"Store&Forward" envconfig:"ROUTING"`
+	TracingEnabled            bool   `default:"false" envconfig:"TRACING_ENABLED"`
+	RPCTimeoutMaxBackoff      int    `default:"1000" envconfig:"RPC_TIMEOUT_MAX_BACK_OFF"`
+	RPCTimeoutDuration        int    `default:"60000" envconfig:"RPC_TIMEOUT_DURATION"`
+	RPCRetryDelay             int    `default:"1" envconfig:"RPC_RETRY_DELAY"`
+	MaxDstServerThreadsPython int    `default:"10" envconfig:"MAX_DST_SERVER_THREADS_PYTHON"`
 }
 
 type Payload struct {

@@ -10,39 +10,23 @@ spec:
         - image: docker.io/vhiveease/gx:latest
           imagePullPolicy: Always
           env:
-            - name: CHUNKSIZEINBYTES
+            - name: CHUNK_SIZE_IN_BYTES
               value: "65536"
-            - name: SQPSERVERHOSTNAME
-              value: "localhost"
-            - name: SQPSERVERPORT
-              value: ":50005"
-            - name: DQPSERVERHOSTNAME
-              value: "localhost"
-            - name: DQPSERVERPORT
-              value: ":50006"
-            - name: DSTSERVERHOSTNAME
-              value: "localhost"
-            - name: DSTSERVERPORT
-              value: ":50007"
-            - name: PROXYHOSTNAME
-              value: "localhost"
-            - name: PROXYPORT
-              value: ":50008"
-            - name: CTBUFFERSIZE
+            - name: CT_BUFFER_SIZE
               value: "25"
-            - name: NUMBEROFBUFFERS
+            - name: NUMBER_OF_BUFFERS
               value: "2"
-            - name: STANDFWBUFFERSIZE
+            - name: ST_AND_FW_BUFFER_SIZE
               value: "1600"
-            - name: TRACINGENABLED
+            - name: ROUTING
               value: "false"
-            - name: RPCTIMEOUTMAXBACKOFF
+            - name: TRACING_ENABLED
               value: "1000"
-            - name: RPCTIMEOUTDURATION
+            - name: RPC_TIMEOUT_MAX_BACK_OFF
               value: "60000"
-            - name: RPCRETRYDELAY
+            - name: RPC_TIMEOUT_DURATION
               value: "1"
-            - name: MAXDSTSERVERTHREADSPYTHON
+            - name: RPC_RETRY_DELAY
               value: "10"
           ports:
             - name: h2c
