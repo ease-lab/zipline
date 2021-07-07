@@ -23,32 +23,30 @@
 package utils
 
 import (
-	"encoding/json"
-	"io/ioutil"
-	"os"
+	"github.com/kelseyhightower/envconfig"
 
 	log "github.com/sirupsen/logrus"
 )
 
 type Config struct {
-	ChunkSizeInBytes          int
-	DQPServerPort             string
-	DstServerPort             string
-	SQPServerPort             string
-	ProxyPort                 string
-	ProxyHostname             string
-	DQPServerHostname         string
-	DstServerHostname         string
-	SQPServerHostname         string
-	CTBufferSize              int
-	NumberOfBuffers           int
-	StAndFwBufferSize         int
-	Routing                   string
-	TracingEnabled            bool
-	RPCTimeoutMaxBackoff      int
-	RPCTimeoutDuration        int
-	RPCRetryDelay             int
-	MaxDstServerThreadsPython int
+	ChunkSizeInBytes          int    `default:"65536"`
+	SQPServerHostname         string `default:"localhost"`
+	SQPServerPort             string `default:":50005"`
+	DQPServerHostname         string `default:"localhost"`
+	DQPServerPort             string `default:":50006"`
+	DstServerHostname         string `default:"localhost"`
+	DstServerPort             string `default:":50007"`
+	ProxyHostname             string `default:"localhost"`
+	ProxyPort                 string `default:":50008"`
+	CTBufferSize              int    `default:"25"`
+	NumberOfBuffers           int    `default:"2"`
+	StAndFwBufferSize         int    `default:"1600"`
+	Routing                   string `default:"Store&Forward"`
+	TracingEnabled            bool   `default:"false"`
+	RPCTimeoutMaxBackoff      int    `default:"1000"`
+	RPCTimeoutDuration        int    `default:"60000"`
+	RPCRetryDelay             int    `default:"1"`
+	MaxDstServerThreadsPython int    `default:"10"`
 }
 
 type Payload struct {
@@ -61,50 +59,14 @@ const (
 	CUT_THROUGH   = "CutThrough"
 )
 
-var LoadConfig = ReadConfig("../config.json")
+var LoadConfig = ReadConfig()
 
-func ReadConfig(file string) Config {
-	log.Debugf("Opening JSON file with config: %s\n", file)
-	jsonFile, err := os.Open(file)
-	if err != nil {
-		log.Error("Config file not found. Using defaults")
-		return Config{
-			ChunkSizeInBytes:          65536,
-			SQPServerHostname:         "localhost",
-			DQPServerPort:             ":50006",
-			DQPServerHostname:         "localhost",
-			DstServerPort:             ":50007",
-			DstServerHostname:         "localhost",
-			SQPServerPort:             ":50005",
-			ProxyHostname:             "localhost",
-			ProxyPort:                 ":50008",
-			NumberOfBuffers:           2,
-			CTBufferSize:              25,
-			StAndFwBufferSize:         1600,
-			Routing:                   "Store&Forward",
-			TracingEnabled:            false,
-			RPCTimeoutMaxBackoff:      1000,
-			RPCTimeoutDuration:        60000,
-			RPCRetryDelay:             1,
-			MaxDstServerThreadsPython: 10,
-		}
-	}
-	defer func() {
-		err = jsonFile.Close()
-		if err != nil {
-			log.Errorf("transport: Error closing the config file")
-		}
-	}()
-
-	jsonByteValue, err := ioutil.ReadAll(jsonFile)
-	if err != nil {
-		log.Fatal(err)
-	}
-
+func ReadConfig() Config {
+	log.Debugf("Loading config from env\n")
 	var config Config
-	if err = json.Unmarshal(jsonByteValue, &config); err != nil {
-		log.Fatal(err)
+	err := envconfig.Process("", &config)
+	if err != nil {
+		log.Fatalf("Error loding config environment variables: %v", err.Error())
 	}
-
 	return config
 }

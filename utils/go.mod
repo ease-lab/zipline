@@ -3,6 +3,7 @@ module github.com/ease-lab/vhive-xdt/utils
 go 1.16
 
 require (
+	github.com/kelseyhightower/envconfig v1.4.0
 	github.com/pkg/errors v0.9.1
 	github.com/sirupsen/logrus v1.8.1
 	go.opentelemetry.io/contrib/instrumentation/google.golang.org/grpc/otelgrpc v0.20.0

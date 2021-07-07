@@ -173,7 +173,7 @@ func TestSdk_InvokeWithXDT(t *testing.T) {
 	start := time.Now()
 	log.Infof("starting integ test")
 	url := config.ProxyHostname + config.ProxyPort
-	if err := sdk.InvokeWithXDT(url, preparePayload(), config.SQPServerHostname+config.SQPServerPort, chunkSizeInBytes); err != nil {
+	if err := sdk.InvokeWithXDT(url, preparePayload(), config); err != nil {
 		log.Fatalf("TestSdk_InvokeWithXDT failed %v", err)
 	}
 	elapsed := time.Since(start)
@@ -202,7 +202,7 @@ func TestErr_DQPTimeout(t *testing.T) {
 	start := time.Now()
 	log.Infof("starting integ test")
 	url := config.ProxyHostname + config.ProxyPort
-	if err := sdk.InvokeWithXDT(url, preparePayload(), config.SQPServerHostname+config.SQPServerPort, chunkSizeInBytes); err == context.DeadlineExceeded {
+	if err := sdk.InvokeWithXDT(url, preparePayload(), config); err == context.DeadlineExceeded {
 		log.Errorf("TestSdk_InvokeWithXDT failed predictably")
 	} else {
 		log.Fatalf("Unexpected Error Occured: %v", err)
@@ -236,7 +236,7 @@ func TestParallel_Invoke(t *testing.T) {
 	errChannel := make(chan error, *numConcurrentFunctions)
 	for i := 0; i < *numConcurrentFunctions; i += 1 {
 		go func() {
-			errChannel <- sdk.InvokeWithXDT(url, preparePayload(), config.SQPServerHostname+config.SQPServerPort, chunkSizeInBytes)
+			errChannel <- sdk.InvokeWithXDT(url, preparePayload(), config)
 		}()
 	}
 	for i := 0; i < *numConcurrentFunctions; i += 1 {
@@ -285,7 +285,8 @@ func TestParallel_FanIn(t *testing.T) {
 	for i := 0; i < numberOfSources; i += 1 {
 		i := i
 		go func() {
-			errChannel <- sdk.InvokeWithXDT(url, preparePayload(), ":"+fmt.Sprint(sQPPort+i), chunkSizeInBytes)
+			config.SQPServerPort = ":" + fmt.Sprint(sQPPort+i)
+			errChannel <- sdk.InvokeWithXDT(url, preparePayload(), config)
 		}()
 	}
 
@@ -340,7 +341,7 @@ func TestParallel_FanOut(t *testing.T) {
 	for i := 0; i < numberOfSources; i += 1 {
 		url := ":" + fmt.Sprint(dQPPort+i+*numConcurrentFunctions+*numConcurrentFunctions)
 		go func() {
-			errChannel <- sdk.InvokeWithXDT(url, preparePayload(), config.SQPServerHostname+config.SQPServerPort, chunkSizeInBytes)
+			errChannel <- sdk.InvokeWithXDT(url, preparePayload(), config)
 		}()
 	}
 
@@ -401,7 +402,7 @@ func TestBenchmark_XDT(t *testing.T) {
 
 		for i := 0; i < sampleSize; i += 1 {
 			start := time.Now()
-			if err := sdk.InvokeWithXDT(url, payloadToSend, config.SQPServerHostname+config.SQPServerPort, chunkSizeInBytes); err != nil {
+			if err := sdk.InvokeWithXDT(url, payloadToSend, config); err != nil {
 				log.Fatalf("TestBenchmark_XDT failed %v", err)
 			}
 			latencyInUs := time.Since(start).Microseconds()
