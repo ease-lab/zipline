@@ -284,10 +284,10 @@ func TestParallel_FanIn(t *testing.T) {
 
 	for i := 0; i < numberOfSources; i += 1 {
 		i := i
-		go func() {
+		go func(config utils.Config) {
 			config.SQPServerPort = ":" + fmt.Sprint(sQPPort+i)
 			errChannel <- sdk.InvokeWithXDT(url, preparePayload(), config)
-		}()
+		}(config)
 	}
 
 	for i := 0; i < numberOfSources; i += 1 {
