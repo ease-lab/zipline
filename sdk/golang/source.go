@@ -52,8 +52,9 @@ func splitPayload(xdtPayload *utils.Payload) (string, []byte) {
 }
 
 // InvokeWithXDT invokes the RPC call with XDT
-func InvokeWithXDT(URL string, xdtPayload utils.Payload, sQPAddr string, chunkSizeInBytes int) error {
+func InvokeWithXDT(URL string, xdtPayload utils.Payload, config utils.Config) error {
 
+	sQPAddr := config.SQPServerHostname + config.SQPServerPort
 	key, payloadData := splitPayload(&xdtPayload)
 	serialisedPayload, err := json.Marshal(xdtPayload)
 	if err != nil {
@@ -68,13 +69,13 @@ func InvokeWithXDT(URL string, xdtPayload utils.Payload, sQPAddr string, chunkSi
 	}
 	ctx := metadata.NewOutgoingContext(context.Background(), metadata.New(httpMetadata))
 	//  This timeout must be large enough for the request to complete
-	timeoutDuration := time.Duration(utils.LoadConfig.RPCTimeoutDuration) * time.Millisecond
+	timeoutDuration := time.Duration(config.RPCTimeoutDuration) * time.Millisecond
 	ctx, cancel := context.WithTimeout(ctx, timeoutDuration)
 	defer cancel()
 
 	errorPushData := make(chan error, 1)
-	go func() { errorPushData <- PushData(ctx, key, payloadData, sQPAddr, chunkSizeInBytes) }()
-	if utils.LoadConfig.Routing == utils.STORE_FORWARD {
+	go func() { errorPushData <- PushData(ctx, key, payloadData, sQPAddr, config.ChunkSizeInBytes) }()
+	if config.Routing == utils.STORE_FORWARD {
 		log.Info("SDK: using store & forward routing")
 		select {
 		case <-ctx.Done():
@@ -103,7 +104,7 @@ func InvokeWithXDT(URL string, xdtPayload utils.Payload, sQPAddr string, chunkSi
 		}
 	}
 
-	if utils.LoadConfig.Routing == utils.CUT_THROUGH {
+	if config.Routing == utils.CUT_THROUGH {
 		log.Info("SDK: using cut through routing")
 		// Wait for completion and return the first error (if any)
 		select {
