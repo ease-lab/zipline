@@ -125,5 +125,7 @@ jobs:
         run: sudo apt-get install psmisc
       - name: Check out code into the Go module directory
         uses: actions/checkout@v2
+      - name: install environs package
+        run: pip install environs --user
       - name: Run test
         run: make python-${{ matrix.test-type }}-test
