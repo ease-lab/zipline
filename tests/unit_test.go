@@ -49,8 +49,8 @@ func init() {
 		FullTimestamp:   true,
 		ForceColors:     true})
 
-	go sQP.StartServer(utils.LoadConfig)
-	go dQP.StartServer(utils.LoadConfig)
+	go sQP.StartServer(utils.ReadConfig())
+	go dQP.StartServer(utils.ReadConfig())
 }
 
 func TestSDK_to_sQP_data_transfer(t *testing.T) {
@@ -62,7 +62,7 @@ func TestSDK_to_sQP_data_transfer(t *testing.T) {
 	if _, err := rand.Read(payloadData); err != nil {
 		log.Fatal(err)
 	}
-	config := utils.LoadConfig
+	config := utils.ReadConfig()
 	chunkSizeInBytes := config.ChunkSizeInBytes
 
 	start := time.Now()
@@ -89,7 +89,7 @@ func TestSQP_to_dQP_data_transfer(t *testing.T) {
 	if _, err := rand.Read(payloadData); err != nil {
 		log.Fatal(err)
 	}
-	config := utils.LoadConfig
+	config := utils.ReadConfig()
 	chunkSizeInBytes := config.ChunkSizeInBytes
 
 	start := time.Now()
@@ -126,7 +126,7 @@ func TestDQP_to_DstFn_data_transfer(t *testing.T) {
 	if _, err := rand.Read(payloadData); err != nil {
 		log.Fatal(err)
 	}
-	config := utils.LoadConfig
+	config := utils.ReadConfig()
 	chunkSizeInBytes := config.ChunkSizeInBytes
 
 	start := time.Now()
@@ -154,7 +154,7 @@ func TestDQP_to_DstFn_data_transfer(t *testing.T) {
 	log.Infof("transferred packet from sQP to dQP in %s", duration)
 
 	start = time.Now()
-	payloadBytes, err := sdk.FetchFromDQP(context.Background(), key, config.DQPServerHostname+config.DQPServerPort)
+	payloadBytes, err := sdk.FetchFromDQP(context.Background(), key, config)
 	if err != nil {
 		log.Fatalf("FetchFromDQP failed %v", err)
 	}

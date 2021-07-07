@@ -105,7 +105,7 @@ func main() {
 		FullTimestamp:   true,
 		ForceColors:     true})
 
-	config := utils.LoadConfig
+	config := utils.ReadConfig()
 	if *dockerCompose {
 		transferPayload(config, "dQP:50006", "sQP:50005", *transferSize)
 	} else {
