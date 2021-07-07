@@ -51,8 +51,8 @@ type producerServer struct {
 
 func (ps producerServer) SayHello(ctx context.Context, req *pb.HelloRequest) (*pb.HelloReply, error) {
 	// establish a connection
-	sQPAddr := fetchSelfIP() + ps.config.SQPServerPort
-	duration := transferPayload(ps.config, ps.url, sQPAddr, ps.transferSize)
+	ps.config.SQPServerHostname = fetchSelfIP()
+	duration := transferPayload(ps.config, ps.transferSize)
 	return &pb.HelloReply{Message: fmt.Sprintf("Transferred %d KB in %s", ps.transferSize, duration)}, nil
 }
 
@@ -73,7 +73,7 @@ func fetchSelfIP() string {
 	return ""
 }
 
-func transferPayload(config utils.Config, url string, sQPAddr string, transferSize int) time.Duration {
+func transferPayload(config utils.Config, transferSize int) time.Duration {
 	payloadData := make([]byte, transferSize*1024) // 10MiB
 	if _, err := rand.Read(payloadData); err != nil {
 		log.Fatal(err)
@@ -86,7 +86,8 @@ func transferPayload(config utils.Config, url string, sQPAddr string, transferSi
 
 	start := time.Now()
 	log.Infof("starting XDT call")
-	log.Infof("using %s as the SQP addr", sQPAddr)
+	log.Infof("using %s as the SQP addr", config.SQPServerHostname+config.SQPServerPort)
+	url := config.ProxyHostname + config.ProxyPort
 	if err := sdk.InvokeWithXDT(url, payloadToSend, config); err != nil {
 		log.Fatalf("SQP_to_dQP_data_transfer failed %v", err)
 	}
@@ -94,7 +95,7 @@ func transferPayload(config utils.Config, url string, sQPAddr string, transferSi
 }
 
 func main() {
-	dockerCompose := flag.Bool("docker-compose", false, "Set to true when used with docker compose")
+	dockerCompose := flag.Bool("dockerCompose", false, "Set to true when used with docker compose")
 	url := flag.String("url", "gx.default.192.168.1.240.sslip.io", "Destination function url")
 	transferSize := flag.Int("transferSize", 10000, "Number of KB's to transfer")
 	flag.Parse()
@@ -107,7 +108,7 @@ func main() {
 
 	config := utils.ReadConfig()
 	if *dockerCompose {
-		transferPayload(config, "dQP:50006", "sQP:50005", *transferSize)
+		transferPayload(config, *transferSize)
 	} else {
 		var grpcServer *grpc.Server
 		if config.TracingEnabled {

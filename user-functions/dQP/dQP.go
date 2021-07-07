@@ -111,7 +111,7 @@ func main() {
 		Addr:    config.ProxyPort,
 		Handler: h2c.NewHandler(composedHandler, h2s),
 	}
-	log.Infof("Listening [:50005]...\n")
+	log.Infof("Proxy Listening on %s\n", config.ProxyPort)
 	err := server.ListenAndServe()
 	if err != nil {
 		log.Errorf("failed to start proxy server")
