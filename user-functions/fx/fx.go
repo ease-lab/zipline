@@ -28,7 +28,6 @@ import (
 	"flag"
 	"fmt"
 	"net"
-	"os"
 	"time"
 
 	"go.opentelemetry.io/contrib/instrumentation/google.golang.org/grpc/otelgrpc"
@@ -80,7 +79,6 @@ func transferPayload(config utils.Config, url string, sQPAddr string, transferSi
 		log.Fatal(err)
 	}
 
-	chunkSizeInBytes := config.ChunkSizeInBytes
 	payloadToSend := utils.Payload{
 		FunctionName: "HelloXDT",
 		Data:         payloadData,
@@ -89,7 +87,7 @@ func transferPayload(config utils.Config, url string, sQPAddr string, transferSi
 	start := time.Now()
 	log.Infof("starting XDT call")
 	log.Infof("using %s as the SQP addr", sQPAddr)
-	if err := sdk.InvokeWithXDT(url, payloadToSend, sQPAddr, chunkSizeInBytes); err != nil {
+	if err := sdk.InvokeWithXDT(url, payloadToSend, config); err != nil {
 		log.Fatalf("SQP_to_dQP_data_transfer failed %v", err)
 	}
 	return time.Since(start)
@@ -107,13 +105,10 @@ func main() {
 		FullTimestamp:   true,
 		ForceColors:     true})
 
+	config := utils.LoadConfig
 	if *dockerCompose {
-		config := utils.ReadConfig(os.Getenv("KO_DATA_PATH") + "/config.json")
 		transferPayload(config, "dQP:50006", "sQP:50005", *transferSize)
 	} else {
-		// load the default config
-		config := utils.ReadConfig("")
-
 		var grpcServer *grpc.Server
 		if config.TracingEnabled {
 			grpcServer = grpc.NewServer(grpc.UnaryInterceptor(otelgrpc.UnaryServerInterceptor()))

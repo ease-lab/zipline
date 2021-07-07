@@ -26,7 +26,6 @@ import (
 	"flag"
 	"net/http"
 	"net/http/httputil"
-	"os"
 
 	"google.golang.org/grpc/metadata"
 
@@ -51,7 +50,7 @@ func main() {
 		FullTimestamp:   true,
 		ForceColors:     true})
 
-	config := utils.ReadConfig(os.Getenv("KO_DATA_PATH") + "/config.json")
+	config := utils.LoadConfig
 	if config.TracingEnabled {
 		shutdown, err := tracing.InitBasicTracer(*zipkinURL, "dQP")
 		if err != nil {

@@ -23,9 +23,6 @@
 package main
 
 import (
-	"flag"
-	"os"
-
 	ctrdlog "github.com/containerd/containerd/log"
 	log "github.com/sirupsen/logrus"
 
@@ -38,8 +35,6 @@ var handler = func(data []byte) {
 }
 
 func main() {
-	dockerCompose := flag.Bool("docker-compose", false, "Set to true when used with docker compose")
-	flag.Parse()
 
 	log.SetLevel(log.InfoLevel)
 	log.SetFormatter(&log.TextFormatter{
@@ -47,12 +42,6 @@ func main() {
 		FullTimestamp:   true,
 		ForceColors:     true})
 
-	var config utils.Config
-	if *dockerCompose {
-		config = utils.ReadConfig(os.Getenv("KO_DATA_PATH") + "/config.json")
-	} else {
-		// Load default config
-		config = utils.ReadConfig("")
-	}
+	config := utils.LoadConfig
 	sdk.StartDstServer(config, handler)
 }

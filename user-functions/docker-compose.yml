@@ -27,6 +27,7 @@ services:
     image: vhiveease/dqp
     expose:
       - "50006"
+
   sQP:
     image: vhiveease/sqp
     expose:
