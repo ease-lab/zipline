@@ -67,7 +67,7 @@ def loadConfig():
     config["CTBufferSize"] = env.int("CT_BUFFER_SIZE", 25)
     config["NumberOfBuffers"] = env.int("NUMBER_OF_BUFFERS", 2)
     config["StAndFwBufferSize"] = env.int("ST_AND_FW_BUFFER_SIZE", 1600)
-    config["Routing"] = env.str("ROUTING", "Store&Forward")
+    config["Routing"] = env.str("ROUTING", "CutThrough")
     config["TracingEnabled"] = env.bool("TRACING_ENABLED", False)
     config["RPCTimeoutMaxBackoff"] = env.int("RPC_TIMEOUT_MAX_BACK_OFF", 1000)
     config["RPCTimeoutDuration"] = env.int("RPC_TIMEOUT_DURATION", 60000)
