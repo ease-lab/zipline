@@ -42,6 +42,7 @@ import (
 type downXDTServer struct {
 	config  utils.Config
 	handler func([]byte)
+	client  downXDT.XDTtoFnClient
 	downXDT.UnimplementedXDTtoFnServer
 }
 
@@ -57,7 +58,7 @@ func (s downXDTServer) XDTFnCall(ctx context.Context, in *downXDT.InvocationRequ
 		log.Infof("DST: using %s routing", headers["routing"][0])
 
 		// fetch data from dQP
-		payloadBytes, err := FetchFromDQP(ctx, key, s.config)
+		payloadBytes, err := FetchFromDQP(ctx, key, s.client, s.config)
 		if err != nil {
 			log.Errorf("DST: FetchFromDQP failed %v", err)
 			return &downXDT.Empty{}, err
@@ -71,15 +72,8 @@ func (s downXDTServer) XDTFnCall(ctx context.Context, in *downXDT.InvocationRequ
 }
 
 // FetchFromDQP fetches data from dQP to DstFn
-func FetchFromDQP(ctx context.Context, key string, config utils.Config) ([]byte, error) {
+func FetchFromDQP(ctx context.Context, key string, client downXDT.XDTtoFnClient, config utils.Config) ([]byte, error) {
 
-	conn, err := utils.GetGRPCConn(ctx, config.DQPServerHostname+config.DQPServerPort, false)
-	if err != nil {
-		log.Errorf("DST: can not connect with server %v", err)
-		return []byte{}, err
-	}
-
-	client := downXDT.NewXDTtoFnClient(conn)
 	in := &downXDT.DataRequest{Key: key}
 	stream, err := client.XDTDataServe(ctx, in)
 	if err != nil {
@@ -131,10 +125,17 @@ func StartDstServer(config utils.Config, handler func([]byte)) {
 	} else {
 		server = grpc.NewServer()
 	}
+	// connect to DQP
+	conn, err := utils.GetGRPCConn(context.Background(), config.DQPServerHostname+config.DQPServerPort, false)
+	if err != nil {
+		log.Fatalf("DST: can not connect with dQP server %v", err)
+	}
+	client := downXDT.NewXDTtoFnClient(conn)
 
 	s := downXDTServer{}
 	s.config = config
 	s.handler = handler
+	s.client = client
 	downXDT.RegisterXDTtoFnServer(server, s)
 
 	log.Infoln("DST: start server")
