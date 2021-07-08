@@ -26,7 +26,8 @@ services:
   dQP:
     image: vhiveease/dqp
     env_file:
-      - .env
+      - xdt.env
+      - network.env
     expose:
       - "50006"
       - "50008"
@@ -34,20 +35,23 @@ services:
   sQP:
     image: vhiveease/sqp
     env_file:
-      - .env
+      - xdt.env
+      - network.env
     expose:
       - "50005"
   gx:
     image: vhiveease/gx
     env_file:
-      - .env
+      - xdt.env
+      - network.env
     expose:
       - "50007"
 
   fx:
     image: vhiveease/fx
     env_file:
-      - .env
+      - xdt.env
+      - network.env
     command:
       - -url=dQP:50006
       - -dockerCompose
