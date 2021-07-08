@@ -100,7 +100,7 @@ jobs:
         with:
           name: XDT benchmarks
           path: |
-            sdk/*.png
+            tests/*.png
 
   Python-SDK-Test:
     name: Python SDK Test
