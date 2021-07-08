@@ -30,7 +30,8 @@ GO_TEST_FLAGS:=-race -v -cover
 SDK_GO_FILES:=./source.go ./destination.go
 
 .EXPORT_ALL_VARIABLES:
-CHUNK_SIZE_IN_BYTES = 65536
+include user-functions/xdt.env
+# network config
 SQP_SERVER_HOSTNAME = localhost
 SQP_SERVER_PORT = :50005
 DQP_SERVER_HOSTNAME = localhost
@@ -39,14 +40,6 @@ DST_SERVER_HOSTNAME = localhost
 DST_SERVER_PORT = :50007
 PROXY_HOSTNAME = localhost
 PROXY_PORT = :50008
-CT_BUFFER_SIZE = 25
-NUMBER_OF_BUFFERS = 2
-ST_AND_FW_BUFFER_SIZE = 1600
-TRACING_ENABLED = false
-RPC_TIMEOUT_MAX_BACK_OFF = 1000
-RPC_TIMEOUT_DURATION = 60000
-RPC_RETRY_DELAY = 1
-MAX_DST_SERVER_THREADS_PYTHON = 10
 
 proto_install:
 	pip install grpcio-tools --user
