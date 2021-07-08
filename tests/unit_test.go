@@ -29,6 +29,8 @@ import (
 	"testing"
 	"time"
 
+	"github.com/ease-lab/vhive-xdt/proto/downXDT"
+
 	"google.golang.org/grpc/metadata"
 
 	sdk "github.com/ease-lab/vhive-xdt/sdk/golang"
@@ -153,8 +155,15 @@ func TestDQP_to_DstFn_data_transfer(t *testing.T) {
 
 	log.Infof("transferred packet from sQP to dQP in %s", duration)
 
+	// connect to dQP
+	conn, err := utils.GetGRPCConn(context.Background(), config.DQPServerHostname+config.DQPServerPort, false)
+	if err != nil {
+		log.Fatalf("DST: can not connect with dQP server %v", err)
+	}
+	client := downXDT.NewXDTtoFnClient(conn)
+
 	start = time.Now()
-	payloadBytes, err := sdk.FetchFromDQP(context.Background(), key, config)
+	payloadBytes, err := sdk.FetchFromDQP(context.Background(), key, client, config)
 	if err != nil {
 		log.Fatalf("FetchFromDQP failed %v", err)
 	}
