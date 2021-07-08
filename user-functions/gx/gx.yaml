@@ -19,15 +19,19 @@ spec:
             - name: ST_AND_FW_BUFFER_SIZE
               value: "1600"
             - name: ROUTING
-              value: "false"
+              value: "CutThrough"
             - name: TRACING_ENABLED
-              value: "1000"
+              value: "false"
             - name: RPC_TIMEOUT_MAX_BACK_OFF
-              value: "60000"
+              value: "1000"
             - name: RPC_TIMEOUT_DURATION
-              value: "1"
+              value: "60000"
             - name: RPC_RETRY_DELAY
+              value: "1"
+            - name: MAX_DST_SERVER_THREADS_PYTHON
               value: "10"
+            - name: DST_SERVER_PORT
+              value: ":50051"
           ports:
             - name: h2c
-              containerPort: 50007
+              containerPort: 50051

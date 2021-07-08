@@ -28,6 +28,7 @@ import (
 	"flag"
 	"fmt"
 	"net"
+	"os"
 	"time"
 
 	"go.opentelemetry.io/contrib/instrumentation/google.golang.org/grpc/otelgrpc"
@@ -52,7 +53,7 @@ type producerServer struct {
 func (ps producerServer) SayHello(ctx context.Context, req *pb.HelloRequest) (*pb.HelloReply, error) {
 	// establish a connection
 	ps.config.SQPServerHostname = fetchSelfIP()
-	duration := transferPayload(ps.config, ps.transferSize)
+	duration := transferPayload(ps.config, ps.url, ps.transferSize)
 	return &pb.HelloReply{Message: fmt.Sprintf("Transferred %d KB in %s", ps.transferSize, duration)}, nil
 }
 
@@ -73,7 +74,7 @@ func fetchSelfIP() string {
 	return ""
 }
 
-func transferPayload(config utils.Config, transferSize int) time.Duration {
+func transferPayload(config utils.Config, url string, transferSize int) time.Duration {
 	payloadData := make([]byte, transferSize*1024) // 10MiB
 	if _, err := rand.Read(payloadData); err != nil {
 		log.Fatal(err)
@@ -87,7 +88,6 @@ func transferPayload(config utils.Config, transferSize int) time.Duration {
 	start := time.Now()
 	log.Infof("starting XDT call")
 	log.Infof("using %s as the SQP addr", config.SQPServerHostname+config.SQPServerPort)
-	url := config.ProxyHostname + config.ProxyPort
 	if err := sdk.InvokeWithXDT(url, payloadToSend, config); err != nil {
 		log.Fatalf("SQP_to_dQP_data_transfer failed %v", err)
 	}
@@ -108,7 +108,7 @@ func main() {
 
 	config := utils.ReadConfig()
 	if *dockerCompose {
-		transferPayload(config, *transferSize)
+		transferPayload(config, config.DQPServerHostname+config.ProxyPort, *transferSize)
 	} else {
 		var grpcServer *grpc.Server
 		if config.TracingEnabled {
@@ -125,7 +125,11 @@ func main() {
 		pb.RegisterGreeterServer(grpcServer, &s)
 
 		//server setup
-		lis, err := net.Listen("tcp", ":50010")
+		port := os.Getenv("PORT")
+		if port == "" {
+			port = "8080"
+		}
+		lis, err := net.Listen("tcp", fmt.Sprintf(":%s", port))
 		if err != nil {
 			log.Fatalf("[producer] failed to listen: %v", err)
 		}
