@@ -40,6 +40,18 @@ import (
 	"google.golang.org/grpc"
 )
 
+func InitXDT(config utils.Config) (upXDT.StreamDataClient, error) {
+	sQPAddr := config.SQPServerHostname + config.SQPServerPort
+	conn, err := utils.GetGRPCConn(context.Background(), sQPAddr, false)
+	if err != nil {
+		log.Errorf("SRC: can not connect to SQP %v", err)
+		return nil, err
+	}
+
+	client := upXDT.NewStreamDataClient(conn)
+	return client, nil
+}
+
 func splitPayload(xdtPayload *utils.Payload) (string, []byte) {
 	now := time.Now()
 	key := strconv.Itoa(int(now.UnixNano()))
@@ -52,7 +64,7 @@ func splitPayload(xdtPayload *utils.Payload) (string, []byte) {
 }
 
 // InvokeWithXDT invokes the RPC call with XDT
-func InvokeWithXDT(URL string, xdtPayload utils.Payload, config utils.Config) error {
+func InvokeWithXDT(URL string, xdtPayload utils.Payload, pushDataClient upXDT.StreamDataClient, config utils.Config) error {
 
 	sQPAddr := config.SQPServerHostname + config.SQPServerPort
 	key, payloadData := splitPayload(&xdtPayload)
@@ -74,7 +86,7 @@ func InvokeWithXDT(URL string, xdtPayload utils.Payload, config utils.Config) er
 	defer cancel()
 
 	errorPushData := make(chan error, 1)
-	go func() { errorPushData <- PushData(ctx, key, payloadData, sQPAddr, config.ChunkSizeInBytes) }()
+	go func() { errorPushData <- PushData(ctx, key, payloadData, pushDataClient, config.ChunkSizeInBytes) }()
 	if config.Routing == utils.STORE_FORWARD {
 		log.Info("SDK: using store & forward routing")
 		select {
@@ -166,15 +178,8 @@ func fnInvocationCall(ctx context.Context, URL string, serialisedPayload []byte)
 }
 
 // PushData to source QP
-func PushData(ctx context.Context, key string, payload []byte, sQPAddr string, chunkSizeInBytes int) error {
+func PushData(ctx context.Context, key string, payload []byte, client upXDT.StreamDataClient, chunkSizeInBytes int) error {
 
-	conn, err := utils.GetGRPCConn(ctx, sQPAddr, false)
-	if err != nil {
-		log.Errorf("SRC: can not connect to SQP %v", err)
-		return err
-	}
-
-	client := upXDT.NewStreamDataClient(conn)
 	payloadSize := len(payload)
 	log.Infof("Transfering %d bytes to sQP", payloadSize)
 	stream, err := client.SendData(ctx)

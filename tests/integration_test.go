@@ -170,10 +170,14 @@ func TestSdk_InvokeWithXDT(t *testing.T) {
 
 	time.Sleep(time.Second * 1)
 
+	client, err := sdk.InitXDT(config)
+	if err != nil {
+		log.Fatalf("InitXDT failed %v", err)
+	}
 	start := time.Now()
 	log.Infof("starting integ test")
 	url := config.ProxyHostname + config.ProxyPort
-	if err := sdk.InvokeWithXDT(url, preparePayload(), config); err != nil {
+	if err := sdk.InvokeWithXDT(url, preparePayload(), client, config); err != nil {
 		log.Fatalf("TestSdk_InvokeWithXDT failed %v", err)
 	}
 	elapsed := time.Since(start)
@@ -198,11 +202,14 @@ func TestErr_DQPTimeout(t *testing.T) {
 	go sdk.StartDstServer(config, handler)
 
 	time.Sleep(time.Second * 1)
-
+	client, err := sdk.InitXDT(config)
+	if err != nil {
+		log.Fatalf("InitXDT failed %v", err)
+	}
 	start := time.Now()
 	log.Infof("starting integ test")
 	url := config.ProxyHostname + config.ProxyPort
-	if err := sdk.InvokeWithXDT(url, preparePayload(), config); err == context.DeadlineExceeded {
+	if err := sdk.InvokeWithXDT(url, preparePayload(), client, config); err == context.DeadlineExceeded {
 		log.Errorf("TestSdk_InvokeWithXDT failed predictably")
 	} else {
 		log.Fatalf("Unexpected Error Occured: %v", err)
@@ -230,13 +237,18 @@ func TestParallel_Invoke(t *testing.T) {
 
 	time.Sleep(time.Second * 1)
 
+	client, err := sdk.InitXDT(config)
+	if err != nil {
+		log.Fatalf("InitXDT failed %v", err)
+	}
+
 	start := time.Now()
 	log.Infof("starting integ test")
 	url := config.ProxyHostname + config.ProxyPort
 	errChannel := make(chan error, *numConcurrentFunctions)
 	for i := 0; i < *numConcurrentFunctions; i += 1 {
 		go func() {
-			errChannel <- sdk.InvokeWithXDT(url, preparePayload(), config)
+			errChannel <- sdk.InvokeWithXDT(url, preparePayload(), client, config)
 		}()
 	}
 	for i := 0; i < *numConcurrentFunctions; i += 1 {
@@ -286,7 +298,11 @@ func TestParallel_FanIn(t *testing.T) {
 		i := i
 		go func(config utils.Config) {
 			config.SQPServerPort = ":" + fmt.Sprint(sQPPort+i)
-			errChannel <- sdk.InvokeWithXDT(url, preparePayload(), config)
+			client, err := sdk.InitXDT(config)
+			if err != nil {
+				log.Fatalf("InitXDT failed %v", err)
+			}
+			errChannel <- sdk.InvokeWithXDT(url, preparePayload(), client, config)
 		}(config)
 	}
 
@@ -333,6 +349,11 @@ func TestParallel_FanOut(t *testing.T) {
 
 	time.Sleep(time.Second * 1)
 
+	client, err := sdk.InitXDT(config)
+	if err != nil {
+		log.Fatalf("InitXDT failed %v", err)
+	}
+
 	start := time.Now()
 	log.Infof("starting integ test")
 	numberOfSources := *numConcurrentFunctions
@@ -341,7 +362,7 @@ func TestParallel_FanOut(t *testing.T) {
 	for i := 0; i < numberOfSources; i += 1 {
 		url := ":" + fmt.Sprint(dQPPort+i+*numConcurrentFunctions+*numConcurrentFunctions)
 		go func() {
-			errChannel <- sdk.InvokeWithXDT(url, preparePayload(), config)
+			errChannel <- sdk.InvokeWithXDT(url, preparePayload(), client, config)
 		}()
 	}
 
@@ -392,6 +413,10 @@ func TestBenchmark_XDT(t *testing.T) {
 		log.Fatal(err)
 	}
 	url := config.ProxyHostname + config.ProxyPort
+	client, err := sdk.InitXDT(config)
+	if err != nil {
+		log.Fatalf("InitXDT failed %v", err)
+	}
 
 	benchPayload := func(payloadSize int, chunkSizeInBytes int, sampleSize int, URL string, payloadData []byte) []float64 {
 		var latencies []float64
@@ -402,7 +427,7 @@ func TestBenchmark_XDT(t *testing.T) {
 
 		for i := 0; i < sampleSize; i += 1 {
 			start := time.Now()
-			if err := sdk.InvokeWithXDT(url, payloadToSend, config); err != nil {
+			if err := sdk.InvokeWithXDT(url, payloadToSend, client, config); err != nil {
 				log.Fatalf("TestBenchmark_XDT failed %v", err)
 			}
 			latencyInUs := time.Since(start).Microseconds()
