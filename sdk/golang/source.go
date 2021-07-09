@@ -28,6 +28,8 @@ import (
 	"strconv"
 	"time"
 
+	tracing "github.com/ease-lab/vhive/utils/tracing/go"
+
 	"google.golang.org/grpc/metadata"
 
 	"github.com/ease-lab/vhive-xdt/proto/downXDT"
@@ -91,6 +93,10 @@ func (x XDTclient) Invoke(URL string, xdtPayload utils.Payload) error {
 	timeoutDuration := time.Duration(x.config.RPCTimeoutDuration) * time.Millisecond
 	ctx, cancel := context.WithTimeout(ctx, timeoutDuration)
 	defer cancel()
+
+	span := tracing.Span{SpanName: "InvokeWithXDT", TracerName: "InvokeWithXDT-Tracer"}
+	ctx = span.StartSpan(ctx)
+	defer span.EndSpan()
 
 	errorPushData := make(chan error, 1)
 	go func() { errorPushData <- x.PushData(ctx, key, payloadData) }()

@@ -31,6 +31,8 @@ import (
 	"os"
 	"time"
 
+	tracing "github.com/ease-lab/vhive/utils/tracing/go"
+
 	"go.opentelemetry.io/contrib/instrumentation/google.golang.org/grpc/otelgrpc"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/reflection"
@@ -111,6 +113,13 @@ func main() {
 
 	config := utils.ReadConfig()
 	if *dockerCompose {
+		if config.TracingEnabled {
+			shutdown, err := tracing.InitBasicTracer("http://localhost:9411/api/v2/spans", "fx")
+			if err != nil {
+				log.Warn(err)
+			}
+			defer shutdown()
+		}
 		transferPayload(config, config.DQPServerHostname+config.ProxyPort, *transferSize)
 	} else {
 		var grpcServer *grpc.Server

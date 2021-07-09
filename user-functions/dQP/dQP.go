@@ -37,12 +37,12 @@ import (
 	"github.com/ease-lab/vhive-xdt/utils"
 	tracing "github.com/ease-lab/vhive/utils/tracing/go"
 	log "github.com/sirupsen/logrus"
+	"go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp"
 	pkgnet "knative.dev/pkg/network"
-	"knative.dev/serving/pkg/queue"
 )
 
 func main() {
-	zipkinURL := flag.String("zipkin", "http://zipkin.istio-system.svc.cluster.local:9411/api/v2/spans", "zipkin url")
+	zipkinURL := flag.String("zipkin", "http://localhost:9411/api/v2/spans", "zipkin url")
 	flag.Parse()
 	log.SetLevel(log.InfoLevel)
 	log.SetFormatter(&log.TextFormatter{
@@ -103,7 +103,13 @@ func main() {
 
 		})
 	}(composedHandler)
-	composedHandler = queue.ForwardedShimHandler(composedHandler)
+
+	composedHandler = otelhttp.NewHandler(composedHandler, "HTTPProxy")
+
+	//if config.TracingEnabled {
+	//	composedHandler = knativeTracing.HTTPSpanMiddleware(composedHandler)
+	//}
+	//composedHandler = queue.ForwardedShimHandler(composedHandler)
 
 	h2s := &http2.Server{}
 	// start server
