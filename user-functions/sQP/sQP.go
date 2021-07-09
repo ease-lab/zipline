@@ -33,7 +33,7 @@ import (
 )
 
 func main() {
-	zipkinURL := flag.String("zipkin", "http://zipkin.istio-system.svc.cluster.local:9411/api/v2/spans", "zipkin url")
+	zipkinURL := flag.String("zipkin", "http://localhost:9411/api/v2/spans", "zipkin url")
 	flag.Parse()
 	log.SetLevel(log.InfoLevel)
 	log.SetFormatter(&log.TextFormatter{
@@ -43,7 +43,7 @@ func main() {
 
 	config := utils.ReadConfig()
 	if config.TracingEnabled {
-		shutdown, err := tracing.InitBasicTracer(*zipkinURL, "dQP")
+		shutdown, err := tracing.InitBasicTracer(*zipkinURL, "sQP")
 		if err != nil {
 			log.Warn(err)
 		}

@@ -129,6 +129,14 @@ func knativeQP(config utils.Config) {
 
 	h2s := &http2.Server{}
 
+	if config.TracingEnabled {
+		shutdown, err := tracing.InitBasicTracer(*zipkinURL, "HTTPProxy")
+		if err != nil {
+			log.Warn(err)
+		}
+		defer shutdown()
+	}
+
 	server := &http.Server{
 		Addr:    config.ProxyPort,
 		Handler: h2c.NewHandler(composedHandler, h2s),
@@ -156,13 +164,13 @@ func preparePayload() utils.Payload {
 func TestSdk_InvokeWithXDT(t *testing.T) {
 
 	config := utils.ReadConfig()
-	if config.TracingEnabled {
-		shutdown, err := tracing.InitBasicTracer(*zipkinURL, "xdt")
-		if err != nil {
-			log.Warn(err)
-		}
-		defer shutdown()
-	}
+	//if config.TracingEnabled {
+	//	shutdown, err := tracing.InitBasicTracer(*zipkinURL, "xdt")
+	//	if err != nil {
+	//		log.Warn(err)
+	//	}
+	//	defer shutdown()
+	//}
 	// start server at sQP
 	go sQP.StartServer(config)
 	go knativeQP(config)
