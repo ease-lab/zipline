@@ -74,8 +74,14 @@ func TestSDK_to_sQP_data_transfer(t *testing.T) {
 		"sqp_addr": config.SQPServerHostname + config.SQPServerPort,
 		"routing":  config.Routing,
 	}
+
+	client, err := sdk.InitXDT(config)
+	if err != nil {
+		log.Fatalf("InitXDT failed %v", err)
+	}
+
 	ctx := metadata.NewOutgoingContext(context.Background(), metadata.New(httpMetadata))
-	if err := sdk.PushData(ctx, key, payloadData, config.SQPServerHostname+config.SQPServerPort, chunkSizeInBytes); err != nil {
+	if err := sdk.PushData(ctx, key, payloadData, client, chunkSizeInBytes); err != nil {
 		log.Fatalf("TestSDK_to_sQP_data_transfer failed %v", err)
 	}
 	duration := time.Since(start)
@@ -103,7 +109,12 @@ func TestSQP_to_dQP_data_transfer(t *testing.T) {
 	}
 	ctx := metadata.NewOutgoingContext(context.Background(), metadata.New(httpMetadata))
 
-	if err := sdk.PushData(ctx, key, payloadData, config.SQPServerHostname+config.SQPServerPort, chunkSizeInBytes); err != nil {
+	client, err := sdk.InitXDT(config)
+	if err != nil {
+		log.Fatalf("InitXDT failed %v", err)
+	}
+
+	if err := sdk.PushData(ctx, key, payloadData, client, chunkSizeInBytes); err != nil {
 		log.Fatalf("TestSDK_to_sQP_data_transfer failed %v", err)
 	}
 	duration := time.Since(start)
@@ -111,7 +122,7 @@ func TestSQP_to_dQP_data_transfer(t *testing.T) {
 
 	log.Infof("transferred %d bytes from SrcFn to sQP in %s", len(payloadData), duration)
 
-	err := dQP.PullDataFromSrcQP(ctx)
+	err = dQP.PullDataFromSrcQP(ctx)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -139,7 +150,11 @@ func TestDQP_to_DstFn_data_transfer(t *testing.T) {
 		"routing":  config.Routing,
 	}
 	ctx := metadata.NewOutgoingContext(context.Background(), metadata.New(httpMetadata))
-	if err := sdk.PushData(ctx, key, payloadData, config.SQPServerHostname+config.SQPServerPort, chunkSizeInBytes); err != nil {
+	client, err := sdk.InitXDT(config)
+	if err != nil {
+		log.Fatalf("InitXDT failed %v", err)
+	}
+	if err := sdk.PushData(ctx, key, payloadData, client, chunkSizeInBytes); err != nil {
 		log.Fatalf("TestDQP_to_DstFn_data_transfer failed %v", err)
 	}
 	duration := time.Since(start)
@@ -147,7 +162,7 @@ func TestDQP_to_DstFn_data_transfer(t *testing.T) {
 	log.Infof("transferred %d bytes from SrcFn to sQP in %s", len(payloadData), duration)
 
 	start = time.Now()
-	err := dQP.PullDataFromSrcQP(ctx)
+	err = dQP.PullDataFromSrcQP(ctx)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -160,10 +175,10 @@ func TestDQP_to_DstFn_data_transfer(t *testing.T) {
 	if err != nil {
 		log.Fatalf("DST: can not connect with dQP server %v", err)
 	}
-	client := downXDT.NewXDTtoFnClient(conn)
+	dstClient := downXDT.NewXDTtoFnClient(conn)
 
 	start = time.Now()
-	payloadBytes, err := sdk.FetchFromDQP(context.Background(), key, client, config)
+	payloadBytes, err := sdk.FetchFromDQP(context.Background(), key, dstClient, config)
 	if err != nil {
 		log.Fatalf("FetchFromDQP failed %v", err)
 	}
