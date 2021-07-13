@@ -40,16 +40,23 @@ import (
 	"google.golang.org/grpc"
 )
 
-func InitXDT(config utils.Config) (upXDT.StreamDataClient, error) {
+type XDTclient struct {
+	config utils.Config
+	client upXDT.StreamDataClient
+}
+
+func NewXDTclient(config utils.Config) (XDTclient, error) {
+	var xdtClient XDTclient
+	xdtClient.config = config
 	sQPAddr := config.SQPServerHostname + config.SQPServerPort
 	conn, err := utils.GetGRPCConn(context.Background(), sQPAddr, false)
 	if err != nil {
 		log.Errorf("SRC: can not connect to SQP %v", err)
-		return nil, err
+		return xdtClient, err
 	}
 
-	client := upXDT.NewStreamDataClient(conn)
-	return client, nil
+	xdtClient.client = upXDT.NewStreamDataClient(conn)
+	return xdtClient, nil
 }
 
 func splitPayload(xdtPayload *utils.Payload) (string, []byte) {
@@ -63,10 +70,10 @@ func splitPayload(xdtPayload *utils.Payload) (string, []byte) {
 	return key, payloadData
 }
 
-// InvokeWithXDT invokes the RPC call with XDT
-func InvokeWithXDT(URL string, xdtPayload utils.Payload, pushDataClient upXDT.StreamDataClient, config utils.Config) error {
+// Invoke invokes the RPC call with XDT
+func (x XDTclient) Invoke(URL string, xdtPayload utils.Payload) error {
 
-	sQPAddr := config.SQPServerHostname + config.SQPServerPort
+	sQPAddr := x.config.SQPServerHostname + x.config.SQPServerPort
 	key, payloadData := splitPayload(&xdtPayload)
 	serialisedPayload, err := json.Marshal(xdtPayload)
 	if err != nil {
@@ -77,17 +84,17 @@ func InvokeWithXDT(URL string, xdtPayload utils.Payload, pushDataClient upXDT.St
 		"is_xdt":   "true",
 		"key":      key,
 		"sqp_addr": sQPAddr,
-		"routing":  config.Routing,
+		"routing":  x.config.Routing,
 	}
 	ctx := metadata.NewOutgoingContext(context.Background(), metadata.New(httpMetadata))
 	//  This timeout must be large enough for the request to complete
-	timeoutDuration := time.Duration(config.RPCTimeoutDuration) * time.Millisecond
+	timeoutDuration := time.Duration(x.config.RPCTimeoutDuration) * time.Millisecond
 	ctx, cancel := context.WithTimeout(ctx, timeoutDuration)
 	defer cancel()
 
 	errorPushData := make(chan error, 1)
-	go func() { errorPushData <- PushData(ctx, key, payloadData, pushDataClient, config.ChunkSizeInBytes) }()
-	if config.Routing == utils.STORE_FORWARD {
+	go func() { errorPushData <- x.PushData(ctx, key, payloadData) }()
+	if x.config.Routing == utils.STORE_FORWARD {
 		log.Info("SDK: using store & forward routing")
 		select {
 		case <-ctx.Done():
@@ -116,7 +123,7 @@ func InvokeWithXDT(URL string, xdtPayload utils.Payload, pushDataClient upXDT.St
 		}
 	}
 
-	if config.Routing == utils.CUT_THROUGH {
+	if x.config.Routing == utils.CUT_THROUGH {
 		log.Info("SDK: using cut through routing")
 		// Wait for completion and return the first error (if any)
 		select {
@@ -178,16 +185,16 @@ func fnInvocationCall(ctx context.Context, URL string, serialisedPayload []byte)
 }
 
 // PushData to source QP
-func PushData(ctx context.Context, key string, payload []byte, client upXDT.StreamDataClient, chunkSizeInBytes int) error {
+func (x XDTclient) PushData(ctx context.Context, key string, payload []byte) error {
 
 	payloadSize := len(payload)
 	log.Infof("Transfering %d bytes to sQP", payloadSize)
-	stream, err := client.SendData(ctx)
+	stream, err := x.client.SendData(ctx)
 	if err != nil {
 		log.Errorf("open stream error %v", err)
 		return err
 	}
-
+	chunkSizeInBytes := x.config.ChunkSizeInBytes
 	chunkTotal := len(payload) / chunkSizeInBytes
 	if len(payload)%chunkSizeInBytes != 0 {
 		chunkTotal += 1
