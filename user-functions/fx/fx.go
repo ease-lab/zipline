@@ -84,14 +84,14 @@ func transferPayload(config utils.Config, url string, transferSize int) time.Dur
 		FunctionName: "HelloXDT",
 		Data:         payloadData,
 	}
-	client, err := sdk.InitXDT(config)
+	xdtClient, err := sdk.NewXDTclient(config)
 	if err != nil {
 		log.Fatalf("InitXDT failed %v", err)
 	}
 	start := time.Now()
 	log.Infof("starting XDT call")
 	log.Infof("using %s as the SQP addr", config.SQPServerHostname+config.SQPServerPort)
-	if err := sdk.InvokeWithXDT(url, payloadToSend, client, config); err != nil {
+	if err := xdtClient.Invoke(url, payloadToSend); err != nil {
 		log.Fatalf("SQP_to_dQP_data_transfer failed %v", err)
 	}
 	return time.Since(start)

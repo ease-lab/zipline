@@ -65,7 +65,6 @@ func TestSDK_to_sQP_data_transfer(t *testing.T) {
 		log.Fatal(err)
 	}
 	config := utils.ReadConfig()
-	chunkSizeInBytes := config.ChunkSizeInBytes
 
 	start := time.Now()
 	httpMetadata := map[string]string{
@@ -75,13 +74,13 @@ func TestSDK_to_sQP_data_transfer(t *testing.T) {
 		"routing":  config.Routing,
 	}
 
-	client, err := sdk.InitXDT(config)
+	xdtClient, err := sdk.NewXDTclient(config)
 	if err != nil {
 		log.Fatalf("InitXDT failed %v", err)
 	}
 
 	ctx := metadata.NewOutgoingContext(context.Background(), metadata.New(httpMetadata))
-	if err := sdk.PushData(ctx, key, payloadData, client, chunkSizeInBytes); err != nil {
+	if err := xdtClient.PushData(ctx, key, payloadData); err != nil {
 		log.Fatalf("TestSDK_to_sQP_data_transfer failed %v", err)
 	}
 	duration := time.Since(start)
@@ -98,7 +97,6 @@ func TestSQP_to_dQP_data_transfer(t *testing.T) {
 		log.Fatal(err)
 	}
 	config := utils.ReadConfig()
-	chunkSizeInBytes := config.ChunkSizeInBytes
 
 	start := time.Now()
 	httpMetadata := map[string]string{
@@ -109,12 +107,12 @@ func TestSQP_to_dQP_data_transfer(t *testing.T) {
 	}
 	ctx := metadata.NewOutgoingContext(context.Background(), metadata.New(httpMetadata))
 
-	client, err := sdk.InitXDT(config)
+	xdtClient, err := sdk.NewXDTclient(config)
 	if err != nil {
 		log.Fatalf("InitXDT failed %v", err)
 	}
 
-	if err := sdk.PushData(ctx, key, payloadData, client, chunkSizeInBytes); err != nil {
+	if err := xdtClient.PushData(ctx, key, payloadData); err != nil {
 		log.Fatalf("TestSDK_to_sQP_data_transfer failed %v", err)
 	}
 	duration := time.Since(start)
@@ -140,7 +138,6 @@ func TestDQP_to_DstFn_data_transfer(t *testing.T) {
 		log.Fatal(err)
 	}
 	config := utils.ReadConfig()
-	chunkSizeInBytes := config.ChunkSizeInBytes
 
 	start := time.Now()
 	httpMetadata := map[string]string{
@@ -150,11 +147,11 @@ func TestDQP_to_DstFn_data_transfer(t *testing.T) {
 		"routing":  config.Routing,
 	}
 	ctx := metadata.NewOutgoingContext(context.Background(), metadata.New(httpMetadata))
-	client, err := sdk.InitXDT(config)
+	xdtClient, err := sdk.NewXDTclient(config)
 	if err != nil {
 		log.Fatalf("InitXDT failed %v", err)
 	}
-	if err := sdk.PushData(ctx, key, payloadData, client, chunkSizeInBytes); err != nil {
+	if err := xdtClient.PushData(ctx, key, payloadData); err != nil {
 		log.Fatalf("TestDQP_to_DstFn_data_transfer failed %v", err)
 	}
 	duration := time.Since(start)
