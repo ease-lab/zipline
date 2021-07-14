@@ -114,6 +114,17 @@ func main() {
 	config := utils.ReadConfig()
 	if *dockerCompose {
 		if config.TracingEnabled {
+			timeout := 1 * time.Second
+			for {
+				_, err := net.DialTimeout("tcp", "zipkin:9411", timeout)
+				if err != nil {
+					log.Infof("Site unreachable, error: %v", err)
+				} else {
+					log.Infof("Zipkin ready, starting the test")
+					break
+				}
+				time.Sleep(time.Second)
+			}
 			shutdown, err := tracing.InitBasicTracer(config.ZipkinEndpoint, "fx")
 			if err != nil {
 				log.Warn(err)
