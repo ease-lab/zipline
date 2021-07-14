@@ -101,12 +101,9 @@ func main() {
 		})
 	}(composedHandler)
 
-	composedHandler = otelhttp.NewHandler(composedHandler, "HTTPProxy")
-
-	//if config.TracingEnabled {
-	//	composedHandler = knativeTracing.HTTPSpanMiddleware(composedHandler)
-	//}
-	//composedHandler = queue.ForwardedShimHandler(composedHandler)
+	if config.TracingEnabled {
+		composedHandler = otelhttp.NewHandler(composedHandler, "HTTPProxy")
+	}
 
 	h2s := &http2.Server{}
 	// start server
