@@ -23,8 +23,6 @@
 package main
 
 import (
-	"flag"
-
 	ctrdlog "github.com/containerd/containerd/log"
 	tracing "github.com/ease-lab/vhive/utils/tracing/go"
 	log "github.com/sirupsen/logrus"
@@ -38,8 +36,6 @@ var handler = func(data []byte) {
 }
 
 func main() {
-	zipkinURL := flag.String("zipkin", "http://localhost:9411/api/v2/spans", "zipkin url")
-	flag.Parse()
 	log.SetLevel(log.InfoLevel)
 	log.SetFormatter(&log.TextFormatter{
 		TimestampFormat: ctrdlog.RFC3339NanoFixed,
@@ -48,7 +44,7 @@ func main() {
 
 	config := utils.ReadConfig()
 	if config.TracingEnabled {
-		shutdown, err := tracing.InitBasicTracer(*zipkinURL, "dst")
+		shutdown, err := tracing.InitBasicTracer(config.ZipkinEndpoint, "gx")
 		if err != nil {
 			log.Warn(err)
 		}

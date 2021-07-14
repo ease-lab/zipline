@@ -23,6 +23,11 @@
 version: "3.7"
 
 services:
+  zipkin:
+    image: openzipkin/zipkin
+    ports:
+      - 9411:9411
+
   dQP:
     image: vhiveease/dqp
     env_file:
@@ -59,3 +64,4 @@ services:
       - gx
       - sQP
       - dQP
+      - zipkin
