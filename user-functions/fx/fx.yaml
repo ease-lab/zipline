@@ -30,6 +30,8 @@ spec:
               value: "1"
             - name: MAX_DST_SERVER_THREADS_PYTHON
               value: "10"
+            - name: ZIPKIN_ENDPOINT
+              value: "http://zipkin.istio-system.svc.cluster.local:9411/api/v2/spans"
           ports:
             - name: h2c
               containerPort: 50051

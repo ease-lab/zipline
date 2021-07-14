@@ -135,6 +135,11 @@ func main() {
 	} else {
 		var grpcServer *grpc.Server
 		if config.TracingEnabled {
+			shutdown, err := tracing.InitBasicTracer(config.ZipkinEndpoint, "fx")
+			if err != nil {
+				log.Warn(err)
+			}
+			defer shutdown()
 			grpcServer = grpc.NewServer(grpc.UnaryInterceptor(otelgrpc.UnaryServerInterceptor()))
 		} else {
 			grpcServer = grpc.NewServer()
