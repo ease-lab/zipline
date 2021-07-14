@@ -32,6 +32,8 @@ spec:
               value: "10"
             - name: DST_SERVER_PORT
               value: ":50051"
+            - name: ZIPKIN_ENDPOINT
+              value: "http://zipkin.istio-system.svc.cluster.local:9411/api/v2/spans"
           ports:
             - name: h2c
               containerPort: 50051
