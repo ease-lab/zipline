@@ -73,6 +73,7 @@ def loadConfig():
     config["RPCTimeoutDuration"] = env.int("RPC_TIMEOUT_DURATION", 60000)
     config["RPCRetryDelay"] = env.int("RPC_RETRY_DELAY", 1)
     config["MaxDstServerThreadsPython"] = env.int("MAX_DST_SERVER_THREADS_PYTHON", 10)
+    config["ZipkinEndpoint"] = env.int("ZIPKIN_ENDPOINT", "http://zipkin.istio-system.svc.cluster.local:9411/api/v2/spans")
     return config
 
 

@@ -47,6 +47,7 @@ type Config struct {
 	RPCTimeoutDuration        int    `default:"60000" envconfig:"RPC_TIMEOUT_DURATION"`
 	RPCRetryDelay             int    `default:"1" envconfig:"RPC_RETRY_DELAY"`
 	MaxDstServerThreadsPython int    `default:"10" envconfig:"MAX_DST_SERVER_THREADS_PYTHON"`
+	ZipkinEndpoint            string `default:"http://zipkin.istio-system.svc.cluster.local:9411/api/v2/spans" envconfig:"ZIPKIN_ENDPOINT"`
 }
 
 type Payload struct {

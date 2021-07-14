@@ -114,7 +114,7 @@ func main() {
 	config := utils.ReadConfig()
 	if *dockerCompose {
 		if config.TracingEnabled {
-			shutdown, err := tracing.InitBasicTracer("http://localhost:9411/api/v2/spans", "fx")
+			shutdown, err := tracing.InitBasicTracer(config.ZipkinEndpoint, "fx")
 			if err != nil {
 				log.Warn(err)
 			}

@@ -23,7 +23,6 @@
 package main
 
 import (
-	"flag"
 	"net/http"
 	"net/http/httputil"
 
@@ -42,8 +41,6 @@ import (
 )
 
 func main() {
-	zipkinURL := flag.String("zipkin", "http://localhost:9411/api/v2/spans", "zipkin url")
-	flag.Parse()
 	log.SetLevel(log.InfoLevel)
 	log.SetFormatter(&log.TextFormatter{
 		TimestampFormat: ctrdlog.RFC3339NanoFixed,
@@ -52,7 +49,7 @@ func main() {
 
 	config := utils.ReadConfig()
 	if config.TracingEnabled {
-		shutdown, err := tracing.InitBasicTracer(*zipkinURL, "dQP")
+		shutdown, err := tracing.InitBasicTracer(config.ZipkinEndpoint, "dQP")
 		if err != nil {
 			log.Warn(err)
 		}
