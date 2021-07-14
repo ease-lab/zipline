@@ -40,7 +40,7 @@ DST_SERVER_HOSTNAME = localhost
 DST_SERVER_PORT = :50007
 PROXY_HOSTNAME = localhost
 PROXY_PORT = :50008
-TRACING_ENABLED=True
+TRACING_ENABLED = False
 
 proto_install:
 	pip install grpcio-tools --user

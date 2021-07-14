@@ -33,6 +33,8 @@ import (
 	"testing"
 	"time"
 
+	"go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp"
+
 	"google.golang.org/grpc/metadata"
 
 	sdk "github.com/ease-lab/vhive-xdt/sdk/golang"
@@ -125,17 +127,13 @@ func knativeQP(config utils.Config) {
 
 		}
 	}(composedHandler)
+
+	if config.TracingEnabled {
+		composedHandler = otelhttp.NewHandler(composedHandler, "HTTPProxy")
+	}
 	composedHandler = network.NewProbeHandler(composedHandler)
 
 	h2s := &http2.Server{}
-
-	if config.TracingEnabled {
-		shutdown, err := tracing.InitBasicTracer(*zipkinEndpoint, "HTTPProxy")
-		if err != nil {
-			log.Warn(err)
-		}
-		defer shutdown()
-	}
 
 	server := &http.Server{
 		Addr:    config.ProxyPort,
@@ -164,13 +162,13 @@ func preparePayload() utils.Payload {
 func TestSdk_InvokeWithXDT(t *testing.T) {
 
 	config := utils.ReadConfig()
-	//if config.TracingEnabled {
-	//	shutdown, err := tracing.InitBasicTracer(*zipkinEndpoint, "xdt")
-	//	if err != nil {
-	//		log.Warn(err)
-	//	}
-	//	defer shutdown()
-	//}
+	if config.TracingEnabled {
+		shutdown, err := tracing.InitBasicTracer(*zipkinEndpoint, "xdt")
+		if err != nil {
+			log.Warn(err)
+		}
+		defer shutdown()
+	}
 	// start server at sQP
 	go sQP.StartServer(config)
 	go knativeQP(config)
