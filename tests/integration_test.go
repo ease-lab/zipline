@@ -69,8 +69,9 @@ func init() {
 		ForceColors:     true})
 }
 
-var handler = func(data []byte) {
+var handler = func(data []byte) ([]byte, bool) {
 	log.Infof("integ-test destination handler received data of size %d", len(data))
+	return []byte("sample response"), true
 }
 
 func knativeQP(config utils.Config) {

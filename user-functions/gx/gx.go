@@ -31,8 +31,9 @@ import (
 	"github.com/ease-lab/vhive-xdt/utils"
 )
 
-var handler = func(data []byte) {
+var handler = func(data []byte) ([]byte, bool) {
 	log.Infof("gx: destination handler received data of size %d", len(data))
+	return []byte("sample response"), true
 }
 
 func main() {
