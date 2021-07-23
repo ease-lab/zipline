@@ -36,6 +36,9 @@ from utils import Payload, loadConfig
 
 # XDTtoFnServicer is to be called by dQP to invoke DstFn
 class XDTtoFnServicer(downXDT_pb2_grpc.XDTtoFnServicer):
+    def __init__(self, config):
+        self.config = config
+
     def XDTFnCall(self, request, context):
         log.info("DST: received invocation call %s", request.XDTJSON)
         xdtPayload = Payload.loadFromBytes(request.XDTJSON)
@@ -43,7 +46,7 @@ class XDTtoFnServicer(downXDT_pb2_grpc.XDTtoFnServicer):
         if metadict['is_xdt'] == "true":
             key = metadict['key']
             # fetch data from dQP
-            payloadBytes = FetchFromDQP(key)
+            payloadBytes = FetchFromDQP(key, self.config)
 
             global dstHandler
             # call destination function
@@ -54,8 +57,7 @@ class XDTtoFnServicer(downXDT_pb2_grpc.XDTtoFnServicer):
 
 
 # FetchFromDQP fetches data from dQP to DstFn
-def FetchFromDQP(key):
-    global config
+def FetchFromDQP(key, config):
     serverAddr = config['DQPServerHostname']+config['DQPServerPort']
 
     request = downXDT_pb2.DataRequest(key=key)
@@ -74,9 +76,11 @@ def FetchFromDQP(key):
 def StartDstServer(config, handler):
     global dstHandler
     dstHandler = handler
+
     server = grpc.server(futures.ThreadPoolExecutor(max_workers=config['MaxDstServerThreadsPython']))
+    xdtServicer = XDTtoFnServicer(config=config)
     downXDT_pb2_grpc.add_XDTtoFnServicer_to_server(
-        XDTtoFnServicer(), server)
+        xdtServicer, server)
     server.add_insecure_port("[::]"+config['DstServerPort'])
     server.start()
     server.wait_for_termination()
@@ -84,9 +88,7 @@ def StartDstServer(config, handler):
 
 if __name__ == '__main__':
     log.basicConfig(level=log.INFO)
-    global config
     config = loadConfig()
-
 
     def handler(payload):
         log.info("destination received payload of length %d", len(payload))
