@@ -41,7 +41,7 @@ import (
 
 type downXDTServer struct {
 	config  utils.Config
-	handler func([]byte)
+	handler func([]byte) ([]byte, bool)
 	client  downXDT.XDTtoFnClient
 	downXDT.UnimplementedXDTtoFnServer
 }
@@ -52,7 +52,7 @@ func (s downXDTServer) XDTFnCall(ctx context.Context, in *downXDT.InvocationRequ
 	log.Infof("DST: received invocation call %s", in.XDTJSON)
 
 	headers, ok := metadata.FromIncomingContext(ctx)
-
+	var message []byte
 	if ok && headers["is_xdt"][0] == "true" {
 		key := headers["key"][0]
 		log.Infof("DST: using %s routing", headers["routing"][0])
@@ -65,10 +65,10 @@ func (s downXDTServer) XDTFnCall(ctx context.Context, in *downXDT.InvocationRequ
 		}
 
 		//call destination function
-		s.handler(payloadBytes)
+		message, ok = s.handler(payloadBytes)
 	}
 
-	return &downXDT.InvocationResponse{Message: []byte("sample response"), Ok: true}, nil
+	return &downXDT.InvocationResponse{Message: message, Ok: ok}, nil
 }
 
 // FetchFromDQP fetches data from dQP to DstFn
@@ -112,7 +112,7 @@ func FetchFromDQP(ctx context.Context, key string, client downXDT.XDTtoFnClient,
 }
 
 // StartDstServer starts DstQP server
-func StartDstServer(config utils.Config, handler func([]byte)) {
+func StartDstServer(config utils.Config, handler func([]byte) ([]byte, bool)) {
 
 	lis, err := net.Listen("tcp", config.DstServerPort)
 	if err != nil {

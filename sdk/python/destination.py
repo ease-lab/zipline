@@ -46,8 +46,8 @@ class XDTtoFnServicer(downXDT_pb2_grpc.XDTtoFnServicer):
 
         global dstHandler
         # call destination function
-        dstHandler(payloadBytes)
-        return downXDT_pb2.InvocationResponse(message=b"sample response", ok=True)
+        message, ok = dstHandler(payloadBytes)
+        return downXDT_pb2.InvocationResponse(message=message, ok=ok)
 
 
 # FetchFromDQP fetches data from dQP to DstFn
@@ -87,6 +87,6 @@ if __name__ == '__main__':
 
     def handler(payload):
         log.info("destination received payload of length %d", len(payload))
-
+        return b"sample response", True
 
     StartDstServer(config, handler)
