@@ -34,7 +34,7 @@ log.basicConfig(level=log.INFO)
 class UnitTest(unittest.TestCase):
     def test_splitPayload(self):
         payloadToSplit = Payload(
-            FunctionName="foo", Data=b'0123456789', Key="", IsXDT=False)
+            FunctionName="foo", Data=b'0123456789')
         key, data, xdtPayload = splitPayload(payloadToSplit)
         log.info("Generated Key is %s", key)
         assert data == b'0123456789'
@@ -53,13 +53,13 @@ class UnitTest(unittest.TestCase):
 class IntegTest(unittest.TestCase):
     def test_Invoke_XDT(self):
         data = bytes(os.urandom(1024 * 1024 * 10))
-        payload = Payload(FunctionName="foo", Data=data, Key="", IsXDT=False)
+        payload = Payload(FunctionName="foo", Data=data)
         message, ok = InvokeWithXDT(URL=config['ProxyHostname']+config['ProxyPort'], xdtPayload=payload, config=config)
         log.info("destination returned %s %s", message, ok)
 
     def test_Timeout(self):
         data = bytes(os.urandom(1024 * 1024))
-        payload = Payload(FunctionName="foo", Data=data, Key="", IsXDT=False)
+        payload = Payload(FunctionName="foo", Data=data)
         try:
             InvokeWithXDT(URL=config['ProxyHostname']+config['ProxyPort'], xdtPayload=payload, config=config)
         except grpc.RpcError as e:
