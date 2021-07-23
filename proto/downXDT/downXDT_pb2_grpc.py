@@ -17,7 +17,7 @@ class XDTtoFnStub(object):
         self.XDTFnCall = channel.unary_unary(
                 '/downXDT.XDTtoFn/XDTFnCall',
                 request_serializer=downXDT__pb2.InvocationRequest.SerializeToString,
-                response_deserializer=downXDT__pb2.Empty.FromString,
+                response_deserializer=downXDT__pb2.InvocationResponse.FromString,
                 )
         self.XDTDataServe = channel.unary_stream(
                 '/downXDT.XDTtoFn/XDTDataServe',
@@ -47,7 +47,7 @@ def add_XDTtoFnServicer_to_server(servicer, server):
             'XDTFnCall': grpc.unary_unary_rpc_method_handler(
                     servicer.XDTFnCall,
                     request_deserializer=downXDT__pb2.InvocationRequest.FromString,
-                    response_serializer=downXDT__pb2.Empty.SerializeToString,
+                    response_serializer=downXDT__pb2.InvocationResponse.SerializeToString,
             ),
             'XDTDataServe': grpc.unary_stream_rpc_method_handler(
                     servicer.XDTDataServe,
@@ -77,7 +77,7 @@ class XDTtoFn(object):
             metadata=None):
         return grpc.experimental.unary_unary(request, target, '/downXDT.XDTtoFn/XDTFnCall',
             downXDT__pb2.InvocationRequest.SerializeToString,
-            downXDT__pb2.Empty.FromString,
+            downXDT__pb2.InvocationResponse.FromString,
             options, channel_credentials,
             insecure, call_credentials, compression, wait_for_ready, timeout, metadata)
 

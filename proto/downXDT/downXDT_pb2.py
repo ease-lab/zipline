@@ -19,7 +19,7 @@ DESCRIPTOR = _descriptor.FileDescriptor(
   syntax='proto3',
   serialized_options=b'Z+github.com/ease-lab/vhive-xdt/proto/downXDT',
   create_key=_descriptor._internal_create_key,
-  serialized_pb=b'\n\rdownXDT.proto\x12\x07\x64ownXDT\"$\n\x11InvocationRequest\x12\x0f\n\x07XDTJSON\x18\x01 \x01(\x0c\"\x07\n\x05\x45mpty\"*\n\x04\x44\x61ta\x12\r\n\x05\x63hunk\x18\x01 \x01(\x0c\x12\x13\n\x0bTotalChunks\x18\x03 \x01(\x03\"\x1a\n\x0b\x44\x61taRequest\x12\x0b\n\x03key\x18\x01 \x01(\t2}\n\x07XDTtoFn\x12\x39\n\tXDTFnCall\x12\x1a.downXDT.InvocationRequest\x1a\x0e.downXDT.Empty\"\x00\x12\x37\n\x0cXDTDataServe\x12\x14.downXDT.DataRequest\x1a\r.downXDT.Data\"\x00\x30\x01\x42-Z+github.com/ease-lab/vhive-xdt/proto/downXDTb\x06proto3'
+  serialized_pb=b'\n\rdownXDT.proto\x12\x07\x64ownXDT\"$\n\x11InvocationRequest\x12\x0f\n\x07XDTJSON\x18\x01 \x01(\x0c\"1\n\x12InvocationResponse\x12\x0f\n\x07message\x18\x01 \x01(\x0c\x12\n\n\x02ok\x18\x02 \x01(\x08\"\x07\n\x05\x45mpty\"*\n\x04\x44\x61ta\x12\r\n\x05\x63hunk\x18\x01 \x01(\x0c\x12\x13\n\x0bTotalChunks\x18\x03 \x01(\x03\"\x1a\n\x0b\x44\x61taRequest\x12\x0b\n\x03key\x18\x01 \x01(\t2\x8a\x01\n\x07XDTtoFn\x12\x46\n\tXDTFnCall\x12\x1a.downXDT.InvocationRequest\x1a\x1b.downXDT.InvocationResponse\"\x00\x12\x37\n\x0cXDTDataServe\x12\x14.downXDT.DataRequest\x1a\r.downXDT.Data\"\x00\x30\x01\x42-Z+github.com/ease-lab/vhive-xdt/proto/downXDTb\x06proto3'
 )
 
 
@@ -57,6 +57,45 @@ _INVOCATIONREQUEST = _descriptor.Descriptor(
 )
 
 
+_INVOCATIONRESPONSE = _descriptor.Descriptor(
+  name='InvocationResponse',
+  full_name='downXDT.InvocationResponse',
+  filename=None,
+  file=DESCRIPTOR,
+  containing_type=None,
+  create_key=_descriptor._internal_create_key,
+  fields=[
+    _descriptor.FieldDescriptor(
+      name='message', full_name='downXDT.InvocationResponse.message', index=0,
+      number=1, type=12, cpp_type=9, label=1,
+      has_default_value=False, default_value=b"",
+      message_type=None, enum_type=None, containing_type=None,
+      is_extension=False, extension_scope=None,
+      serialized_options=None, file=DESCRIPTOR,  create_key=_descriptor._internal_create_key),
+    _descriptor.FieldDescriptor(
+      name='ok', full_name='downXDT.InvocationResponse.ok', index=1,
+      number=2, type=8, cpp_type=7, label=1,
+      has_default_value=False, default_value=False,
+      message_type=None, enum_type=None, containing_type=None,
+      is_extension=False, extension_scope=None,
+      serialized_options=None, file=DESCRIPTOR,  create_key=_descriptor._internal_create_key),
+  ],
+  extensions=[
+  ],
+  nested_types=[],
+  enum_types=[
+  ],
+  serialized_options=None,
+  is_extendable=False,
+  syntax='proto3',
+  extension_ranges=[],
+  oneofs=[
+  ],
+  serialized_start=64,
+  serialized_end=113,
+)
+
+
 _EMPTY = _descriptor.Descriptor(
   name='Empty',
   full_name='downXDT.Empty',
@@ -77,8 +116,8 @@ _EMPTY = _descriptor.Descriptor(
   extension_ranges=[],
   oneofs=[
   ],
-  serialized_start=64,
-  serialized_end=71,
+  serialized_start=115,
+  serialized_end=122,
 )
 
 
@@ -116,8 +155,8 @@ _DATA = _descriptor.Descriptor(
   extension_ranges=[],
   oneofs=[
   ],
-  serialized_start=73,
-  serialized_end=115,
+  serialized_start=124,
+  serialized_end=166,
 )
 
 
@@ -148,11 +187,12 @@ _DATAREQUEST = _descriptor.Descriptor(
   extension_ranges=[],
   oneofs=[
   ],
-  serialized_start=117,
-  serialized_end=143,
+  serialized_start=168,
+  serialized_end=194,
 )
 
 DESCRIPTOR.message_types_by_name['InvocationRequest'] = _INVOCATIONREQUEST
+DESCRIPTOR.message_types_by_name['InvocationResponse'] = _INVOCATIONRESPONSE
 DESCRIPTOR.message_types_by_name['Empty'] = _EMPTY
 DESCRIPTOR.message_types_by_name['Data'] = _DATA
 DESCRIPTOR.message_types_by_name['DataRequest'] = _DATAREQUEST
@@ -164,6 +204,13 @@ InvocationRequest = _reflection.GeneratedProtocolMessageType('InvocationRequest'
   # @@protoc_insertion_point(class_scope:downXDT.InvocationRequest)
   })
 _sym_db.RegisterMessage(InvocationRequest)
+
+InvocationResponse = _reflection.GeneratedProtocolMessageType('InvocationResponse', (_message.Message,), {
+  'DESCRIPTOR' : _INVOCATIONRESPONSE,
+  '__module__' : 'downXDT_pb2'
+  # @@protoc_insertion_point(class_scope:downXDT.InvocationResponse)
+  })
+_sym_db.RegisterMessage(InvocationResponse)
 
 Empty = _reflection.GeneratedProtocolMessageType('Empty', (_message.Message,), {
   'DESCRIPTOR' : _EMPTY,
@@ -196,8 +243,8 @@ _XDTTOFN = _descriptor.ServiceDescriptor(
   index=0,
   serialized_options=None,
   create_key=_descriptor._internal_create_key,
-  serialized_start=145,
-  serialized_end=270,
+  serialized_start=197,
+  serialized_end=335,
   methods=[
   _descriptor.MethodDescriptor(
     name='XDTFnCall',
@@ -205,7 +252,7 @@ _XDTTOFN = _descriptor.ServiceDescriptor(
     index=0,
     containing_service=None,
     input_type=_INVOCATIONREQUEST,
-    output_type=_EMPTY,
+    output_type=_INVOCATIONRESPONSE,
     serialized_options=None,
     create_key=_descriptor._internal_create_key,
   ),

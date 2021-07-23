@@ -29,12 +29,17 @@ package downXDT;
 
 
 service XDTtoFn {
-  rpc XDTFnCall (InvocationRequest) returns (Empty) {}
+  rpc XDTFnCall (InvocationRequest) returns (InvocationResponse) {}
   rpc XDTDataServe (DataRequest) returns (stream Data) {}
 }
 
 message InvocationRequest {
   bytes XDTJSON = 1;
+}
+
+message InvocationResponse {
+  bytes message = 1;
+  bool ok = 2;
 }
 
 message Empty {

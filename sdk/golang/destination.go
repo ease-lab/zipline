@@ -47,7 +47,7 @@ type downXDTServer struct {
 }
 
 // XDTFnCall is to be called by dQP to invoke DstFn
-func (s downXDTServer) XDTFnCall(ctx context.Context, in *downXDT.InvocationRequest) (*downXDT.Empty, error) {
+func (s downXDTServer) XDTFnCall(ctx context.Context, in *downXDT.InvocationRequest) (*downXDT.InvocationResponse, error) {
 
 	log.Infof("DST: received invocation call %s", in.XDTJSON)
 
@@ -61,14 +61,14 @@ func (s downXDTServer) XDTFnCall(ctx context.Context, in *downXDT.InvocationRequ
 		payloadBytes, err := FetchFromDQP(ctx, key, s.client, s.config)
 		if err != nil {
 			log.Errorf("DST: FetchFromDQP failed %v", err)
-			return &downXDT.Empty{}, err
+			return &downXDT.InvocationResponse{}, err
 		}
 
 		//call destination function
 		s.handler(payloadBytes)
 	}
 
-	return &downXDT.Empty{}, nil
+	return &downXDT.InvocationResponse{}, nil
 }
 
 // FetchFromDQP fetches data from dQP to DstFn

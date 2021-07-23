@@ -73,13 +73,13 @@ func splitPayload(xdtPayload *utils.Payload) (string, []byte) {
 }
 
 // Invoke invokes the RPC call with XDT
-func (x XDTclient) Invoke(URL string, xdtPayload utils.Payload) error {
+func (x XDTclient) Invoke(URL string, xdtPayload utils.Payload) ([]byte, bool, error) {
 
 	sQPAddr := x.config.SQPServerHostname + x.config.SQPServerPort
 	key, payloadData := splitPayload(&xdtPayload)
 	serialisedPayload, err := json.Marshal(xdtPayload)
 	if err != nil {
-		return err
+		return nil, false, err
 	}
 
 	httpMetadata := map[string]string{
@@ -105,27 +105,30 @@ func (x XDTclient) Invoke(URL string, xdtPayload utils.Payload) error {
 		select {
 		case <-ctx.Done():
 			<-errorPushData // Wait for f to return.
-			return ctx.Err()
+			return nil, false, ctx.Err()
 		case err := <-errorPushData:
 			if err != nil {
 				log.Errorf("SDK: [Store & Forward] Push data failed")
-				return err
+				return nil, false, err
 			}
 		}
 	}
 
 	errorFnInvocationCall := make(chan error, 1)
+	responseChannel := make(chan *downXDT.InvocationResponse, 1)
 	go func() {
-		errorFnInvocationCall <- fnInvocationCall(ctx, URL, serialisedPayload)
+		response, err := fnInvocationCall(ctx, URL, serialisedPayload)
+		errorFnInvocationCall <- err
+		responseChannel <- response
 	}()
 	select {
 	case <-ctx.Done():
 		<-errorFnInvocationCall
-		return ctx.Err()
+		return nil, false, ctx.Err()
 	case err := <-errorFnInvocationCall:
 		if err != nil {
 			log.Errorf("SDK: InvokeWithXDT: fnInvocationCall failed: %v", err)
-			return err
+			return nil, false, err
 		}
 	}
 
@@ -135,23 +138,26 @@ func (x XDTclient) Invoke(URL string, xdtPayload utils.Payload) error {
 		select {
 		case <-ctx.Done():
 			<-errorPushData
-			return ctx.Err()
+			return nil, false, ctx.Err()
 		case err := <-errorPushData:
 			if err != nil {
 				log.Errorf("SDK: [Cut Through] Push data failed")
-				return err
+				return nil, false, err
 			}
-			return nil
+			response := <-responseChannel
+			return response.Message, response.Ok, nil
 		}
 	} else {
-		return nil
+		response := <-responseChannel
+		return response.Message, response.Ok, nil
 	}
 }
 
 // fnInvocationCall makes fn invocation call to dQP with xdt payload
-func fnInvocationCall(ctx context.Context, URL string, serialisedPayload []byte) error {
+func fnInvocationCall(ctx context.Context, URL string, serialisedPayload []byte) (*downXDT.InvocationResponse, error) {
 
 	errorChannel := make(chan error, 1)
+	responseChannel := make(chan *downXDT.InvocationResponse, 1)
 
 	go func() {
 		conn, err := grpc.DialContext(ctx, URL, utils.GetGopts()...)
@@ -161,7 +167,7 @@ func fnInvocationCall(ctx context.Context, URL string, serialisedPayload []byte)
 		}
 		c := downXDT.NewXDTtoFnClient(conn)
 		log.Infof("SDK: Fn invocation start")
-		_, err = c.XDTFnCall(ctx, &downXDT.InvocationRequest{XDTJSON: serialisedPayload})
+		response, err := c.XDTFnCall(ctx, &downXDT.InvocationRequest{XDTJSON: serialisedPayload})
 		if err != nil {
 			errorChannel <- err
 			return
@@ -174,19 +180,20 @@ func fnInvocationCall(ctx context.Context, URL string, serialisedPayload []byte)
 			return
 		}
 		errorChannel <- nil
+		responseChannel <- response
 	}()
 	select {
 	case <-ctx.Done():
 		log.Errorf("SDK: context expired at fnInvocationCall")
 		<-errorChannel
-		return ctx.Err()
+		return nil, ctx.Err()
 	case err := <-errorChannel:
 		if err != nil {
 			log.Errorf("SDK: Fn invocation failed: %v", err)
-			return err
+			return nil, err
 		}
 		log.Infof("SDK: Fn invocation successful")
-		return nil
+		return <-responseChannel, nil
 	}
 }
 

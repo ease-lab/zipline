@@ -18,7 +18,7 @@ const _ = grpc.SupportPackageIsVersion7
 //
 // For semantics around ctx use and closing/ending streaming RPCs, please refer to https://pkg.go.dev/google.golang.org/grpc/?tab=doc#ClientConn.NewStream.
 type XDTtoFnClient interface {
-	XDTFnCall(ctx context.Context, in *InvocationRequest, opts ...grpc.CallOption) (*Empty, error)
+	XDTFnCall(ctx context.Context, in *InvocationRequest, opts ...grpc.CallOption) (*InvocationResponse, error)
 	XDTDataServe(ctx context.Context, in *DataRequest, opts ...grpc.CallOption) (XDTtoFn_XDTDataServeClient, error)
 }
 
@@ -30,8 +30,8 @@ func NewXDTtoFnClient(cc grpc.ClientConnInterface) XDTtoFnClient {
 	return &xDTtoFnClient{cc}
 }
 
-func (c *xDTtoFnClient) XDTFnCall(ctx context.Context, in *InvocationRequest, opts ...grpc.CallOption) (*Empty, error) {
-	out := new(Empty)
+func (c *xDTtoFnClient) XDTFnCall(ctx context.Context, in *InvocationRequest, opts ...grpc.CallOption) (*InvocationResponse, error) {
+	out := new(InvocationResponse)
 	err := c.cc.Invoke(ctx, "/downXDT.XDTtoFn/XDTFnCall", in, out, opts...)
 	if err != nil {
 		return nil, err
@@ -75,7 +75,7 @@ func (x *xDTtoFnXDTDataServeClient) Recv() (*Data, error) {
 // All implementations must embed UnimplementedXDTtoFnServer
 // for forward compatibility
 type XDTtoFnServer interface {
-	XDTFnCall(context.Context, *InvocationRequest) (*Empty, error)
+	XDTFnCall(context.Context, *InvocationRequest) (*InvocationResponse, error)
 	XDTDataServe(*DataRequest, XDTtoFn_XDTDataServeServer) error
 	mustEmbedUnimplementedXDTtoFnServer()
 }
@@ -84,7 +84,7 @@ type XDTtoFnServer interface {
 type UnimplementedXDTtoFnServer struct {
 }
 
-func (UnimplementedXDTtoFnServer) XDTFnCall(context.Context, *InvocationRequest) (*Empty, error) {
+func (UnimplementedXDTtoFnServer) XDTFnCall(context.Context, *InvocationRequest) (*InvocationResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method XDTFnCall not implemented")
 }
 func (UnimplementedXDTtoFnServer) XDTDataServe(*DataRequest, XDTtoFn_XDTDataServeServer) error {
