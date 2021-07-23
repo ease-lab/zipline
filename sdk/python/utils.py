@@ -27,29 +27,22 @@ from environs import Env
 class Payload:
     FunctionName: str
     Data: bytes
-    Key: str
-    IsXDT: bool
 
-    def __init__(self, FunctionName, Data, Key, IsXDT):
+    def __init__(self, FunctionName, Data):
         self.FunctionName = FunctionName
         self.Data = Data
-        self.Key = Key
-        self.IsXDT = IsXDT
 
     def tobytes(self):
         objectDict = dict()
         objectDict['FunctionName'] = self.FunctionName
         objectDict['Data'] = ''
-        objectDict['Key'] = self.Key
-        objectDict['IsXDT'] = self.IsXDT
         return bytes(json.dumps(objectDict), 'utf-8')
 
     @classmethod
     def loadFromBytes(self, jsonBytes):
         jsonDump = jsonBytes.decode('utf-8')
         objectDict = json.loads(jsonDump)
-        return Payload(objectDict['FunctionName'], bytes(objectDict['Data'], 'utf-8'), objectDict['Key'],
-                       objectDict['IsXDT'])
+        return Payload(objectDict['FunctionName'], bytes(objectDict['Data'], 'utf-8'))
 
 
 def loadConfig():

@@ -47,8 +47,6 @@ def splitPayload(xdtPayload):
     log.info("%s %s", [b for b in payloadData[0:9]], [
              b for b in payloadData[len(payloadData)-9:]])
     xdtPayload.Data = b''
-    xdtPayload.Key = key
-    xdtPayload.IsXDT = True
     return key, payloadData, xdtPayload
 
 

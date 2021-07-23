@@ -39,15 +39,18 @@ class XDTtoFnServicer(downXDT_pb2_grpc.XDTtoFnServicer):
     def XDTFnCall(self, request, context):
         log.info("DST: received invocation call %s", request.XDTJSON)
         xdtPayload = Payload.loadFromBytes(request.XDTJSON)
-        key = xdtPayload.Key
+        metadict = dict(context.invocation_metadata())
+        if metadict['is_xdt'] == "true":
+            key = metadict['key']
+            # fetch data from dQP
+            payloadBytes = FetchFromDQP(key)
 
-        # fetch data from dQP
-        payloadBytes = FetchFromDQP(key)
-
-        global dstHandler
-        # call destination function
-        message, ok = dstHandler(payloadBytes)
-        return downXDT_pb2.InvocationResponse(message=message, ok=ok)
+            global dstHandler
+            # call destination function
+            message, ok = dstHandler(payloadBytes)
+            return downXDT_pb2.InvocationResponse(message=message, ok=ok)
+        else:
+            return downXDT_pb2.InvocationResponse(message=b'', ok=False)
 
 
 # FetchFromDQP fetches data from dQP to DstFn
