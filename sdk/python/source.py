@@ -78,7 +78,7 @@ def InvokeWithXDT(URL, xdtPayload, config):
     else:
         log.fatal("SDK: invalid routing specified in config")
 
-    fnInvocationCall(URL, serialisedPayload, metadata, config)
+    response = fnInvocationCall(URL, serialisedPayload, metadata, config)
     if config['Routing'] == utils.CUT_THROUGH:
         try:
             err = mpQueue.get(block=True, timeout=config['RPCTimeoutDuration']/1000)
@@ -87,7 +87,7 @@ def InvokeWithXDT(URL, xdtPayload, config):
         except queue.Empty:
             raise grpc.RpcError
         p.join()
-    return
+    return response.message, response.ok
 
 
 # fnInvocationCall makes fn invocation call to dQP with xdt payload
@@ -102,9 +102,9 @@ def fnInvocationCall(URL, serialisedPayload, metadata, config):
         raise e
     else:
         stub = downXDT_pb2_grpc.XDTtoFnStub(channel)
-        stub.XDTFnCall(downXDT_pb2.InvocationRequest(
+        response = stub.XDTFnCall(downXDT_pb2.InvocationRequest(
             XDTJSON=serialisedPayload), metadata=metadata, timeout=config['RPCTimeoutDuration']/1000)
-    return
+        return response
 
 
 # generate_chunks is a generator for payload stream

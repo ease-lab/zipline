@@ -93,8 +93,10 @@ func transferPayload(config utils.Config, url string, transferSize int) time.Dur
 	start := time.Now()
 	log.Infof("starting XDT call")
 	log.Infof("using %s as the SQP addr", config.SQPServerHostname+config.SQPServerPort)
-	if err := xdtClient.Invoke(url, payloadToSend); err != nil {
+	if message, _, err := xdtClient.Invoke(url, payloadToSend); err != nil {
 		log.Fatalf("SQP_to_dQP_data_transfer failed %v", err)
+	} else {
+		log.Infof("received %s from the dest", message)
 	}
 	return time.Since(start)
 }

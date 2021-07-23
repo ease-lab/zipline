@@ -47,7 +47,7 @@ class XDTtoFnServicer(downXDT_pb2_grpc.XDTtoFnServicer):
         global dstHandler
         # call destination function
         dstHandler(payloadBytes)
-        return downXDT_pb2.Empty()
+        return downXDT_pb2.InvocationResponse(message=b"sample response", ok=True)
 
 
 # FetchFromDQP fetches data from dQP to DstFn

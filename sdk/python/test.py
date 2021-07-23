@@ -28,6 +28,7 @@ import os
 import unittest
 
 config = loadConfig()
+log.basicConfig(level=log.INFO)
 
 
 class UnitTest(unittest.TestCase):
@@ -53,7 +54,8 @@ class IntegTest(unittest.TestCase):
     def test_Invoke_XDT(self):
         data = bytes(os.urandom(1024 * 1024 * 10))
         payload = Payload(FunctionName="foo", Data=data, Key="", IsXDT=False)
-        InvokeWithXDT(URL=config['ProxyHostname']+config['ProxyPort'], xdtPayload=payload, config=config)
+        message, ok = InvokeWithXDT(URL=config['ProxyHostname']+config['ProxyPort'], xdtPayload=payload, config=config)
+        log.info("destination returned %s %s", message, ok)
 
     def test_Timeout(self):
         data = bytes(os.urandom(1024 * 1024))

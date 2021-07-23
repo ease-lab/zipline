@@ -68,7 +68,7 @@ func (s downXDTServer) XDTFnCall(ctx context.Context, in *downXDT.InvocationRequ
 		s.handler(payloadBytes)
 	}
 
-	return &downXDT.InvocationResponse{}, nil
+	return &downXDT.InvocationResponse{Message: []byte("sample response"), Ok: true}, nil
 }
 
 // FetchFromDQP fetches data from dQP to DstFn
