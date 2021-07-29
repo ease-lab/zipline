@@ -190,6 +190,14 @@ python-timeout-test_SF:
 	cd sdk/python && python -m unittest -v test.IntegTest.test_Timeout
 	-fuser -k 50005/tcp
 
+python-get-put-test: export ROUTING = Store&Forward
+python-get-put-test:
+	cd tests && go test ./integration_test.go -run TestPython_SDK $(GO_TEST_FLAGS) &
+	sleep 60
+	cd sdk/python && python -m unittest -v test.IntegTest.test_GetPut
+	-fuser -k 50005/tcp
+	-fuser -k 50007/tcp
+
 docker-images-push:
 	cd user-functions/fx && ko publish ./ -B
 	cd user-functions/dQP && ko publish ./ -B
@@ -198,7 +206,7 @@ docker-images-push:
 
 benchmark-XDT: export ROUTING = CutThrough
 benchmark-XDT:
-	cd tests && go test ./integration_test.go -run TestGet_Put -v
+		cd tests && go test ./integration_test.go -run TestBenchmark_XDT -v
 
 get-put-test: export ROUTING = Store&Forward
 get-put-test:
