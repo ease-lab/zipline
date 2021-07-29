@@ -25,13 +25,16 @@ import os
 
 # adding gRPC sources to the system path
 sys.path.insert(0, os.getcwd() + '/../../proto/downXDT')
+sys.path.insert(0, os.getcwd() + '/../../proto/crossXDT')
 
 from concurrent import futures
 import grpc
 import logging as log
 import downXDT_pb2_grpc
 import downXDT_pb2
-from utils import Payload, loadConfig
+import crossXDT_pb2_grpc
+import crossXDT_pb2
+from utils import Payload, loadConfig, STORE_FORWARD
 
 
 # XDTtoFnServicer is to be called by dQP to invoke DstFn
@@ -64,6 +67,28 @@ def FetchFromDQP(key, config):
     with grpc.insecure_channel(serverAddr) as channel:
         stub = downXDT_pb2_grpc.XDTtoFnStub(channel)
         chunks = stub.XDTDataServe(request)
+
+        payloadBytes = bytearray()
+        for chunk in chunks:
+            payloadBytes += chunk.chunk
+        log.info("DST: payload of length %d received", len(payloadBytes))
+        return payloadBytes
+
+
+# Get fetches data from sQP
+def Get(key, sQPAddr, config):
+
+    metadata = (
+        ('is_xdt', 'true'),
+        ('key', key),
+        ('sqp_addr', sQPAddr),
+        ('routing', STORE_FORWARD),
+    )
+
+    request = crossXDT_pb2.Request(key=key)
+    with grpc.insecure_channel(sQPAddr) as channel:
+        stub = crossXDT_pb2_grpc.StreamDataStub(channel)
+        chunks = stub.ServeData(request, metadata=metadata)
 
         payloadBytes = bytearray()
         for chunk in chunks:

@@ -136,7 +136,7 @@ func (x XDTclient) Invoke(URL string, xdtPayload utils.Payload) ([]byte, bool, e
 	defer span.EndSpan()
 
 	errorPushData := make(chan error, 1)
-	go func() { errorPushData <- x.PushData(ctx, httpMetadata["key"], payloadData) }()
+	go func() { errorPushData <- x.PushData(ctx, key, payloadData) }()
 	if x.config.Routing == utils.STORE_FORWARD {
 		log.Info("SDK: using store & forward routing")
 		select {

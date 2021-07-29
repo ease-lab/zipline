@@ -88,6 +88,21 @@ def InvokeWithXDT(URL, xdtPayload, config):
     return response.message, response.ok
 
 
+# Put uploads the data to sQP and returns key and sQP address
+def Put(payload, config):
+    sQPAddr = config["SQPServerHostname"]+config["SQPServerPort"]
+    key, payloadData, _ = splitPayload(utils.Payload(FunctionName="foo", Data=payload))
+
+    metadata = (
+        ('is_xdt', 'true'),
+        ('key', key),
+        ('sqp_addr', sQPAddr),
+        ('routing', utils.STORE_FORWARD),
+    )
+    PushData(metadata, key, payloadData, sQPAddr, config["ChunkSizeInBytes"])
+    return key, sQPAddr
+
+
 # fnInvocationCall makes fn invocation call to dQP with xdt payload
 def fnInvocationCall(URL, serialisedPayload, metadata, config):
 

@@ -21,7 +21,8 @@
 # SOFTWARE.
 
 from utils import Payload, loadConfig
-from source import splitPayload, PushData, InvokeWithXDT
+from source import splitPayload, PushData, InvokeWithXDT, Put
+from destination import Get
 import logging as log
 import grpc
 import os
@@ -56,6 +57,13 @@ class IntegTest(unittest.TestCase):
         payload = Payload(FunctionName="foo", Data=data)
         message, ok = InvokeWithXDT(URL=config['ProxyHostname']+config['ProxyPort'], xdtPayload=payload, config=config)
         log.info("destination returned %s %s", message, ok)
+
+    def test_GetPut(self):
+        payloadData = bytes(os.urandom(1024 * 1024 * 10))
+        log.info("sending %s %s", payloadData[0:9], payloadData[-9:])
+        key, sQPAddr = Put(payload=payloadData, config=config)
+        receivedData = Get(key, sQPAddr, config)
+        log.info("received %s %s", receivedData[0:9], receivedData[-9:])
 
     def test_Timeout(self):
         data = bytes(os.urandom(1024 * 1024))
