@@ -24,7 +24,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        test-type: [unit, integ, timeout, parallel-invoke, fan-in, fan-out]
+        test-type: [unit, integ, timeout, parallel-invoke, fan-in, fan-out, get-put]
     steps:
     - name: Set up Go 1.x
       uses: actions/setup-go@v2

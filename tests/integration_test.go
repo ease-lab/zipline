@@ -23,6 +23,7 @@
 package tests
 
 import (
+	"bytes"
 	"context"
 	"crypto/rand"
 	"flag"
@@ -401,6 +402,46 @@ func TestPython_SDKTimeout(t *testing.T) {
 	config := utils.ReadConfig()
 	// start servers
 	sQP.StartServer(config)
+}
+
+func TestGet_Put(t *testing.T) {
+
+	config := utils.ReadConfig()
+	if config.TracingEnabled {
+		shutdown, err := tracing.InitBasicTracer(*zipkinEndpoint, "xdt")
+		if err != nil {
+			log.Warn(err)
+		}
+		defer shutdown()
+	}
+	// start server at sQP
+	go sQP.StartServer(config)
+	go knativeQP(config)
+	go sdk.StartDstServer(config, handler)
+
+	time.Sleep(time.Second * 1)
+
+	xdtClient, err := sdk.NewXDTclient(config)
+	if err != nil {
+		log.Fatalf("InitXDT failed %v", err)
+	}
+	payload := preparePayload().Data
+	var key, sQPAddr string
+	start := time.Now()
+	log.Infof("starting integ test")
+	if key, sQPAddr, err = xdtClient.Put(payload); err != nil {
+		log.Fatalf("TestSdk_InvokeWithXDT failed %v", err)
+	}
+	log.Infof("Object put succesful")
+	receivedPayload, err := sdk.Get(context.Background(), key, sQPAddr, config)
+	if err != nil {
+		log.Fatalf("Error pulling the object: %v", err)
+	} else if bytes.Compare(payload, receivedPayload) == 0 {
+		elapsed := time.Since(start)
+		log.Infof("completed XDT in %s", elapsed)
+	} else {
+		log.Fatalf("Data mismatch")
+	}
 }
 
 func TestBenchmark_XDT(t *testing.T) {

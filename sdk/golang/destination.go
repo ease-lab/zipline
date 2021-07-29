@@ -28,6 +28,8 @@ import (
 	"net"
 	"sync"
 
+	"github.com/ease-lab/vhive-xdt/proto/crossXDT"
+
 	"google.golang.org/grpc/metadata"
 
 	"github.com/ease-lab/vhive-xdt/proto/downXDT"
@@ -102,6 +104,59 @@ func FetchFromDQP(ctx context.Context, key string, client downXDT.XDTtoFnClient,
 			totalChunks = chunk.TotalChunks
 			log.Infof("DST: creating a new buffer")
 			payloadBytes = make([]byte, config.StAndFwBufferSize*config.ChunkSizeInBytes)
+			log.Infof("DST: chunkTotal = %d", totalChunks)
+		})
+		log.Debugf("DST: appending chunk number %d", chunkCount)
+		copy(payloadBytes[byteCount:], chunk.Chunk)
+		byteCount += len(chunk.Chunk)
+		chunkCount += 1
+	}
+}
+
+// Get pulls payload from DQP server using the key
+func Get(ctx context.Context, key, sQPAddr string, config utils.Config) ([]byte, error) {
+	httpMetadata := map[string]string{
+		"is_xdt":   "true",
+		"key":      key,
+		"sqp_addr": sQPAddr,
+		"routing":  config.Routing,
+	}
+	ctx = metadata.NewOutgoingContext(ctx, metadata.New(httpMetadata))
+	conn, err := utils.GetGRPCConn(ctx, sQPAddr, true)
+	if err != nil {
+		log.Errorf("DST: can not connect with SQP server %v", err)
+		return nil, err
+	}
+
+	client := crossXDT.NewStreamDataClient(conn)
+	in := &crossXDT.Request{Key: key}
+	stream, err := client.ServeData(ctx, in)
+	if err != nil {
+		log.Errorf("dST: open stream error %v", err)
+		return nil, err
+	}
+
+	chunkCount := 0
+	byteCount := 0
+	var onlyOnce sync.Once
+	var payloadBytes []byte
+	var totalChunks int64
+	for {
+		chunk, err := stream.Recv()
+		if err == io.EOF {
+			log.Infof("DST: Received %d chunks at DstFn with first/last bytes as:", chunkCount)
+			log.Info(payloadBytes[0:9], payloadBytes[byteCount-9:byteCount])
+			return payloadBytes[:byteCount], nil
+		}
+		if err != nil {
+			log.Errorf("dQP: receive error: %v", err)
+			return nil, err
+		}
+		log.Debugf("dQP: Received chunk no. %d", chunkCount)
+		onlyOnce.Do(func() {
+			totalChunks = chunk.TotalChunks
+			log.Infof("DST: creating a new buffer")
+			payloadBytes = make([]byte, totalChunks*int64(config.ChunkSizeInBytes))
 			log.Infof("DST: chunkTotal = %d", totalChunks)
 		})
 		log.Debugf("DST: appending chunk number %d", chunkCount)
