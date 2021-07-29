@@ -198,4 +198,8 @@ docker-images-push:
 
 benchmark-XDT: export ROUTING = CutThrough
 benchmark-XDT:
-	cd tests && go test ./integration_test.go -run TestBenchmark_XDT -v
+	cd tests && go test ./integration_test.go -run TestGet_Put -v
+
+get-put-test: export ROUTING = Store&Forward
+get-put-test:
+	cd tests && go test ./integration_test.go -run TestGet_Put $(GO_TEST_FLAGS)

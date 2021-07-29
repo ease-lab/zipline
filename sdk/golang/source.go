@@ -73,9 +73,9 @@ func splitPayload(xdtPayload *utils.Payload) (string, []byte) {
 }
 
 // Put uploads the data to sQP and returns key and sQP address
-func (x XDTclient) Put(xdtPayload utils.Payload) (string, string, error) {
+func (x XDTclient) Put(payload []byte) (string, string, error) {
 	sQPAddr := x.config.SQPServerHostname + x.config.SQPServerPort
-	key, payloadData := splitPayload(&xdtPayload)
+	key, _ := splitPayload(&utils.Payload{Data: payload})
 
 	httpMetadata := map[string]string{
 		"is_xdt":   "true",
@@ -94,7 +94,7 @@ func (x XDTclient) Put(xdtPayload utils.Payload) (string, string, error) {
 	defer span.EndSpan()
 
 	errorPushData := make(chan error, 1)
-	go func() { errorPushData <- x.PushData(ctx, key, payloadData) }()
+	go func() { errorPushData <- x.PushData(ctx, key, payload) }()
 
 	select {
 	case <-ctx.Done():
@@ -118,12 +118,6 @@ func (x XDTclient) Invoke(URL string, xdtPayload utils.Payload) ([]byte, bool, e
 	if err != nil {
 		return nil, false, err
 	}
-
-	return x.InvokeWithMetadata(URL, key, sQPAddr, payloadData, serialisedPayload)
-}
-
-// InvokeWithMetadata invokes the RPC call with XDT in put/get scenarios
-func (x XDTclient) InvokeWithMetadata(URL, key, sQPAddr string, payloadData, serialisedPayload []byte) ([]byte, bool, error) {
 
 	httpMetadata := map[string]string{
 		"is_xdt":   "true",
