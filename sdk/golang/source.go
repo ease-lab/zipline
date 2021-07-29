@@ -72,6 +72,43 @@ func splitPayload(xdtPayload *utils.Payload) (string, []byte) {
 	return key, payloadData
 }
 
+// Put uploads the data to sQP and returns key and sQP address
+func (x XDTclient) Put(xdtPayload utils.Payload) (string, string, error) {
+	sQPAddr := x.config.SQPServerHostname + x.config.SQPServerPort
+	key, payloadData := splitPayload(&xdtPayload)
+
+	httpMetadata := map[string]string{
+		"is_xdt":   "true",
+		"key":      key,
+		"sqp_addr": sQPAddr,
+		"routing":  x.config.Routing,
+	}
+	ctx := metadata.NewOutgoingContext(context.Background(), metadata.New(httpMetadata))
+	//  This timeout must be large enough for the request to complete
+	timeoutDuration := time.Duration(x.config.RPCTimeoutDuration) * time.Millisecond
+	ctx, cancel := context.WithTimeout(ctx, timeoutDuration)
+	defer cancel()
+
+	span := tracing.Span{SpanName: "PutXDT", TracerName: "PutXDT-Tracer"}
+	ctx = span.StartSpan(ctx)
+	defer span.EndSpan()
+
+	errorPushData := make(chan error, 1)
+	go func() { errorPushData <- x.PushData(ctx, key, payloadData) }()
+
+	select {
+	case <-ctx.Done():
+		<-errorPushData // Wait for f to return.
+		return "", "", ctx.Err()
+	case err := <-errorPushData:
+		if err != nil {
+			log.Errorf("SDK: [Store & Forward] Push data failed")
+			return "", "", err
+		}
+	}
+	return key, sQPAddr, nil
+}
+
 // Invoke invokes the RPC call with XDT
 func (x XDTclient) Invoke(URL string, xdtPayload utils.Payload) ([]byte, bool, error) {
 
@@ -81,6 +118,12 @@ func (x XDTclient) Invoke(URL string, xdtPayload utils.Payload) ([]byte, bool, e
 	if err != nil {
 		return nil, false, err
 	}
+
+	return x.InvokeWithMetadata(URL, key, sQPAddr, payloadData, serialisedPayload)
+}
+
+// InvokeWithMetadata invokes the RPC call with XDT in put/get scenarios
+func (x XDTclient) InvokeWithMetadata(URL, key, sQPAddr string, payloadData, serialisedPayload []byte) ([]byte, bool, error) {
 
 	httpMetadata := map[string]string{
 		"is_xdt":   "true",
@@ -99,7 +142,7 @@ func (x XDTclient) Invoke(URL string, xdtPayload utils.Payload) ([]byte, bool, e
 	defer span.EndSpan()
 
 	errorPushData := make(chan error, 1)
-	go func() { errorPushData <- x.PushData(ctx, key, payloadData) }()
+	go func() { errorPushData <- x.PushData(ctx, httpMetadata["key"], payloadData) }()
 	if x.config.Routing == utils.STORE_FORWARD {
 		log.Info("SDK: using store & forward routing")
 		select {
