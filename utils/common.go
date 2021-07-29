@@ -23,6 +23,8 @@
 package utils
 
 import (
+	"net"
+
 	"github.com/kelseyhightower/envconfig"
 
 	log "github.com/sirupsen/logrus"
@@ -68,4 +70,21 @@ func ReadConfig() Config {
 		log.Fatalf("Error loding config environment variables: %v", err.Error())
 	}
 	return config
+}
+
+func FetchSelfIP() string {
+	addrs, err := net.InterfaceAddrs()
+	if err != nil {
+		log.Errorf("Error fetching self IP: " + err.Error())
+	}
+
+	for _, a := range addrs {
+		if ipnet, ok := a.(*net.IPNet); ok && !ipnet.IP.IsLoopback() {
+			if ipnet.IP.To4() != nil {
+				return ipnet.IP.String()
+			}
+		}
+	}
+	log.Errorf("unable to find IP, returning empty string")
+	return ""
 }
