@@ -61,8 +61,8 @@ class IntegTest(unittest.TestCase):
     def test_GetPut(self):
         payloadData = bytes(os.urandom(1024 * 1024 * 10))
         log.info("sending %s %s", payloadData[0:9], payloadData[-9:])
-        key, sQPAddr = Put(payload=payloadData, config=config)
-        receivedData = Get(key, sQPAddr, config)
+        capability = Put(payload=payloadData, config=config)
+        receivedData = Get(capability, config)
         log.info("received %s %s", receivedData[0:9], receivedData[-9:])
 
     def test_Timeout(self):

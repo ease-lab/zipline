@@ -426,14 +426,14 @@ func TestGet_Put(t *testing.T) {
 		log.Fatalf("InitXDT failed %v", err)
 	}
 	payload := preparePayload().Data
-	var key, sQPAddr string
+	var capability string
 	start := time.Now()
 	log.Infof("starting integ test")
-	if key, sQPAddr, err = xdtClient.Put(payload); err != nil {
+	if capability, err = xdtClient.Put(payload); err != nil {
 		log.Fatalf("TestSdk_InvokeWithXDT failed %v", err)
 	}
 	log.Infof("Object put succesful")
-	receivedPayload, err := sdk.Get(context.Background(), key, sQPAddr, config)
+	receivedPayload, err := sdk.Get(context.Background(), capability, config)
 	if err != nil {
 		log.Fatalf("Error pulling the object: %v", err)
 	} else if bytes.Compare(payload, receivedPayload) == 0 {

@@ -25,6 +25,7 @@ package golang
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 	"strconv"
 	"time"
 
@@ -73,7 +74,7 @@ func splitPayload(xdtPayload *utils.Payload) (string, []byte) {
 }
 
 // Put uploads the data to sQP and returns key and sQP address
-func (x XDTclient) Put(payload []byte) (string, string, error) {
+func (x XDTclient) Put(payload []byte) (string, error) {
 	sQPAddr := x.config.SQPServerHostname + x.config.SQPServerPort
 	key, _ := splitPayload(&utils.Payload{Data: payload})
 
@@ -99,14 +100,14 @@ func (x XDTclient) Put(payload []byte) (string, string, error) {
 	select {
 	case <-ctx.Done():
 		<-errorPushData // Wait for f to return.
-		return "", "", ctx.Err()
+		return "", ctx.Err()
 	case err := <-errorPushData:
 		if err != nil {
 			log.Errorf("SDK: [Store & Forward] Push data failed")
-			return "", "", err
+			return "", err
 		}
 	}
-	return key, sQPAddr, nil
+	return fmt.Sprintf("%s|%s", key, sQPAddr), nil
 }
 
 // Invoke invokes the RPC call with XDT
