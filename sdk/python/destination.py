@@ -76,8 +76,11 @@ def FetchFromDQP(key, config):
 
 
 # Get fetches data from sQP
-def Get(key, sQPAddr, config):
+def Get(capability, config):
 
+    splitString = capability.split("|", 1)
+    key = splitString[0]
+    sQPAddr = splitString[1]
     metadata = (
         ('is_xdt', 'true'),
         ('key', key),

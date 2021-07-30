@@ -100,7 +100,7 @@ def Put(payload, config):
         ('routing', utils.STORE_FORWARD),
     )
     PushData(metadata, key, payloadData, sQPAddr, config["ChunkSizeInBytes"])
-    return key, sQPAddr
+    return key+"|"+sQPAddr
 
 
 # fnInvocationCall makes fn invocation call to dQP with xdt payload
