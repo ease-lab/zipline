@@ -111,7 +111,7 @@ func (x XDTclient) Put(ctx context.Context, payload []byte) (string, error) {
 }
 
 // Invoke invokes the RPC call with XDT
-func (x XDTclient) Invoke(URL string, xdtPayload utils.Payload) ([]byte, bool, error) {
+func (x XDTclient) Invoke(ctx context.Context, URL string, xdtPayload utils.Payload) ([]byte, bool, error) {
 
 	sQPAddr := x.config.SQPServerHostname + x.config.SQPServerPort
 	key, payloadData := splitPayload(&xdtPayload)
@@ -126,7 +126,7 @@ func (x XDTclient) Invoke(URL string, xdtPayload utils.Payload) ([]byte, bool, e
 		"sqp_addr": sQPAddr,
 		"routing":  x.config.Routing,
 	}
-	ctx := metadata.NewOutgoingContext(context.Background(), metadata.New(httpMetadata))
+	ctx = metadata.NewOutgoingContext(ctx, metadata.New(httpMetadata))
 	//  This timeout must be large enough for the request to complete
 	timeoutDuration := time.Duration(x.config.RPCTimeoutDuration) * time.Millisecond
 	ctx, cancel := context.WithTimeout(ctx, timeoutDuration)

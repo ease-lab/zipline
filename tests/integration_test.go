@@ -185,7 +185,7 @@ func TestSdk_InvokeWithXDT(t *testing.T) {
 	start := time.Now()
 	log.Infof("starting integ test")
 	url := config.ProxyHostname + config.ProxyPort
-	if _, _, err := xdtClient.Invoke(url, preparePayload()); err != nil {
+	if _, _, err := xdtClient.Invoke(context.Background(), url, preparePayload()); err != nil {
 		log.Fatalf("TestSdk_InvokeWithXDT failed %v", err)
 	}
 	elapsed := time.Since(start)
@@ -217,7 +217,7 @@ func TestErr_DQPTimeout(t *testing.T) {
 	start := time.Now()
 	log.Infof("starting integ test")
 	url := config.ProxyHostname + config.ProxyPort
-	if _, _, err := xdtClient.Invoke(url, preparePayload()); err == context.DeadlineExceeded {
+	if _, _, err := xdtClient.Invoke(context.Background(), url, preparePayload()); err == context.DeadlineExceeded {
 		log.Errorf("TestSdk_InvokeWithXDT failed predictably")
 	} else {
 		log.Fatalf("Unexpected Error Occured: %v", err)
@@ -256,7 +256,7 @@ func TestParallel_Invoke(t *testing.T) {
 	errChannel := make(chan error, *numConcurrentFunctions)
 	for i := 0; i < *numConcurrentFunctions; i += 1 {
 		go func() {
-			_, _, err := xdtClient.Invoke(url, preparePayload())
+			_, _, err := xdtClient.Invoke(context.Background(), url, preparePayload())
 			errChannel <- err
 		}()
 	}
@@ -311,7 +311,7 @@ func TestParallel_FanIn(t *testing.T) {
 			if err != nil {
 				log.Fatalf("InitXDT failed %v", err)
 			}
-			_, _, err = xdtClient.Invoke(url, preparePayload())
+			_, _, err = xdtClient.Invoke(context.Background(), url, preparePayload())
 			errChannel <- err
 		}(config)
 	}
@@ -372,7 +372,7 @@ func TestParallel_FanOut(t *testing.T) {
 	for i := 0; i < numberOfSources; i += 1 {
 		url := ":" + fmt.Sprint(dQPPort+i+*numConcurrentFunctions+*numConcurrentFunctions)
 		go func() {
-			_, _, err := xdtClient.Invoke(url, preparePayload())
+			_, _, err := xdtClient.Invoke(context.Background(), url, preparePayload())
 			errChannel <- err
 		}()
 	}
@@ -478,7 +478,7 @@ func TestBenchmark_XDT(t *testing.T) {
 
 		for i := 0; i < sampleSize; i += 1 {
 			start := time.Now()
-			if _, _, err := xdtClient.Invoke(url, payloadToSend); err != nil {
+			if _, _, err := xdtClient.Invoke(context.Background(), url, payloadToSend); err != nil {
 				log.Fatalf("TestBenchmark_XDT failed %v", err)
 			}
 			latencyInUs := time.Since(start).Microseconds()
