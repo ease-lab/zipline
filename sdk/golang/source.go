@@ -74,7 +74,7 @@ func splitPayload(xdtPayload *utils.Payload) (string, []byte) {
 }
 
 // Put uploads the data to sQP and returns key and sQP address
-func (x XDTclient) Put(payload []byte) (string, error) {
+func (x XDTclient) Put(ctx context.Context, payload []byte) (string, error) {
 	sQPAddr := x.config.SQPServerHostname + x.config.SQPServerPort
 	key, _ := splitPayload(&utils.Payload{Data: payload})
 
@@ -84,7 +84,7 @@ func (x XDTclient) Put(payload []byte) (string, error) {
 		"sqp_addr": sQPAddr,
 		"routing":  x.config.Routing,
 	}
-	ctx := metadata.NewOutgoingContext(context.Background(), metadata.New(httpMetadata))
+	ctx = metadata.NewOutgoingContext(ctx, metadata.New(httpMetadata))
 	//  This timeout must be large enough for the request to complete
 	timeoutDuration := time.Duration(x.config.RPCTimeoutDuration) * time.Millisecond
 	ctx, cancel := context.WithTimeout(ctx, timeoutDuration)
