@@ -429,7 +429,7 @@ func TestGet_Put(t *testing.T) {
 	var capability string
 	start := time.Now()
 	log.Infof("starting integ test")
-	if capability, err = xdtClient.Put(payload); err != nil {
+	if capability, err = xdtClient.Put(context.Background(), payload); err != nil {
 		log.Fatalf("TestSdk_InvokeWithXDT failed %v", err)
 	}
 	log.Infof("Object put succesful")
