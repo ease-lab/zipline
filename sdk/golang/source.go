@@ -82,7 +82,7 @@ func (x XDTclient) Put(payload []byte) (string, error) {
 		"is_xdt":   "true",
 		"key":      key,
 		"sqp_addr": sQPAddr,
-		"routing":  utils.STORE_FORWARD,
+		"routing":  x.config.Routing,
 	}
 	ctx := metadata.NewOutgoingContext(context.Background(), metadata.New(httpMetadata))
 	//  This timeout must be large enough for the request to complete

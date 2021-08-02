@@ -40,8 +40,8 @@ type Config struct {
 	DstServerPort             string `default:":50007" envconfig:"DST_SERVER_PORT"`
 	ProxyHostname             string `default:"localhost" envconfig:"PROXY_HOSTNAME"`
 	ProxyPort                 string `default:":50008" envconfig:"PROXY_PORT"`
-	CTBufferSize              int    `default:"25" envconfig:"CT_BUFFER_SIZE"`
-	NumberOfBuffers           int    `default:"2" envconfig:"NUMBER_OF_BUFFERS"`
+	CTBufferSize              int    `default:"157" envconfig:"CT_BUFFER_SIZE"`
+	NumberOfBuffers           int    `default:"10" envconfig:"NUMBER_OF_BUFFERS"`
 	StAndFwBufferSize         int    `default:"1600" envconfig:"ST_AND_FW_BUFFER_SIZE"`
 	Routing                   string `default:"CutThrough" envconfig:"ROUTING"`
 	TracingEnabled            bool   `default:"false" envconfig:"TRACING_ENABLED"`
