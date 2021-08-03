@@ -54,26 +54,9 @@ type producerServer struct {
 
 func (ps producerServer) SayHello(ctx context.Context, req *pb.HelloRequest) (*pb.HelloReply, error) {
 	// establish a connection
-	ps.config.SQPServerHostname = fetchSelfIP()
+	ps.config.SQPServerHostname = utils.FetchSelfIP()
 	duration := transferPayload(ps.config, ps.url, ps.transferSize)
 	return &pb.HelloReply{Message: fmt.Sprintf("Transferred %d KB in %s", ps.transferSize, duration)}, nil
-}
-
-func fetchSelfIP() string {
-	addrs, err := net.InterfaceAddrs()
-	if err != nil {
-		log.Errorf("Oops: " + err.Error())
-	}
-
-	for _, a := range addrs {
-		if ipnet, ok := a.(*net.IPNet); ok && !ipnet.IP.IsLoopback() {
-			if ipnet.IP.To4() != nil {
-				return ipnet.IP.String()
-			}
-		}
-	}
-	log.Errorf("unable to find IP, returning empty string")
-	return ""
 }
 
 func transferPayload(config utils.Config, url string, transferSize int) time.Duration {
@@ -93,7 +76,7 @@ func transferPayload(config utils.Config, url string, transferSize int) time.Dur
 	start := time.Now()
 	log.Infof("starting XDT call")
 	log.Infof("using %s as the SQP addr", config.SQPServerHostname+config.SQPServerPort)
-	if message, _, err := xdtClient.Invoke(url, payloadToSend); err != nil {
+	if message, _, err := xdtClient.Invoke(context.Background(), url, payloadToSend); err != nil {
 		log.Fatalf("SQP_to_dQP_data_transfer failed %v", err)
 	} else {
 		log.Infof("received %s from the dest", message)
