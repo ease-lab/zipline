@@ -52,22 +52,24 @@ type XDTclient struct {
 	ip     string
 }
 
-func NewXDTclient(config utils.Config) (XDTclient, error) {
+func NewXDTclient(config utils.Config) (*XDTclient, error) {
 	var xdtClient XDTclient
 	xdtClient.config = config
 	sQPAddr := config.SQPServerHostname + config.SQPServerPort
 	conn, err := utils.GetGRPCConn(context.Background(), sQPAddr, false)
 	if err != nil {
 		log.Errorf("SRC: can not connect to SQP %v", err)
-		return xdtClient, err
+		return &xdtClient, err
 	}
 
 	xdtClient.client = upXDT.NewStreamDataClient(conn)
-	xdtClient.ip = utils.FetchSelfIP()
-	return xdtClient, nil
+	xdtClient.atom.Store(0)
+
+	xdtClient.ip = utils.FetchSelfIP() + config.SQPServerPort
+	return &xdtClient, nil
 }
 
-func (x XDTclient) splitPayload(xdtPayload *utils.Payload) (string, []byte) {
+func (x *XDTclient) splitPayload(xdtPayload *utils.Payload) (string, []byte) {
 	key := fmt.Sprintf("%s|%s", strconv.FormatUint(x.atom.Inc(), 10), x.ip)
 	log.Infof("XDT invoke called with payload size %d", len(xdtPayload.Data))
 
@@ -78,7 +80,7 @@ func (x XDTclient) splitPayload(xdtPayload *utils.Payload) (string, []byte) {
 }
 
 // Put uploads the data to sQP and returns key and sQP address
-func (x XDTclient) Put(ctx context.Context, payload []byte) (string, error) {
+func (x *XDTclient) Put(ctx context.Context, payload []byte) (string, error) {
 	sQPAddr := x.config.SQPServerHostname + x.config.SQPServerPort
 	key, _ := x.splitPayload(&utils.Payload{Data: payload})
 
@@ -111,11 +113,11 @@ func (x XDTclient) Put(ctx context.Context, payload []byte) (string, error) {
 			return "", err
 		}
 	}
-	return fmt.Sprintf("%s|%s", key, sQPAddr), nil
+	return fmt.Sprintf("%s", key), nil
 }
 
 // Invoke invokes the RPC call with XDT
-func (x XDTclient) Invoke(ctx context.Context, URL string, xdtPayload utils.Payload) ([]byte, bool, error) {
+func (x *XDTclient) Invoke(ctx context.Context, URL string, xdtPayload utils.Payload) ([]byte, bool, error) {
 
 	sQPAddr := x.config.SQPServerHostname + x.config.SQPServerPort
 	key, payloadData := x.splitPayload(&xdtPayload)
@@ -240,7 +242,7 @@ func fnInvocationCall(ctx context.Context, URL string, serialisedPayload []byte)
 }
 
 // PushData to source QP
-func (x XDTclient) PushData(ctx context.Context, key string, payload []byte) error {
+func (x *XDTclient) PushData(ctx context.Context, key string, payload []byte) error {
 
 	payloadSize := len(payload)
 	log.Infof("Transfering %d bytes to sQP", payloadSize)

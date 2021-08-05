@@ -116,8 +116,9 @@ func FetchFromDQP(ctx context.Context, key string, client downXDT.XDTtoFnClient,
 
 // Get pulls payload from DQP server using the key
 func Get(ctx context.Context, capability string, config utils.Config) ([]byte, error) {
+	log.Infof("attempting Get using capability %s", capability)
+	key := capability
 	splitString := strings.SplitN(capability, "|", 2)
-	key := splitString[0]
 	sQPAddr := splitString[1]
 	httpMetadata := map[string]string{
 		"is_xdt":   "true",

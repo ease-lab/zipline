@@ -432,7 +432,7 @@ func TestGet_Put(t *testing.T) {
 	if capability, err = xdtClient.Put(context.Background(), payload); err != nil {
 		log.Fatalf("TestSdk_InvokeWithXDT failed %v", err)
 	}
-	log.Infof("Object put succesful")
+	log.Infof("Object put succesful, received capability %s", capability)
 	receivedPayload, err := sdk.Get(context.Background(), capability, config)
 	if err != nil {
 		log.Fatalf("Error pulling the object: %v", err)
