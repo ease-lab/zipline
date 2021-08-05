@@ -83,6 +83,6 @@ func (b *BufferPool) FreeChannel(key string) {
 		b.channelMap.Delete(key)
 		b.bufferChannels <- tmpChanel.(buffer).channel
 	} else {
-		log.Fatalf("sQP: %s key not found in buffer pool for deletion", key)
+		log.Fatalf("%s key not found in buffer pool for deletion", key)
 	}
 }

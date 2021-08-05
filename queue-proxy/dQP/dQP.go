@@ -70,6 +70,7 @@ func (s downXDTServer) XDTDataServe(in *downXDT.DataRequest, srv downXDT.XDTtoFn
 			resp := downXDT.Data{Chunk: chunk, TotalChunks: chunkTotal}
 			if err := srv.Send(&resp); err != nil {
 				log.Errorf("dQP: send error %v", err)
+				log.Infof("[dQP] freeing channel %s due to send error", in.Key)
 				bufferPool.FreeChannel(in.Key)
 				return err
 			}
@@ -77,6 +78,7 @@ func (s downXDTServer) XDTDataServe(in *downXDT.DataRequest, srv downXDT.XDTtoFn
 			chunkCount += 1
 		default:
 			if chunkTotal == int64(chunkCount) {
+				log.Infof("[dQP] transfer to DST complete, freeing channel %s ", in.Key)
 				bufferPool.FreeChannel(in.Key)
 				return nil
 			}

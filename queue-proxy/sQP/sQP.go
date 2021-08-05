@@ -121,6 +121,7 @@ func (s crossXDTServer) ServeData(in *crossXDT.Request, srv crossXDT.StreamData_
 			resp := crossXDT.Response{Chunk: chunk, TotalChunks: chunkTotal}
 			if err := srv.Send(&resp); err != nil {
 				log.Errorf("sQP: send error %v", err)
+				log.Infof("[sQP] freeing channel %s due to send error", in.Key)
 				bufferPool.FreeChannel(in.Key)
 				return err
 			}
@@ -128,6 +129,7 @@ func (s crossXDTServer) ServeData(in *crossXDT.Request, srv crossXDT.StreamData_
 			chunkCount += 1
 		default:
 			if chunkTotal == int64(chunkCount) {
+				log.Infof("[sQP] transfer to dQP complete, freeing channel %s", in.Key)
 				bufferPool.FreeChannel(in.Key)
 				return nil
 			}

@@ -29,6 +29,8 @@ import (
 	"strconv"
 	"time"
 
+	"go.uber.org/atomic"
+
 	tracing "github.com/ease-lab/vhive/utils/tracing/go"
 
 	"google.golang.org/grpc/metadata"
@@ -44,8 +46,10 @@ import (
 )
 
 type XDTclient struct {
+	atom   atomic.Uint64
 	config utils.Config
 	client upXDT.StreamDataClient
+	ip     string
 }
 
 func NewXDTclient(config utils.Config) (XDTclient, error) {
@@ -59,12 +63,12 @@ func NewXDTclient(config utils.Config) (XDTclient, error) {
 	}
 
 	xdtClient.client = upXDT.NewStreamDataClient(conn)
+	xdtClient.ip = utils.FetchSelfIP()
 	return xdtClient, nil
 }
 
-func splitPayload(xdtPayload *utils.Payload) (string, []byte) {
-	now := time.Now()
-	key := strconv.Itoa(int(now.UnixNano()))
+func (x XDTclient) splitPayload(xdtPayload *utils.Payload) (string, []byte) {
+	key := fmt.Sprintf("%s|%s", strconv.FormatUint(x.atom.Inc(), 10), x.ip)
 	log.Infof("XDT invoke called with payload size %d", len(xdtPayload.Data))
 
 	payloadData := xdtPayload.Data
@@ -76,7 +80,7 @@ func splitPayload(xdtPayload *utils.Payload) (string, []byte) {
 // Put uploads the data to sQP and returns key and sQP address
 func (x XDTclient) Put(ctx context.Context, payload []byte) (string, error) {
 	sQPAddr := x.config.SQPServerHostname + x.config.SQPServerPort
-	key, _ := splitPayload(&utils.Payload{Data: payload})
+	key, _ := x.splitPayload(&utils.Payload{Data: payload})
 
 	httpMetadata := map[string]string{
 		"is_xdt":   "true",
@@ -114,7 +118,7 @@ func (x XDTclient) Put(ctx context.Context, payload []byte) (string, error) {
 func (x XDTclient) Invoke(ctx context.Context, URL string, xdtPayload utils.Payload) ([]byte, bool, error) {
 
 	sQPAddr := x.config.SQPServerHostname + x.config.SQPServerPort
-	key, payloadData := splitPayload(&xdtPayload)
+	key, payloadData := x.splitPayload(&xdtPayload)
 	serialisedPayload, err := json.Marshal(xdtPayload)
 	if err != nil {
 		return nil, false, err
