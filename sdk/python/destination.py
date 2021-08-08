@@ -77,9 +77,9 @@ def FetchFromDQP(key, config):
 
 # Get fetches data from sQP
 def Get(capability, config):
-
+    log.info("fetching payload using capability %s", capability)
+    key = capability
     splitString = capability.split("|", 1)
-    key = splitString[0]
     sQPAddr = splitString[1]
     metadata = (
         ('is_xdt', 'true'),
@@ -102,9 +102,9 @@ def Get(capability, config):
 
 # Get fetches data from sQP
 def BroadcastGet(capability, config):
-
+    log.info("fetching payload using capability %s", capability)
+    key = capability
     splitString = capability.split("|", 1)
-    key = splitString[0]
     sQPAddr = splitString[1]
     metadata = (
         ('is_xdt', 'true'),
