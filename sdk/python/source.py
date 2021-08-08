@@ -32,90 +32,96 @@ import upXDT_pb2_grpc
 import upXDT_pb2
 import downXDT_pb2_grpc
 import downXDT_pb2
-import time
 import multiprocessing as mp
 import utils
 import queue
+import threading
 
 
-def splitPayload(xdtPayload):
-    now = time.time_ns()
-    key = str(now)
-    log.info("XDT invoke called with payload size %d", len(xdtPayload.Data))
+class XDTclient:
+    def __init__(self, config):
+        self.config = config
+        self.ip = utils.get_self_ip() + config["SQPServerPort"]
+        self.atom = 0
+        self._lock = threading.Lock()
 
-    payloadData = xdtPayload.Data
-    log.info("%s %s", [b for b in payloadData[0:9]], [
-             b for b in payloadData[len(payloadData)-9:]])
-    xdtPayload.Data = b''
-    return key, payloadData, xdtPayload
+    def splitPayload(self, xdtPayload):
+        key = ""
+        with self._lock:
+            key = str(self.atom) + "|" + self.ip
+            log.info("XDT invoke called with payload size %d", len(xdtPayload.Data))
+            self.atom += 1
 
+        payloadData = xdtPayload.Data
+        log.info("%s %s", [b for b in payloadData[0:9]], [
+                 b for b in payloadData[len(payloadData)-9:]])
+        xdtPayload.Data = b''
+        return key, payloadData, xdtPayload
 
-# InvokeWithXDT invokes the RPC call with XDT
-def InvokeWithXDT(URL, xdtPayload, config):
+    # InvokeWithXDT invokes the RPC call with XDT
+    def Invoke(self, URL, xdtPayload):
 
-    sQPAddr = config["SQPServerHostname"]+config["SQPServerPort"]
-    key, payloadData, xdtPayload = splitPayload(xdtPayload)
-    serialisedPayload = xdtPayload.tobytes()
+        sQPAddr = self.config["SQPServerHostname"]+self.config["SQPServerPort"]
+        key, payloadData, xdtPayload = self.splitPayload(xdtPayload)
+        serialisedPayload = xdtPayload.tobytes()
 
-    metadata = (
-        ('is_xdt', 'true'),
-        ('key', key),
-        ('sqp_addr', sQPAddr),
-        ('routing', config['Routing']),
-    )
+        metadata = (
+            ('is_xdt', 'true'),
+            ('key', key),
+            ('sqp_addr', sQPAddr),
+            ('routing', self.config['Routing']),
+        )
 
-    mpQueue = mp.Queue()
-    p = mp.Process(target=PushData, args=(metadata, key, payloadData, sQPAddr, config["ChunkSizeInBytes"], mpQueue,))
+        mpQueue = mp.Queue()
+        p = mp.Process(target=PushData, args=(metadata, key, payloadData, sQPAddr, self.config["ChunkSizeInBytes"], mpQueue,))
 
-    if config['Routing'] == utils.CUT_THROUGH:
-        log.info("SDK: using CutThrough routing")
-        p.start()
-    elif config['Routing'] == utils.STORE_FORWARD:
-        log.info("SDK: using store & forward routing")
-        PushData(metadata, key, payloadData, sQPAddr, config["ChunkSizeInBytes"])
-    else:
-        log.fatal("SDK: invalid routing specified in config")
+        if self.config['Routing'] == utils.CUT_THROUGH:
+            log.info("SDK: using CutThrough routing")
+            p.start()
+        elif self.config['Routing'] == utils.STORE_FORWARD:
+            log.info("SDK: using store & forward routing")
+            PushData(metadata, key, payloadData, sQPAddr, self.config["ChunkSizeInBytes"])
+        else:
+            log.fatal("SDK: invalid routing specified in config")
 
-    response = fnInvocationCall(URL, serialisedPayload, metadata, config)
-    if config['Routing'] == utils.CUT_THROUGH:
-        try:
-            err = mpQueue.get(block=True, timeout=config['RPCTimeoutDuration']/1000)
-            if err is not None:
-                raise err
-        except queue.Empty:
-            raise grpc.RpcError
-        p.join()
-    return response.message, response.ok
+        response = fnInvocationCall(URL, serialisedPayload, metadata, self.config)
+        if self.config['Routing'] == utils.CUT_THROUGH:
+            try:
+                err = mpQueue.get(block=True, timeout=self.config['RPCTimeoutDuration']/1000)
+                if err is not None:
+                    raise err
+            except queue.Empty:
+                raise grpc.RpcError
+            p.join()
+        return response.message, response.ok
 
+    # Put uploads the data to sQP and returns key and sQP address
+    def Put(self, payload):
+        sQPAddr = self.config["SQPServerHostname"]+self.config["SQPServerPort"]
+        key, payloadData, _ = self.splitPayload(utils.Payload(FunctionName="foo", Data=payload))
 
-# Put uploads the data to sQP and returns key and sQP address
-def Put(payload, config):
-    sQPAddr = config["SQPServerHostname"]+config["SQPServerPort"]
-    key, payloadData, _ = splitPayload(utils.Payload(FunctionName="foo", Data=payload))
+        metadata = (
+            ('is_xdt', 'true'),
+            ('key', key),
+            ('sqp_addr', sQPAddr),
+            ('routing', utils.STORE_FORWARD),
+        )
+        PushData(metadata, key, payloadData, sQPAddr, self.config["ChunkSizeInBytes"])
+        return key
 
-    metadata = (
-        ('is_xdt', 'true'),
-        ('key', key),
-        ('sqp_addr', sQPAddr),
-        ('routing', utils.STORE_FORWARD),
-    )
-    PushData(metadata, key, payloadData, sQPAddr, config["ChunkSizeInBytes"])
-    return key+"|"+sQPAddr
+    # Put uploads the data to sQP and returns key and sQP address
+    def BroadcastPut(self, payload):
+        sQPAddr = self.config["SQPServerHostname"]+self.config["SQPServerPort"]
+        key, payloadData, _ = self.splitPayload(utils.Payload(FunctionName="foo", Data=payload))
 
-
-# Put uploads the data to sQP and returns key and sQP address
-def BroadcastPut(payload, config):
-    sQPAddr = config["SQPServerHostname"]+config["SQPServerPort"]
-    key, payloadData, _ = splitPayload(utils.Payload(FunctionName="foo", Data=payload))
-
-    metadata = (
-        ('is_xdt', 'true'),
-        ('key', key),
-        ('sqp_addr', sQPAddr),
-        ('routing', utils.STORE_FORWARD),
-    )
-    PushBroadcastData(metadata, key, payloadData, sQPAddr, config["ChunkSizeInBytes"])
-    return key+"|"+sQPAddr
+        metadata = (
+            ('is_xdt', 'true'),
+            ('key', key),
+            ('sqp_addr', sQPAddr),
+            ('routing', utils.STORE_FORWARD),
+        )
+        PushBroadcastData(metadata, key, payloadData, sQPAddr, self.config["ChunkSizeInBytes"])
+        return key
 
 
 # fnInvocationCall makes fn invocation call to dQP with xdt payload
