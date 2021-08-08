@@ -61,7 +61,7 @@ func (s downXDTServer) XDTFnCall(ctx context.Context, in *downXDT.InvocationRequ
 		log.Infof("DST: using %s routing", headers["routing"][0])
 
 		// fetch data from dQP
-		payloadBytes, err := FetchFromDQP(ctx, key, s.client, s.config)
+		payloadBytes, err := FetchFromDQP(ctx, key, s.client)
 		if err != nil {
 			log.Errorf("DST: FetchFromDQP failed %v", err)
 			return &downXDT.InvocationResponse{}, err
@@ -75,8 +75,7 @@ func (s downXDTServer) XDTFnCall(ctx context.Context, in *downXDT.InvocationRequ
 }
 
 // FetchFromDQP fetches data from dQP to DstFn
-func FetchFromDQP(ctx context.Context, key string, client downXDT.XDTtoFnClient, config utils.Config) ([]byte, error) {
-
+func FetchFromDQP(ctx context.Context, key string, client downXDT.XDTtoFnClient) ([]byte, error) {
 	in := &downXDT.DataRequest{Key: key}
 	stream, err := client.XDTDataServe(ctx, in)
 	if err != nil {
@@ -104,7 +103,7 @@ func FetchFromDQP(ctx context.Context, key string, client downXDT.XDTtoFnClient,
 		onlyOnce.Do(func() {
 			totalChunks = chunk.TotalChunks
 			log.Infof("DST: creating a new buffer")
-			payloadBytes = make([]byte, config.StAndFwBufferSize*config.ChunkSizeInBytes)
+			payloadBytes = make([]byte, int(totalChunks)*len(chunk.Chunk))
 			log.Infof("DST: chunkTotal = %d", totalChunks)
 		})
 		log.Debugf("DST: appending chunk number %d", chunkCount)
