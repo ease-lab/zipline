@@ -175,7 +175,7 @@ func TestDQP_to_DstFn_data_transfer(t *testing.T) {
 	dstClient := downXDT.NewXDTtoFnClient(conn)
 
 	start = time.Now()
-	payloadBytes, err := sdk.FetchFromDQP(context.Background(), key, dstClient, config)
+	payloadBytes, err := sdk.FetchFromDQP(context.Background(), key, dstClient)
 	if err != nil {
 		log.Fatalf("FetchFromDQP failed %v", err)
 	}
