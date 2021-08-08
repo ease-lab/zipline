@@ -19,7 +19,7 @@ DESCRIPTOR = _descriptor.FileDescriptor(
   syntax='proto3',
   serialized_options=b'Z,github.com/ease-lab/vhive-xdt/proto/crossXDT',
   create_key=_descriptor._internal_create_key,
-  serialized_pb=b'\n\x0e\x63rossXDT.proto\x12\x08\x63rossXDT\"\x16\n\x07Request\x12\x0b\n\x03key\x18\x01 \x01(\t\".\n\x08Response\x12\r\n\x05\x63hunk\x18\x01 \x01(\x0c\x12\x13\n\x0bTotalChunks\x18\x03 \x01(\x03\x32\x44\n\nStreamData\x12\x36\n\tServeData\x12\x11.crossXDT.Request\x1a\x12.crossXDT.Response\"\x00\x30\x01\x42.Z,github.com/ease-lab/vhive-xdt/proto/crossXDTb\x06proto3'
+  serialized_pb=b'\n\x0e\x63rossXDT.proto\x12\x08\x63rossXDT\"\x16\n\x07Request\x12\x0b\n\x03key\x18\x01 \x01(\t\"9\n\x10\x42roadcastRequest\x12\x0b\n\x03key\x18\x01 \x01(\t\x12\x18\n\x10\x43hunkSizeInBytes\x18\x02 \x01(\x03\".\n\x08Response\x12\r\n\x05\x63hunk\x18\x01 \x01(\x0c\x12\x13\n\x0bTotalChunks\x18\x03 \x01(\x03\x32\x8e\x01\n\nStreamData\x12\x36\n\tServeData\x12\x11.crossXDT.Request\x1a\x12.crossXDT.Response\"\x00\x30\x01\x12H\n\x12ServeBroadcastData\x12\x1a.crossXDT.BroadcastRequest\x1a\x12.crossXDT.Response\"\x00\x30\x01\x42.Z,github.com/ease-lab/vhive-xdt/proto/crossXDTb\x06proto3'
 )
 
 
@@ -57,6 +57,45 @@ _REQUEST = _descriptor.Descriptor(
 )
 
 
+_BROADCASTREQUEST = _descriptor.Descriptor(
+  name='BroadcastRequest',
+  full_name='crossXDT.BroadcastRequest',
+  filename=None,
+  file=DESCRIPTOR,
+  containing_type=None,
+  create_key=_descriptor._internal_create_key,
+  fields=[
+    _descriptor.FieldDescriptor(
+      name='key', full_name='crossXDT.BroadcastRequest.key', index=0,
+      number=1, type=9, cpp_type=9, label=1,
+      has_default_value=False, default_value=b"".decode('utf-8'),
+      message_type=None, enum_type=None, containing_type=None,
+      is_extension=False, extension_scope=None,
+      serialized_options=None, file=DESCRIPTOR,  create_key=_descriptor._internal_create_key),
+    _descriptor.FieldDescriptor(
+      name='ChunkSizeInBytes', full_name='crossXDT.BroadcastRequest.ChunkSizeInBytes', index=1,
+      number=2, type=3, cpp_type=2, label=1,
+      has_default_value=False, default_value=0,
+      message_type=None, enum_type=None, containing_type=None,
+      is_extension=False, extension_scope=None,
+      serialized_options=None, file=DESCRIPTOR,  create_key=_descriptor._internal_create_key),
+  ],
+  extensions=[
+  ],
+  nested_types=[],
+  enum_types=[
+  ],
+  serialized_options=None,
+  is_extendable=False,
+  syntax='proto3',
+  extension_ranges=[],
+  oneofs=[
+  ],
+  serialized_start=52,
+  serialized_end=109,
+)
+
+
 _RESPONSE = _descriptor.Descriptor(
   name='Response',
   full_name='crossXDT.Response',
@@ -91,11 +130,12 @@ _RESPONSE = _descriptor.Descriptor(
   extension_ranges=[],
   oneofs=[
   ],
-  serialized_start=52,
-  serialized_end=98,
+  serialized_start=111,
+  serialized_end=157,
 )
 
 DESCRIPTOR.message_types_by_name['Request'] = _REQUEST
+DESCRIPTOR.message_types_by_name['BroadcastRequest'] = _BROADCASTREQUEST
 DESCRIPTOR.message_types_by_name['Response'] = _RESPONSE
 _sym_db.RegisterFileDescriptor(DESCRIPTOR)
 
@@ -105,6 +145,13 @@ Request = _reflection.GeneratedProtocolMessageType('Request', (_message.Message,
   # @@protoc_insertion_point(class_scope:crossXDT.Request)
   })
 _sym_db.RegisterMessage(Request)
+
+BroadcastRequest = _reflection.GeneratedProtocolMessageType('BroadcastRequest', (_message.Message,), {
+  'DESCRIPTOR' : _BROADCASTREQUEST,
+  '__module__' : 'crossXDT_pb2'
+  # @@protoc_insertion_point(class_scope:crossXDT.BroadcastRequest)
+  })
+_sym_db.RegisterMessage(BroadcastRequest)
 
 Response = _reflection.GeneratedProtocolMessageType('Response', (_message.Message,), {
   'DESCRIPTOR' : _RESPONSE,
@@ -123,8 +170,8 @@ _STREAMDATA = _descriptor.ServiceDescriptor(
   index=0,
   serialized_options=None,
   create_key=_descriptor._internal_create_key,
-  serialized_start=100,
-  serialized_end=168,
+  serialized_start=160,
+  serialized_end=302,
   methods=[
   _descriptor.MethodDescriptor(
     name='ServeData',
@@ -132,6 +179,16 @@ _STREAMDATA = _descriptor.ServiceDescriptor(
     index=0,
     containing_service=None,
     input_type=_REQUEST,
+    output_type=_RESPONSE,
+    serialized_options=None,
+    create_key=_descriptor._internal_create_key,
+  ),
+  _descriptor.MethodDescriptor(
+    name='ServeBroadcastData',
+    full_name='crossXDT.StreamData.ServeBroadcastData',
+    index=1,
+    containing_service=None,
+    input_type=_BROADCASTREQUEST,
     output_type=_RESPONSE,
     serialized_options=None,
     create_key=_descriptor._internal_create_key,

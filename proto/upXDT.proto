@@ -29,6 +29,7 @@ package upXDT;
 
 service StreamData {
   rpc SendData (stream Request) returns (Empty) {}
+  rpc BroadcastUpload(stream Request) returns (Empty) {}
 }
 
 message Request {

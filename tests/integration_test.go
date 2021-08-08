@@ -404,6 +404,48 @@ func TestPython_SDKTimeout(t *testing.T) {
 	sQP.StartServer(config)
 }
 
+func TestBroadcast_GetPut(t *testing.T) {
+
+	config := utils.ReadConfig()
+	if config.TracingEnabled {
+		shutdown, err := tracing.InitBasicTracer(*zipkinEndpoint, "xdt")
+		if err != nil {
+			log.Warn(err)
+		}
+		defer shutdown()
+	}
+	// start server at sQP
+	go sQP.StartServer(config)
+	go knativeQP(config)
+	go sdk.StartDstServer(config, handler)
+
+	time.Sleep(time.Second * 1)
+
+	xdtClient, err := sdk.NewXDTclient(config)
+	if err != nil {
+		log.Fatalf("InitXDT failed %v", err)
+	}
+	payload := preparePayload().Data
+	var capability string
+	start := time.Now()
+	log.Infof("starting integ test")
+	if capability, err = xdtClient.BroadcastPut(context.Background(), payload); err != nil {
+		log.Fatalf("TestSdk_InvokeWithXDT failed %v", err)
+	}
+	log.Infof("Object put succesful, received capability %s", capability)
+	for i := 0; i < 10; i++ {
+		receivedPayload, err := sdk.BroadcastGet(context.Background(), capability, config)
+		if err != nil {
+			log.Fatalf("Error pulling the object: %v", err)
+		} else if bytes.Compare(payload, receivedPayload) == 0 {
+			elapsed := time.Since(start)
+			log.Infof("completed XDT in %s", elapsed)
+		} else {
+			log.Fatalf("Data mismatch")
+		}
+	}
+}
+
 func TestGet_Put(t *testing.T) {
 
 	config := utils.ReadConfig()

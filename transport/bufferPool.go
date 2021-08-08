@@ -37,6 +37,7 @@ type BufferPool struct {
 
 type buffer struct {
 	channel     chan []byte
+	getPutSlice []byte
 	totalChunks int64
 }
 
@@ -67,7 +68,11 @@ func (b *BufferPool) CreateChannel() chan []byte {
 }
 
 func (b *BufferPool) StoreChannel(key string, totalChunks int64, channel chan []byte) {
-	b.channelMap.Store(key, buffer{channel, totalChunks})
+	b.channelMap.Store(key, buffer{channel: channel, totalChunks: totalChunks})
+}
+
+func (b *BufferPool) StoreSlice(key string, totalChunks int64, slice []byte) {
+	b.channelMap.Store(key, buffer{getPutSlice: slice, totalChunks: totalChunks})
 }
 
 func (b *BufferPool) GetChannel(key string) (chan []byte, int64) {
@@ -78,11 +83,27 @@ func (b *BufferPool) GetChannel(key string) (chan []byte, int64) {
 	}
 }
 
+func (b *BufferPool) GetSlice(key string) ([]byte, int64) {
+	if tmpChanel, ok := b.channelMap.Load(key); ok {
+		return tmpChanel.(buffer).getPutSlice, tmpChanel.(buffer).totalChunks
+	} else {
+		return nil, -1
+	}
+}
+
 func (b *BufferPool) FreeChannel(key string) {
 	if tmpChanel, ok := b.channelMap.Load(key); ok {
 		b.channelMap.Delete(key)
 		b.bufferChannels <- tmpChanel.(buffer).channel
 	} else {
-		log.Fatalf("%s key not found in buffer pool for deletion", key)
+		log.Fatalf("%s key not found in buffer channel pool for deletion", key)
+	}
+}
+
+func (b *BufferPool) FreeSlice(key string) {
+	if _, ok := b.channelMap.Load(key); ok {
+		b.channelMap.Delete(key)
+	} else {
+		log.Fatalf("%s key not found in buffer slice pool for deletion", key)
 	}
 }
