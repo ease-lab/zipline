@@ -19,6 +19,7 @@ const _ = grpc.SupportPackageIsVersion7
 // For semantics around ctx use and closing/ending streaming RPCs, please refer to https://pkg.go.dev/google.golang.org/grpc/?tab=doc#ClientConn.NewStream.
 type StreamDataClient interface {
 	SendData(ctx context.Context, opts ...grpc.CallOption) (StreamData_SendDataClient, error)
+	BroadcastUpload(ctx context.Context, opts ...grpc.CallOption) (StreamData_BroadcastUploadClient, error)
 }
 
 type streamDataClient struct {
@@ -63,11 +64,46 @@ func (x *streamDataSendDataClient) CloseAndRecv() (*Empty, error) {
 	return m, nil
 }
 
+func (c *streamDataClient) BroadcastUpload(ctx context.Context, opts ...grpc.CallOption) (StreamData_BroadcastUploadClient, error) {
+	stream, err := c.cc.NewStream(ctx, &StreamData_ServiceDesc.Streams[1], "/upXDT.StreamData/BroadcastUpload", opts...)
+	if err != nil {
+		return nil, err
+	}
+	x := &streamDataBroadcastUploadClient{stream}
+	return x, nil
+}
+
+type StreamData_BroadcastUploadClient interface {
+	Send(*Request) error
+	CloseAndRecv() (*Empty, error)
+	grpc.ClientStream
+}
+
+type streamDataBroadcastUploadClient struct {
+	grpc.ClientStream
+}
+
+func (x *streamDataBroadcastUploadClient) Send(m *Request) error {
+	return x.ClientStream.SendMsg(m)
+}
+
+func (x *streamDataBroadcastUploadClient) CloseAndRecv() (*Empty, error) {
+	if err := x.ClientStream.CloseSend(); err != nil {
+		return nil, err
+	}
+	m := new(Empty)
+	if err := x.ClientStream.RecvMsg(m); err != nil {
+		return nil, err
+	}
+	return m, nil
+}
+
 // StreamDataServer is the server API for StreamData service.
 // All implementations must embed UnimplementedStreamDataServer
 // for forward compatibility
 type StreamDataServer interface {
 	SendData(StreamData_SendDataServer) error
+	BroadcastUpload(StreamData_BroadcastUploadServer) error
 	mustEmbedUnimplementedStreamDataServer()
 }
 
@@ -77,6 +113,9 @@ type UnimplementedStreamDataServer struct {
 
 func (UnimplementedStreamDataServer) SendData(StreamData_SendDataServer) error {
 	return status.Errorf(codes.Unimplemented, "method SendData not implemented")
+}
+func (UnimplementedStreamDataServer) BroadcastUpload(StreamData_BroadcastUploadServer) error {
+	return status.Errorf(codes.Unimplemented, "method BroadcastUpload not implemented")
 }
 func (UnimplementedStreamDataServer) mustEmbedUnimplementedStreamDataServer() {}
 
@@ -117,6 +156,32 @@ func (x *streamDataSendDataServer) Recv() (*Request, error) {
 	return m, nil
 }
 
+func _StreamData_BroadcastUpload_Handler(srv interface{}, stream grpc.ServerStream) error {
+	return srv.(StreamDataServer).BroadcastUpload(&streamDataBroadcastUploadServer{stream})
+}
+
+type StreamData_BroadcastUploadServer interface {
+	SendAndClose(*Empty) error
+	Recv() (*Request, error)
+	grpc.ServerStream
+}
+
+type streamDataBroadcastUploadServer struct {
+	grpc.ServerStream
+}
+
+func (x *streamDataBroadcastUploadServer) SendAndClose(m *Empty) error {
+	return x.ServerStream.SendMsg(m)
+}
+
+func (x *streamDataBroadcastUploadServer) Recv() (*Request, error) {
+	m := new(Request)
+	if err := x.ServerStream.RecvMsg(m); err != nil {
+		return nil, err
+	}
+	return m, nil
+}
+
 // StreamData_ServiceDesc is the grpc.ServiceDesc for StreamData service.
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
@@ -128,6 +193,11 @@ var StreamData_ServiceDesc = grpc.ServiceDesc{
 		{
 			StreamName:    "SendData",
 			Handler:       _StreamData_SendData_Handler,
+			ClientStreams: true,
+		},
+		{
+			StreamName:    "BroadcastUpload",
+			Handler:       _StreamData_BroadcastUpload_Handler,
 			ClientStreams: true,
 		},
 	},

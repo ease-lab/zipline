@@ -100,6 +100,31 @@ def Get(capability, config):
         return payloadBytes
 
 
+# Get fetches data from sQP
+def BroadcastGet(capability, config):
+
+    splitString = capability.split("|", 1)
+    key = splitString[0]
+    sQPAddr = splitString[1]
+    metadata = (
+        ('is_xdt', 'true'),
+        ('key', key),
+        ('sqp_addr', sQPAddr),
+        ('routing', STORE_FORWARD),
+    )
+
+    request = crossXDT_pb2.BroadcastRequest(key=key, ChunkSizeInBytes=config["ChunkSizeInBytes"])
+    with grpc.insecure_channel(sQPAddr) as channel:
+        stub = crossXDT_pb2_grpc.StreamDataStub(channel)
+        chunks = stub.ServeBroadcastData(request, metadata=metadata)
+
+        payloadBytes = bytearray()
+        for chunk in chunks:
+            payloadBytes += chunk.chunk
+        log.info("DST: payload of length %d received", len(payloadBytes))
+        return payloadBytes
+
+
 # StartDstServer starts DstQP server
 def StartDstServer(config, handler):
     global dstHandler

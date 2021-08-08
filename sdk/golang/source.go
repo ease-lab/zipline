@@ -116,6 +116,43 @@ func (x *XDTclient) Put(ctx context.Context, payload []byte) (string, error) {
 	return key, nil
 }
 
+// BroadcastPut uploads the data to sQP and returns key and sQP address
+func (x *XDTclient) BroadcastPut(ctx context.Context, payload []byte) (string, error) {
+	sQPAddr := x.config.SQPServerHostname + x.config.SQPServerPort
+	key, _ := x.splitPayload(&utils.Payload{Data: payload})
+
+	httpMetadata := map[string]string{
+		"is_xdt":   "true",
+		"key":      key,
+		"sqp_addr": sQPAddr,
+		"routing":  x.config.Routing,
+	}
+	ctx = metadata.NewOutgoingContext(ctx, metadata.New(httpMetadata))
+	//  This timeout must be large enough for the request to complete
+	timeoutDuration := time.Duration(x.config.RPCTimeoutDuration) * time.Millisecond
+	ctx, cancel := context.WithTimeout(ctx, timeoutDuration)
+	defer cancel()
+
+	span := tracing.Span{SpanName: "PutXDT", TracerName: "PutXDT-Tracer"}
+	ctx = span.StartSpan(ctx)
+	defer span.EndSpan()
+
+	errorPushData := make(chan error, 1)
+	go func() { errorPushData <- x.PushBroadcastData(ctx, key, payload) }()
+
+	select {
+	case <-ctx.Done():
+		<-errorPushData // Wait for f to return.
+		return "", ctx.Err()
+	case err := <-errorPushData:
+		if err != nil {
+			log.Errorf("SDK: [Store & Forward] Push data failed")
+			return "", err
+		}
+	}
+	return fmt.Sprintf("%s", key), nil
+}
+
 // Invoke invokes the RPC call with XDT
 func (x *XDTclient) Invoke(ctx context.Context, URL string, xdtPayload utils.Payload) ([]byte, bool, error) {
 
@@ -247,6 +284,51 @@ func (x *XDTclient) PushData(ctx context.Context, key string, payload []byte) er
 	payloadSize := len(payload)
 	log.Infof("Transfering %d bytes to sQP", payloadSize)
 	stream, err := x.client.SendData(ctx)
+	if err != nil {
+		log.Errorf("open stream error %v", err)
+		return err
+	}
+	chunkSizeInBytes := x.config.ChunkSizeInBytes
+	chunkTotal := len(payload) / chunkSizeInBytes
+	if len(payload)%chunkSizeInBytes != 0 {
+		chunkTotal += 1
+	}
+
+	for currentByte := 0; currentByte < payloadSize; currentByte += chunkSizeInBytes {
+
+		if currentByte+chunkSizeInBytes > payloadSize {
+			req := upXDT.Request{Chunk: payload[currentByte:payloadSize], Key: key, TotalChunks: int64(chunkTotal)}
+			if err := stream.Send(&req); err != nil {
+				log.Errorf("send error %v", err)
+				return err
+			}
+			log.Debugf("finishing request number : %d", currentByte)
+		} else {
+			req := upXDT.Request{Chunk: payload[currentByte : currentByte+chunkSizeInBytes], Key: key, TotalChunks: int64(chunkTotal)}
+			if err := stream.Send(&req); err != nil {
+				log.Errorf("send error %v", err)
+				return err
+
+			}
+			log.Debugf("finishing request number : %d", currentByte)
+		}
+
+	}
+	_, err = stream.CloseAndRecv()
+	if err != nil {
+		log.Errorf("%v.CloseAndRecv() got error %v, want %v", stream, err, nil)
+		return err
+	}
+	log.Infof("SDK: data push successful")
+	return nil
+}
+
+// PushBroadcastData to source QP
+func (x *XDTclient) PushBroadcastData(ctx context.Context, key string, payload []byte) error {
+
+	payloadSize := len(payload)
+	log.Infof("Transfering %d bytes to sQP", payloadSize)
+	stream, err := x.client.BroadcastUpload(ctx)
 	if err != nil {
 		log.Errorf("open stream error %v", err)
 		return err

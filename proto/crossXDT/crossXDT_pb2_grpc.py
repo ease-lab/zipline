@@ -19,6 +19,11 @@ class StreamDataStub(object):
                 request_serializer=crossXDT__pb2.Request.SerializeToString,
                 response_deserializer=crossXDT__pb2.Response.FromString,
                 )
+        self.ServeBroadcastData = channel.unary_stream(
+                '/crossXDT.StreamData/ServeBroadcastData',
+                request_serializer=crossXDT__pb2.BroadcastRequest.SerializeToString,
+                response_deserializer=crossXDT__pb2.Response.FromString,
+                )
 
 
 class StreamDataServicer(object):
@@ -30,12 +35,23 @@ class StreamDataServicer(object):
         context.set_details('Method not implemented!')
         raise NotImplementedError('Method not implemented!')
 
+    def ServeBroadcastData(self, request, context):
+        """Missing associated documentation comment in .proto file."""
+        context.set_code(grpc.StatusCode.UNIMPLEMENTED)
+        context.set_details('Method not implemented!')
+        raise NotImplementedError('Method not implemented!')
+
 
 def add_StreamDataServicer_to_server(servicer, server):
     rpc_method_handlers = {
             'ServeData': grpc.unary_stream_rpc_method_handler(
                     servicer.ServeData,
                     request_deserializer=crossXDT__pb2.Request.FromString,
+                    response_serializer=crossXDT__pb2.Response.SerializeToString,
+            ),
+            'ServeBroadcastData': grpc.unary_stream_rpc_method_handler(
+                    servicer.ServeBroadcastData,
+                    request_deserializer=crossXDT__pb2.BroadcastRequest.FromString,
                     response_serializer=crossXDT__pb2.Response.SerializeToString,
             ),
     }
@@ -61,6 +77,23 @@ class StreamData(object):
             metadata=None):
         return grpc.experimental.unary_stream(request, target, '/crossXDT.StreamData/ServeData',
             crossXDT__pb2.Request.SerializeToString,
+            crossXDT__pb2.Response.FromString,
+            options, channel_credentials,
+            insecure, call_credentials, compression, wait_for_ready, timeout, metadata)
+
+    @staticmethod
+    def ServeBroadcastData(request,
+            target,
+            options=(),
+            channel_credentials=None,
+            call_credentials=None,
+            insecure=False,
+            compression=None,
+            wait_for_ready=None,
+            timeout=None,
+            metadata=None):
+        return grpc.experimental.unary_stream(request, target, '/crossXDT.StreamData/ServeBroadcastData',
+            crossXDT__pb2.BroadcastRequest.SerializeToString,
             crossXDT__pb2.Response.FromString,
             options, channel_credentials,
             insecure, call_credentials, compression, wait_for_ready, timeout, metadata)

@@ -29,10 +29,16 @@ package crossXDT;
 
 service StreamData {
   rpc ServeData (Request) returns (stream Response) {}
+  rpc ServeBroadcastData (BroadcastRequest) returns (stream Response) {}
 }
 
 message Request {
   string key = 1;
+}
+
+message BroadcastRequest {
+  string key = 1;
+  int64  ChunkSizeInBytes = 2;
 }
 
 message Response {

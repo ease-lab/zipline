@@ -19,6 +19,7 @@ const _ = grpc.SupportPackageIsVersion7
 // For semantics around ctx use and closing/ending streaming RPCs, please refer to https://pkg.go.dev/google.golang.org/grpc/?tab=doc#ClientConn.NewStream.
 type StreamDataClient interface {
 	ServeData(ctx context.Context, in *Request, opts ...grpc.CallOption) (StreamData_ServeDataClient, error)
+	ServeBroadcastData(ctx context.Context, in *BroadcastRequest, opts ...grpc.CallOption) (StreamData_ServeBroadcastDataClient, error)
 }
 
 type streamDataClient struct {
@@ -61,11 +62,44 @@ func (x *streamDataServeDataClient) Recv() (*Response, error) {
 	return m, nil
 }
 
+func (c *streamDataClient) ServeBroadcastData(ctx context.Context, in *BroadcastRequest, opts ...grpc.CallOption) (StreamData_ServeBroadcastDataClient, error) {
+	stream, err := c.cc.NewStream(ctx, &StreamData_ServiceDesc.Streams[1], "/crossXDT.StreamData/ServeBroadcastData", opts...)
+	if err != nil {
+		return nil, err
+	}
+	x := &streamDataServeBroadcastDataClient{stream}
+	if err := x.ClientStream.SendMsg(in); err != nil {
+		return nil, err
+	}
+	if err := x.ClientStream.CloseSend(); err != nil {
+		return nil, err
+	}
+	return x, nil
+}
+
+type StreamData_ServeBroadcastDataClient interface {
+	Recv() (*Response, error)
+	grpc.ClientStream
+}
+
+type streamDataServeBroadcastDataClient struct {
+	grpc.ClientStream
+}
+
+func (x *streamDataServeBroadcastDataClient) Recv() (*Response, error) {
+	m := new(Response)
+	if err := x.ClientStream.RecvMsg(m); err != nil {
+		return nil, err
+	}
+	return m, nil
+}
+
 // StreamDataServer is the server API for StreamData service.
 // All implementations must embed UnimplementedStreamDataServer
 // for forward compatibility
 type StreamDataServer interface {
 	ServeData(*Request, StreamData_ServeDataServer) error
+	ServeBroadcastData(*BroadcastRequest, StreamData_ServeBroadcastDataServer) error
 	mustEmbedUnimplementedStreamDataServer()
 }
 
@@ -75,6 +109,9 @@ type UnimplementedStreamDataServer struct {
 
 func (UnimplementedStreamDataServer) ServeData(*Request, StreamData_ServeDataServer) error {
 	return status.Errorf(codes.Unimplemented, "method ServeData not implemented")
+}
+func (UnimplementedStreamDataServer) ServeBroadcastData(*BroadcastRequest, StreamData_ServeBroadcastDataServer) error {
+	return status.Errorf(codes.Unimplemented, "method ServeBroadcastData not implemented")
 }
 func (UnimplementedStreamDataServer) mustEmbedUnimplementedStreamDataServer() {}
 
@@ -110,6 +147,27 @@ func (x *streamDataServeDataServer) Send(m *Response) error {
 	return x.ServerStream.SendMsg(m)
 }
 
+func _StreamData_ServeBroadcastData_Handler(srv interface{}, stream grpc.ServerStream) error {
+	m := new(BroadcastRequest)
+	if err := stream.RecvMsg(m); err != nil {
+		return err
+	}
+	return srv.(StreamDataServer).ServeBroadcastData(m, &streamDataServeBroadcastDataServer{stream})
+}
+
+type StreamData_ServeBroadcastDataServer interface {
+	Send(*Response) error
+	grpc.ServerStream
+}
+
+type streamDataServeBroadcastDataServer struct {
+	grpc.ServerStream
+}
+
+func (x *streamDataServeBroadcastDataServer) Send(m *Response) error {
+	return x.ServerStream.SendMsg(m)
+}
+
 // StreamData_ServiceDesc is the grpc.ServiceDesc for StreamData service.
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
@@ -121,6 +179,11 @@ var StreamData_ServiceDesc = grpc.ServiceDesc{
 		{
 			StreamName:    "ServeData",
 			Handler:       _StreamData_ServeData_Handler,
+			ServerStreams: true,
+		},
+		{
+			StreamName:    "ServeBroadcastData",
+			Handler:       _StreamData_ServeBroadcastData_Handler,
 			ServerStreams: true,
 		},
 	},

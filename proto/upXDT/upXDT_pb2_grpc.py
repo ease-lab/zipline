@@ -19,6 +19,11 @@ class StreamDataStub(object):
                 request_serializer=upXDT__pb2.Request.SerializeToString,
                 response_deserializer=upXDT__pb2.Empty.FromString,
                 )
+        self.BroadcastUpload = channel.stream_unary(
+                '/upXDT.StreamData/BroadcastUpload',
+                request_serializer=upXDT__pb2.Request.SerializeToString,
+                response_deserializer=upXDT__pb2.Empty.FromString,
+                )
 
 
 class StreamDataServicer(object):
@@ -30,11 +35,22 @@ class StreamDataServicer(object):
         context.set_details('Method not implemented!')
         raise NotImplementedError('Method not implemented!')
 
+    def BroadcastUpload(self, request_iterator, context):
+        """Missing associated documentation comment in .proto file."""
+        context.set_code(grpc.StatusCode.UNIMPLEMENTED)
+        context.set_details('Method not implemented!')
+        raise NotImplementedError('Method not implemented!')
+
 
 def add_StreamDataServicer_to_server(servicer, server):
     rpc_method_handlers = {
             'SendData': grpc.stream_unary_rpc_method_handler(
                     servicer.SendData,
+                    request_deserializer=upXDT__pb2.Request.FromString,
+                    response_serializer=upXDT__pb2.Empty.SerializeToString,
+            ),
+            'BroadcastUpload': grpc.stream_unary_rpc_method_handler(
+                    servicer.BroadcastUpload,
                     request_deserializer=upXDT__pb2.Request.FromString,
                     response_serializer=upXDT__pb2.Empty.SerializeToString,
             ),
@@ -60,6 +76,23 @@ class StreamData(object):
             timeout=None,
             metadata=None):
         return grpc.experimental.stream_unary(request_iterator, target, '/upXDT.StreamData/SendData',
+            upXDT__pb2.Request.SerializeToString,
+            upXDT__pb2.Empty.FromString,
+            options, channel_credentials,
+            insecure, call_credentials, compression, wait_for_ready, timeout, metadata)
+
+    @staticmethod
+    def BroadcastUpload(request_iterator,
+            target,
+            options=(),
+            channel_credentials=None,
+            call_credentials=None,
+            insecure=False,
+            compression=None,
+            wait_for_ready=None,
+            timeout=None,
+            metadata=None):
+        return grpc.experimental.stream_unary(request_iterator, target, '/upXDT.StreamData/BroadcastUpload',
             upXDT__pb2.Request.SerializeToString,
             upXDT__pb2.Empty.FromString,
             options, channel_credentials,

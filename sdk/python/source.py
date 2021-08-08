@@ -103,6 +103,21 @@ def Put(payload, config):
     return key+"|"+sQPAddr
 
 
+# Put uploads the data to sQP and returns key and sQP address
+def BroadcastPut(payload, config):
+    sQPAddr = config["SQPServerHostname"]+config["SQPServerPort"]
+    key, payloadData, _ = splitPayload(utils.Payload(FunctionName="foo", Data=payload))
+
+    metadata = (
+        ('is_xdt', 'true'),
+        ('key', key),
+        ('sqp_addr', sQPAddr),
+        ('routing', utils.STORE_FORWARD),
+    )
+    PushBroadcastData(metadata, key, payloadData, sQPAddr, config["ChunkSizeInBytes"])
+    return key+"|"+sQPAddr
+
+
 # fnInvocationCall makes fn invocation call to dQP with xdt payload
 def fnInvocationCall(URL, serialisedPayload, metadata, config):
 
@@ -146,6 +161,34 @@ def PushData(metadata, key, payload, sQPAddr, chunkSizeInBytes, mpQueue=None):
             stub = upXDT_pb2_grpc.StreamDataStub(channel)
             payload_iterator = generate_chunks(payload, key, chunkSizeInBytes)
             route_summary = stub.SendData(payload_iterator, metadata=metadata)
+            if route_summary == upXDT_pb2.Empty():
+                log.info("Src: payload pushed successfully")
+            else:
+                log.info("Src: err while pushing the data")
+                log.info(route_summary)
+    except grpc.RpcError as e:
+        log.info("Push data timed out")
+        if mpQueue is not None:
+            mpQueue.put(e)
+            return
+        else:
+            raise e
+    else:
+        log.info("Push data successful")
+
+        if mpQueue is not None:
+            mpQueue.put(None)
+        return
+
+
+# PushData to sQP
+def PushBroadcastData(metadata, key, payload, sQPAddr, chunkSizeInBytes, mpQueue=None):
+
+    try:
+        with grpc.insecure_channel(sQPAddr) as channel:
+            stub = upXDT_pb2_grpc.StreamDataStub(channel)
+            payload_iterator = generate_chunks(payload, key, chunkSizeInBytes)
+            route_summary = stub.BroadcastUpload(payload_iterator, metadata=metadata)
             if route_summary == upXDT_pb2.Empty():
                 log.info("Src: payload pushed successfully")
             else:

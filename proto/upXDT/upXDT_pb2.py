@@ -19,7 +19,7 @@ DESCRIPTOR = _descriptor.FileDescriptor(
   syntax='proto3',
   serialized_options=b'Z)github.com/ease-lab/vhive-xdt/proto/upXDT',
   create_key=_descriptor._internal_create_key,
-  serialized_pb=b'\n\x0bupXDT.proto\x12\x05upXDT\":\n\x07Request\x12\r\n\x05\x63hunk\x18\x01 \x01(\x0c\x12\x0b\n\x03key\x18\x02 \x01(\t\x12\x13\n\x0bTotalChunks\x18\x03 \x01(\x03\"\x07\n\x05\x45mpty2:\n\nStreamData\x12,\n\x08SendData\x12\x0e.upXDT.Request\x1a\x0c.upXDT.Empty\"\x00(\x01\x42+Z)github.com/ease-lab/vhive-xdt/proto/upXDTb\x06proto3'
+  serialized_pb=b'\n\x0bupXDT.proto\x12\x05upXDT\":\n\x07Request\x12\r\n\x05\x63hunk\x18\x01 \x01(\x0c\x12\x0b\n\x03key\x18\x02 \x01(\t\x12\x13\n\x0bTotalChunks\x18\x03 \x01(\x03\"\x07\n\x05\x45mpty2o\n\nStreamData\x12,\n\x08SendData\x12\x0e.upXDT.Request\x1a\x0c.upXDT.Empty\"\x00(\x01\x12\x33\n\x0f\x42roadcastUpload\x12\x0e.upXDT.Request\x1a\x0c.upXDT.Empty\"\x00(\x01\x42+Z)github.com/ease-lab/vhive-xdt/proto/upXDTb\x06proto3'
 )
 
 
@@ -124,12 +124,22 @@ _STREAMDATA = _descriptor.ServiceDescriptor(
   serialized_options=None,
   create_key=_descriptor._internal_create_key,
   serialized_start=91,
-  serialized_end=149,
+  serialized_end=202,
   methods=[
   _descriptor.MethodDescriptor(
     name='SendData',
     full_name='upXDT.StreamData.SendData',
     index=0,
+    containing_service=None,
+    input_type=_REQUEST,
+    output_type=_EMPTY,
+    serialized_options=None,
+    create_key=_descriptor._internal_create_key,
+  ),
+  _descriptor.MethodDescriptor(
+    name='BroadcastUpload',
+    full_name='upXDT.StreamData.BroadcastUpload',
+    index=1,
     containing_service=None,
     input_type=_REQUEST,
     output_type=_EMPTY,

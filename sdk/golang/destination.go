@@ -170,6 +170,63 @@ func Get(ctx context.Context, capability string, config utils.Config) ([]byte, e
 	}
 }
 
+// BroadcastGet pulls payload from DQP server using the key
+func BroadcastGet(ctx context.Context, capability string, config utils.Config) ([]byte, error) {
+	log.Infof("attempting Get using capability %s", capability)
+	key := capability
+	splitString := strings.SplitN(capability, "|", 2)
+	sQPAddr := splitString[1]
+	httpMetadata := map[string]string{
+		"is_xdt":   "true",
+		"key":      key,
+		"sqp_addr": sQPAddr,
+		"routing":  config.Routing,
+	}
+	ctx = metadata.NewOutgoingContext(ctx, metadata.New(httpMetadata))
+	conn, err := utils.GetGRPCConn(ctx, sQPAddr, true)
+	if err != nil {
+		log.Errorf("DST: can not connect with SQP server %v", err)
+		return nil, err
+	}
+
+	client := crossXDT.NewStreamDataClient(conn)
+	in := &crossXDT.BroadcastRequest{Key: key, ChunkSizeInBytes: int64(config.ChunkSizeInBytes)}
+	stream, err := client.ServeBroadcastData(ctx, in)
+	if err != nil {
+		log.Errorf("dST: open stream error %v", err)
+		return nil, err
+	}
+
+	chunkCount := 0
+	byteCount := 0
+	var onlyOnce sync.Once
+	var payloadBytes []byte
+	var totalChunks int64
+	for {
+		chunk, err := stream.Recv()
+		if err == io.EOF {
+			log.Infof("DST: Received %d chunks at DstFn with first/last bytes as:", chunkCount)
+			log.Info(payloadBytes[0:9], payloadBytes[byteCount-9:byteCount])
+			return payloadBytes[:byteCount], nil
+		}
+		if err != nil {
+			log.Errorf("dQP: receive error: %v", err)
+			return nil, err
+		}
+		log.Debugf("dQP: Received chunk no. %d", chunkCount)
+		onlyOnce.Do(func() {
+			totalChunks = chunk.TotalChunks
+			log.Infof("DST: creating a new buffer")
+			payloadBytes = make([]byte, totalChunks*int64(config.ChunkSizeInBytes))
+			log.Infof("DST: chunkTotal = %d", totalChunks)
+		})
+		log.Debugf("DST: appending chunk number %d", chunkCount)
+		copy(payloadBytes[byteCount:], chunk.Chunk)
+		byteCount += len(chunk.Chunk)
+		chunkCount += 1
+	}
+}
+
 // StartDstServer starts DstQP server
 func StartDstServer(config utils.Config, handler func([]byte) ([]byte, bool)) {
 
