@@ -210,10 +210,10 @@ func BroadcastGet(ctx context.Context, capability string, config utils.Config) (
 			return payloadBytes[:byteCount], nil
 		}
 		if err != nil {
-			log.Errorf("dQP: receive error: %v", err)
+			log.Errorf("DST: receive error: %v", err)
 			return nil, err
 		}
-		log.Debugf("dQP: Received chunk no. %d", chunkCount)
+		log.Debugf("DST: Received chunk no. %d", chunkCount)
 		onlyOnce.Do(func() {
 			totalChunks = chunk.TotalChunks
 			log.Infof("DST: creating a new buffer")
