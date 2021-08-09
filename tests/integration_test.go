@@ -433,17 +433,33 @@ func TestBroadcast_GetPut(t *testing.T) {
 		log.Fatalf("TestSdk_InvokeWithXDT failed %v", err)
 	}
 	log.Infof("Object put succesful, received capability %s", capability)
-	for i := 0; i < 10; i++ {
-		receivedPayload, err := sdk.BroadcastGet(context.Background(), capability, config)
-		if err != nil {
-			log.Fatalf("Error pulling the object: %v", err)
-		} else if bytes.Compare(payload, receivedPayload) == 0 {
-			elapsed := time.Since(start)
-			log.Infof("completed XDT in %s", elapsed)
-		} else {
-			log.Fatalf("Data mismatch")
+	var broadcastAmount = 1
+	errorChannel := make(chan error, broadcastAmount)
+	for i := 0; i < broadcastAmount; i++ {
+		go func(i int) {
+			receivedPayload, err := sdk.BroadcastGet(context.Background(), capability, config)
+			if err != nil {
+				log.Fatalf("Error pulling the object: %v", err)
+				errorChannel <- err
+			} else if bytes.Compare(payload, receivedPayload) == 0 {
+				log.Infof("completed Broadcast no %d", i)
+				errorChannel <- nil
+			} else {
+				log.Fatalf("payload damaged")
+				errorChannel <- nil
+			}
+		}(i)
+	}
+	for i := 0; i < broadcastAmount; i++ {
+		select {
+		case err := <-errorChannel:
+			if err != nil {
+				log.Errorf("Broadcast failed: %v", err)
+			}
 		}
 	}
+	elapsed := time.Since(start)
+	log.Infof("completed Broadcast in %s", elapsed)
 }
 
 func TestGet_Put(t *testing.T) {

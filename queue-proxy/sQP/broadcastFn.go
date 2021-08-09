@@ -21,24 +21,24 @@ func (s upXDTServer) BroadcastUpload(srv upXDT.StreamData_BroadcastUploadServer)
 	for {
 		chunk, err := srv.Recv()
 		if err == io.EOF {
-			log.Infof("dQP: Received %d chunks at DstFn with first/last bytes as:", chunkCount)
+			log.Infof("sQP: Received %d chunks at DstFn with first/last bytes as:", chunkCount)
 			log.Info(payloadBytes[0:9], payloadBytes[byteCount-9:byteCount])
 			bufferPool.StoreSlice(key, totalChunks, payloadBytes)
 			return srv.SendAndClose(&upXDT.Empty{})
 		}
 		if err != nil {
-			log.Errorf("dQP: receive error: %v", err)
+			log.Errorf("sQP: receive error: %v", err)
 			return err
 		}
-		log.Debugf("dQP: Received chunk no. %d", chunkCount)
+		log.Debugf("sQP: Received chunk no. %d", chunkCount)
 		onlyOnce.Do(func() {
 			key = chunk.Key
 			totalChunks = chunk.TotalChunks
-			log.Infof("dQP: creating a new buffer")
+			log.Infof("sQP: creating a new buffer")
 			payloadBytes = make([]byte, int(totalChunks)*len(chunk.Chunk))
-			log.Infof("dQP: chunkTotal = %d", totalChunks)
+			log.Infof("sQP: chunkTotal = %d", totalChunks)
 		})
-		log.Debugf("dQP: appending chunk number %d", chunkCount)
+		log.Debugf("sQP: appending chunk number %d", chunkCount)
 		copy(payloadBytes[byteCount:], chunk.Chunk)
 		byteCount += len(chunk.Chunk)
 		chunkCount += 1
@@ -85,6 +85,5 @@ func (s crossXDTServer) ServeBroadcastData(in *crossXDT.BroadcastRequest, srv cr
 		}
 
 	}
-	log.Infof("SDK: data push successful")
 	return nil
 }
