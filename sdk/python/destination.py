@@ -34,26 +34,25 @@ import downXDT_pb2_grpc
 import downXDT_pb2
 import crossXDT_pb2_grpc
 import crossXDT_pb2
-from utils import Payload, loadConfig, STORE_FORWARD
+from utils import loadConfig, STORE_FORWARD
 
 
 # XDTtoFnServicer is to be called by dQP to invoke DstFn
 class XDTtoFnServicer(downXDT_pb2_grpc.XDTtoFnServicer):
-    def __init__(self, config):
+    def __init__(self, config, dstHandler):
         self.config = config
+        self.dstHandler = dstHandler
 
     def XDTFnCall(self, request, context):
         log.info("DST: received invocation call %s", request.XDTJSON)
-        xdtPayload = Payload.loadFromBytes(request.XDTJSON)
         metadict = dict(context.invocation_metadata())
         if metadict['is_xdt'] == "true":
             key = metadict['key']
             # fetch data from dQP
             payloadBytes = FetchFromDQP(key, self.config)
 
-            global dstHandler
             # call destination function
-            message, ok = dstHandler(payloadBytes)
+            message, ok = self.dstHandler(payloadBytes)
             return downXDT_pb2.InvocationResponse(message=message, ok=ok)
         else:
             return downXDT_pb2.InvocationResponse(message=b'', ok=False)
@@ -126,12 +125,10 @@ def BroadcastGet(capability, config):
 
 
 # StartDstServer starts DstQP server
-def StartDstServer(config, handler):
-    global dstHandler
-    dstHandler = handler
+def StartDstServer(config, dstHandler):
 
     server = grpc.server(futures.ThreadPoolExecutor(max_workers=config['MaxDstServerThreadsPython']))
-    xdtServicer = XDTtoFnServicer(config=config)
+    xdtServicer = XDTtoFnServicer(config=config, dstHandler=dstHandler)
     downXDT_pb2_grpc.add_XDTtoFnServicer_to_server(
         xdtServicer, server)
     server.add_insecure_port("[::]"+config['DstServerPort'])
@@ -141,10 +138,9 @@ def StartDstServer(config, handler):
 
 if __name__ == '__main__':
     log.basicConfig(level=log.INFO)
-    config = loadConfig()
 
     def handler(payload):
         log.info("destination received payload of length %d", len(payload))
         return b"sample response", True
 
-    StartDstServer(config, handler)
+    StartDstServer(loadConfig(), handler)

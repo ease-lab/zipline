@@ -59,7 +59,7 @@ func (s downXDTServer) XDTDataServe(in *downXDT.DataRequest, srv downXDT.XDTtoFn
 	// Check whether the first packet has been received at dQP or not
 	for {
 		if channel, chunkTotal = bufferPool.GetChannel(in.Key); channel != nil {
-			log.Infof("dQP: found chunkTotal %d for key %s at sQP", chunkTotal, in.Key)
+			log.Infof("dQP: found chunkTotal %d for key %s at dQP", chunkTotal, in.Key)
 			break
 		}
 	}
