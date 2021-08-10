@@ -61,7 +61,7 @@ func (s crossXDTServer) ServeBroadcastData(in *crossXDT.BroadcastRequest, srv cr
 		}
 	}
 	payloadSize := len(slice)
-	log.Infof("Transfering %d bytes to sQP", payloadSize)
+	log.Infof("Broadcasting %d bytes to sQP", payloadSize)
 
 	chunkSizeInBytes := int(in.ChunkSizeInBytes)
 

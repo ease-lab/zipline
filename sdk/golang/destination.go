@@ -217,7 +217,7 @@ func BroadcastGet(ctx context.Context, capability string, config utils.Config) (
 		onlyOnce.Do(func() {
 			totalChunks = chunk.TotalChunks
 			log.Infof("DST: creating a new buffer")
-			payloadBytes = make([]byte, totalChunks*int64(config.ChunkSizeInBytes))
+			payloadBytes = make([]byte, totalChunks*int64(len(chunk.Chunk)))
 			log.Infof("DST: chunkTotal = %d", totalChunks)
 		})
 		log.Debugf("DST: appending chunk number %d", chunkCount)
