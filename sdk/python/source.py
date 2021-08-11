@@ -62,6 +62,7 @@ class XDTclient:
     def Invoke(self, URL, xdtPayload):
 
         sQPAddr = self.config["SQPServerHostname"]+self.config["SQPServerPort"]
+        log.info("Src: calling SQP at %s", sQPAddr)
         key, payloadData, xdtPayload = self.splitPayload(xdtPayload)
         serialisedPayload = xdtPayload.tobytes()
 
@@ -132,7 +133,7 @@ def fnInvocationCall(URL, serialisedPayload, metadata, config):
     try:
         channel_ready_future.result(timeout=config['RPCTimeoutDuration']/1000)
     except grpc.FutureTimeoutError as e:
-        log.error("SRC: connection to LB/DQP timed out")
+        log.error("Src: connection to LB/DQP timed out")
         raise e
     else:
         stub = downXDT_pb2_grpc.XDTtoFnStub(channel)
@@ -155,6 +156,7 @@ def generate_chunks(payload, key, chunkSizeInBytes):
         else:
             chunk = payload[currentByte: currentByte+chunkSizeInBytes]
         req = upXDT_pb2.Request(chunk=chunk, key=key, TotalChunks=chunkTotal)
+        log.debug("Src: pushed %d bytes to sQP", currentByte)
         currentByte += chunkSizeInBytes
         yield req
 
@@ -166,7 +168,9 @@ def PushData(metadata, key, payload, sQPAddr, chunkSizeInBytes, mpQueue=None):
         with grpc.insecure_channel(sQPAddr) as channel:
             stub = upXDT_pb2_grpc.StreamDataStub(channel)
             payload_iterator = generate_chunks(payload, key, chunkSizeInBytes)
+            log.info("Src: iterator defined")
             route_summary = stub.SendData(payload_iterator, metadata=metadata)
+            log.info("Src: data pushed to sQP successfully")
             if route_summary == upXDT_pb2.Empty():
                 log.info("Src: payload pushed successfully")
             else:
@@ -187,7 +191,7 @@ def PushData(metadata, key, payload, sQPAddr, chunkSizeInBytes, mpQueue=None):
         return
 
 
-# PushData to sQP
+# PushBroadcastData to sQP
 def PushBroadcastData(metadata, key, payload, sQPAddr, chunkSizeInBytes, mpQueue=None):
 
     try:
