@@ -150,7 +150,7 @@ func (x *XDTclient) BroadcastPut(ctx context.Context, payload []byte) (string, e
 			return "", err
 		}
 	}
-	return fmt.Sprintf("%s", key), nil
+	return key, nil
 }
 
 // Invoke invokes the RPC call with XDT
