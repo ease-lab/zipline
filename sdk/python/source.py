@@ -74,11 +74,11 @@ class XDTclient:
         )
 
         mpQueue = mp.Queue()
-        p = mp.Process(target=PushData, args=(metadata, key, payloadData, sQPAddr, self.config["ChunkSizeInBytes"], mpQueue,))
+        thread = threading.Thread(target=PushData, args=(metadata, key, payloadData, sQPAddr, self.config["ChunkSizeInBytes"], mpQueue,))
 
         if self.config['Routing'] == utils.CUT_THROUGH:
             log.info("SDK: using CutThrough routing")
-            p.start()
+            thread.start()
         elif self.config['Routing'] == utils.STORE_FORWARD:
             log.info("SDK: using store & forward routing")
             PushData(metadata, key, payloadData, sQPAddr, self.config["ChunkSizeInBytes"])
@@ -93,7 +93,7 @@ class XDTclient:
                     raise err
             except queue.Empty:
                 raise grpc.RpcError
-            p.join()
+            thread.join()
         return response.message, response.ok
 
     # Put uploads the data to sQP and returns key and sQP address
