@@ -117,6 +117,7 @@ fan-out_SF:
 	cd tests && go test ./integration_test.go -run TestParallel_FanOut -concurrentCalls 2 $(GO_TEST_FLAGS)
 	sleep 2
 	cd tests && go test ./integration_test.go -run TestParallel_FanOut -concurrentCalls 5 $(GO_TEST_FLAGS)
+	sleep 2
 fan-out_CT: export ROUTING = CutThrough
 fan-out_CT:
 	cd tests && go test ./integration_test.go -run TestParallel_FanOut -concurrentCalls 1 $(GO_TEST_FLAGS)
@@ -124,6 +125,7 @@ fan-out_CT:
 	cd tests && go test ./integration_test.go -run TestParallel_FanOut -concurrentCalls 2 $(GO_TEST_FLAGS)
 	sleep 2
 	cd tests && go test ./integration_test.go -run TestParallel_FanOut -concurrentCalls 5 $(GO_TEST_FLAGS)
+	sleep 2
 
 fan-in_SF: export ROUTING = Store&Forward
 fan-in_SF:
