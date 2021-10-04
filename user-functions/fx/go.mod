@@ -11,7 +11,7 @@ replace (
 )
 
 require (
-	github.com/containerd/containerd v1.5.2
+	github.com/containerd/containerd v1.5.7
 	github.com/ease-lab/vhive-xdt/sdk/golang v0.0.0-00010101000000-000000000000
 	github.com/ease-lab/vhive-xdt/utils v0.0.0-00010101000000-000000000000
 	github.com/ease-lab/vhive/examples/protobuf/helloworld v0.0.0-20210624210547-e0cd5d053491
