@@ -49,14 +49,45 @@ type producerServer struct {
 	config       utils.Config
 	url          string
 	transferSize int
+	noCopy       bool
 	pb.UnimplementedGreeterServer
 }
 
 func (ps producerServer) SayHello(ctx context.Context, req *pb.HelloRequest) (*pb.HelloReply, error) {
 	// establish a connection
 	ps.config.SQPServerHostname = utils.FetchSelfIP()
-	duration := transferPayload(ps.config, ps.url, ps.transferSize)
+	var duration time.Duration
+	if ps.noCopy {
+		duration = transferPayloadNoCopy(ps.config, ps.url, ps.transferSize)
+	} else {
+		duration = transferPayload(ps.config, ps.url, ps.transferSize)
+	}
 	return &pb.HelloReply{Message: fmt.Sprintf("Transferred %d KB in %s", ps.transferSize, duration)}, nil
+}
+
+func transferPayloadNoCopy(config utils.Config, url string, transferSize int) time.Duration {
+	payloadData := make([]byte, transferSize*1024) // 10MiB
+	if _, err := rand.Read(payloadData); err != nil {
+		log.Fatal(err)
+	}
+
+	payloadToSend := utils.Payload{
+		FunctionName: "HelloXDT",
+		Data:         payloadData,
+	}
+	xdtClient, err := sdk.NewXDTclient(config)
+	if err != nil {
+		log.Fatalf("InitXDT failed %v", err)
+	}
+	start := time.Now()
+	log.Infof("starting ServeAndInvoke XDT call")
+	log.Infof("using %s as the src addr", config.SrcServerHostname+config.SrcServerPort)
+	if message, _, err := xdtClient.ServeAndInvoke(context.Background(), url, payloadToSend); err != nil {
+		log.Fatalf("SRC_to_dQP_data_transfer failed %v", err)
+	} else {
+		log.Infof("received %s from the dest", message)
+	}
+	return time.Since(start)
 }
 
 func transferPayload(config utils.Config, url string, transferSize int) time.Duration {
@@ -88,9 +119,10 @@ func main() {
 	dockerCompose := flag.Bool("dockerCompose", false, "Set to true when used with docker compose")
 	url := flag.String("url", "gx.default.192.168.1.240.sslip.io", "Destination function url")
 	transferSize := flag.Int("transferSize", 10000, "Number of KB's to transfer")
+	noCopy := flag.Bool("noCopy", false, "Set to true to bypass sQP for object transfers")
 	flag.Parse()
 
-	log.SetLevel(log.InfoLevel)
+	log.SetLevel(log.DebugLevel)
 	log.SetFormatter(&log.TextFormatter{
 		TimestampFormat: ctrdlog.RFC3339NanoFixed,
 		FullTimestamp:   true,
@@ -116,7 +148,11 @@ func main() {
 			}
 			defer shutdown()
 		}
-		transferPayload(config, config.DQPServerHostname+config.ProxyPort, *transferSize)
+		if *noCopy {
+			transferPayloadNoCopy(config, config.DQPServerHostname+config.ProxyPort, *transferSize)
+		} else {
+			transferPayload(config, config.DQPServerHostname+config.ProxyPort, *transferSize)
+		}
 	} else {
 		var grpcServer *grpc.Server
 		if config.TracingEnabled {
@@ -135,6 +171,7 @@ func main() {
 		s.config = config
 		s.url = *url + ":80"
 		s.transferSize = *transferSize
+		s.noCopy = *noCopy
 		pb.RegisterGreeterServer(grpcServer, &s)
 
 		//server setup

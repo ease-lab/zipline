@@ -35,21 +35,33 @@ import (
 
 	"google.golang.org/grpc/metadata"
 
+	"github.com/ease-lab/vhive-xdt/proto/crossXDT"
 	"github.com/ease-lab/vhive-xdt/proto/downXDT"
 
 	"github.com/ease-lab/vhive-xdt/utils"
 
 	log "github.com/sirupsen/logrus"
 
+	"net"
+
 	"github.com/ease-lab/vhive-xdt/proto/upXDT"
+	"go.opentelemetry.io/contrib/instrumentation/google.golang.org/grpc/otelgrpc"
 	"google.golang.org/grpc"
 )
 
+type crossXDTServer struct {
+	payloadData *[]byte
+	config      utils.Config
+	crossXDT.UnimplementedStreamDataServer
+}
+
 type XDTclient struct {
-	atom   atomic.Uint64
-	config utils.Config
-	client upXDT.StreamDataClient
-	ip     string
+	atom           atomic.Uint64
+	config         utils.Config
+	client         upXDT.StreamDataClient
+	ip             string
+	payloadData    []byte
+	crossXDTserver crossXDTServer
 }
 
 func NewXDTclient(config utils.Config) (*XDTclient, error) {
@@ -61,11 +73,32 @@ func NewXDTclient(config utils.Config) (*XDTclient, error) {
 		log.Errorf("SRC: can not connect to SQP %v", err)
 		return &xdtClient, err
 	}
-
 	xdtClient.client = upXDT.NewStreamDataClient(conn)
 	xdtClient.atom.Store(0)
-
 	xdtClient.ip = utils.FetchSelfIP() + config.SQPServerPort
+
+	log.Infof("[src] starting the host server")
+	lis, err := net.Listen("tcp", config.SrcServerPort)
+	if err != nil {
+		log.Fatalf("src: failed to listen: %v", err)
+	}
+	var server *grpc.Server
+	if config.TracingEnabled {
+		server = grpc.NewServer(grpc.UnaryInterceptor(otelgrpc.UnaryServerInterceptor()),
+			grpc.StreamInterceptor(otelgrpc.StreamServerInterceptor()))
+	} else {
+		server = grpc.NewServer()
+	}
+	xdtClient.crossXDTserver = crossXDTServer{payloadData: &xdtClient.payloadData, config: config}
+	crossXDT.RegisterStreamDataServer(server, xdtClient.crossXDTserver)
+
+	//errorServerInit := make(chan error, 1)
+	go func() {
+		if err := server.Serve(lis); err != nil {
+			log.Fatalf("src: failed to serve: %v", err)
+		}
+	}()
+
 	return &xdtClient, nil
 }
 
@@ -77,6 +110,41 @@ func (x *XDTclient) splitPayload(xdtPayload *utils.Payload) (string, []byte) {
 	log.Info(payloadData[0:9], payloadData[len(payloadData)-9:])
 	xdtPayload.Data = []byte("")
 	return key, payloadData
+}
+
+func (x *XDTclient) serve(payloadData []byte) string {
+	x.payloadData = payloadData
+	return "bla"
+}
+
+// ServeData is the gRPC server to serve the available data to the dQP
+func (s crossXDTServer) ServeData(in *crossXDT.Request, srv crossXDT.StreamData_ServeDataServer) error {
+
+	payloadData := *s.payloadData
+	log.Infof("src: dQP is fetching key: %s", in.Key)
+	payloadSize := len(payloadData)
+	log.Infof("Transfering %d bytes to dQP", payloadSize)
+	chunkSizeInBytes := s.config.ChunkSizeInBytes
+	chunkTotal := len(payloadData) / chunkSizeInBytes
+	if len(payloadData)%chunkSizeInBytes != 0 {
+		chunkTotal += 1
+	}
+	var resp crossXDT.Response
+
+	for currentByte := 0; currentByte < payloadSize; currentByte += chunkSizeInBytes {
+		if currentByte+chunkSizeInBytes > payloadSize {
+			resp = crossXDT.Response{Chunk: payloadData[currentByte:payloadSize], TotalChunks: int64(chunkTotal)}
+		} else {
+			resp = crossXDT.Response{Chunk: payloadData[currentByte : currentByte+chunkSizeInBytes], TotalChunks: int64(chunkTotal)}
+		}
+		if err := srv.Send(&resp); err != nil {
+			log.Errorf("src: send error %v", err)
+			log.Infof("[src] freeing channel %s due to send error", in.Key)
+			return err
+		}
+		log.Debugf("finishing sending : %d bytes", currentByte)
+	}
+	return nil
 }
 
 // Put uploads the data to sQP and returns key and sQP address
@@ -151,6 +219,57 @@ func (x *XDTclient) BroadcastPut(ctx context.Context, payload []byte) (string, e
 		}
 	}
 	return key, nil
+}
+
+// ServeAndInvoke invokes the RPC call with and serves the object for DstQP to pull
+func (x *XDTclient) ServeAndInvoke(ctx context.Context, URL string, xdtPayload utils.Payload) ([]byte, bool, error) {
+
+	srcAddr := x.config.SrcServerHostname + x.config.SrcServerPort
+	key, payloadData := x.splitPayload(&xdtPayload)
+	serialisedPayload, err := json.Marshal(xdtPayload)
+	if err != nil {
+		return nil, false, err
+	}
+
+	httpMetadata := map[string]string{
+		"is_xdt":   "true",
+		"key":      key,
+		"sqp_addr": srcAddr,
+		"routing":  x.config.Routing,
+	}
+	ctx = metadata.NewOutgoingContext(ctx, metadata.New(httpMetadata))
+	//  This timeout must be large enough for the request to complete
+	timeoutDuration := time.Duration(x.config.RPCTimeoutDuration) * time.Millisecond
+	ctx, cancel := context.WithTimeout(ctx, timeoutDuration)
+	defer cancel()
+
+	span := tracing.Span{SpanName: "InvokeWithXDT", TracerName: "InvokeWithXDT-Tracer"}
+	ctx = span.StartSpan(ctx)
+	defer span.EndSpan()
+
+	x.serve(payloadData)
+
+	errorFnInvocationCall := make(chan error, 1)
+	responseChannel := make(chan *downXDT.InvocationResponse, 1)
+	go func() {
+		response, err := fnInvocationCall(ctx, URL, serialisedPayload)
+		errorFnInvocationCall <- err
+		responseChannel <- response
+	}()
+	select {
+	case <-ctx.Done():
+		<-errorFnInvocationCall
+		return nil, false, ctx.Err()
+	case err := <-errorFnInvocationCall:
+		if err != nil {
+			log.Errorf("SDK: ServeAndInvokeWithXDT: fnInvocationCall failed: %v", err)
+			return nil, false, err
+		}
+	}
+
+	response := <-responseChannel
+	return response.Message, response.Ok, nil
+
 }
 
 // Invoke invokes the RPC call with XDT
