@@ -47,6 +47,7 @@ type Config struct {
 	StAndFwBufferSize         int    `default:"1600" envconfig:"ST_AND_FW_BUFFER_SIZE"`
 	Routing                   string `default:"CutThrough" envconfig:"ROUTING"`
 	TracingEnabled            bool   `default:"false" envconfig:"TRACING_ENABLED"`
+	NoCopy                    bool   `default:"false" envconfig:"NO_COPY"`
 	RPCTimeoutMaxBackoff      int    `default:"1000" envconfig:"RPC_TIMEOUT_MAX_BACK_OFF"`
 	RPCTimeoutDuration        int    `default:"60000" envconfig:"RPC_TIMEOUT_DURATION"`
 	RPCRetryDelay             int    `default:"1" envconfig:"RPC_RETRY_DELAY"`

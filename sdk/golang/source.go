@@ -77,27 +77,30 @@ func NewXDTclient(config utils.Config) (*XDTclient, error) {
 	xdtClient.atom.Store(0)
 	xdtClient.ip = utils.FetchSelfIP() + config.SQPServerPort
 
-	log.Infof("[src] starting the host server")
-	lis, err := net.Listen("tcp", config.SrcServerPort)
-	if err != nil {
-		log.Fatalf("src: failed to listen: %v", err)
-	}
-	var server *grpc.Server
-	if config.TracingEnabled {
-		server = grpc.NewServer(grpc.UnaryInterceptor(otelgrpc.UnaryServerInterceptor()),
-			grpc.StreamInterceptor(otelgrpc.StreamServerInterceptor()))
-	} else {
-		server = grpc.NewServer()
-	}
-	xdtClient.crossXDTserver = crossXDTServer{payloadData: &xdtClient.payloadData, config: config}
-	crossXDT.RegisterStreamDataServer(server, xdtClient.crossXDTserver)
-
-	//errorServerInit := make(chan error, 1)
-	go func() {
-		if err := server.Serve(lis); err != nil {
-			log.Fatalf("src: failed to serve: %v", err)
+	if config.NoCopy {
+		xdtClient.ip = utils.FetchSelfIP() + config.SrcServerPort
+		log.Infof("[src] starting the host server")
+		lis, err := net.Listen("tcp", config.SrcServerPort)
+		if err != nil {
+			log.Fatalf("src: failed to listen: %v", err)
 		}
-	}()
+		var server *grpc.Server
+		if config.TracingEnabled {
+			server = grpc.NewServer(grpc.UnaryInterceptor(otelgrpc.UnaryServerInterceptor()),
+				grpc.StreamInterceptor(otelgrpc.StreamServerInterceptor()))
+		} else {
+			server = grpc.NewServer()
+		}
+		xdtClient.crossXDTserver = crossXDTServer{payloadData: &xdtClient.payloadData, config: config}
+		crossXDT.RegisterStreamDataServer(server, xdtClient.crossXDTserver)
+
+		//errorServerInit := make(chan error, 1)
+		go func() {
+			if err := server.Serve(lis); err != nil {
+				log.Fatalf("src: failed to serve: %v", err)
+			}
+		}()
+	}
 
 	return &xdtClient, nil
 }
@@ -272,8 +275,17 @@ func (x *XDTclient) ServeAndInvoke(ctx context.Context, URL string, xdtPayload u
 
 }
 
-// Invoke invokes the RPC call with XDT
+// Invoke invokes the RPC call with proper version
 func (x *XDTclient) Invoke(ctx context.Context, URL string, xdtPayload utils.Payload) ([]byte, bool, error) {
+	if x.config.NoCopy {
+		return x.ServeAndInvoke(ctx, URL, xdtPayload)
+	} else {
+		return x.InvokeWithCopy(ctx, URL, xdtPayload)
+	}
+}
+
+// InvokeWithCopy invokes the RPC call with XDT with copy
+func (x *XDTclient) InvokeWithCopy(ctx context.Context, URL string, xdtPayload utils.Payload) ([]byte, bool, error) {
 
 	sQPAddr := x.config.SQPServerHostname + x.config.SQPServerPort
 	key, payloadData := x.splitPayload(&xdtPayload)

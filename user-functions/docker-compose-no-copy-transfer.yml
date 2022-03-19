@@ -58,6 +58,8 @@ services:
     env_file:
       - xdt.env
       - network.env
+    environment:
+      - NO_COPY=true
     expose:
       - "50004"
     command:
