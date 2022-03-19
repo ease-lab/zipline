@@ -152,13 +152,20 @@ func (s crossXDTServer) ServeData(in *crossXDT.Request, srv crossXDT.StreamData_
 
 // Put uploads the data to sQP and returns key and sQP address
 func (x *XDTclient) Put(ctx context.Context, payload []byte) (string, error) {
-	sQPAddr := x.config.SQPServerHostname + x.config.SQPServerPort
+
+	var payloadLocation string
+	if x.config.NoCopy {
+		payloadLocation = x.config.SrcServerHostname + x.config.SrcServerPort
+		x.serve(payload)
+	} else {
+		payloadLocation = x.config.SQPServerHostname + x.config.SQPServerPort
+	}
 	key, _ := x.splitPayload(&utils.Payload{Data: payload})
 
 	httpMetadata := map[string]string{
 		"is_xdt":   "true",
 		"key":      key,
-		"sqp_addr": sQPAddr,
+		"sqp_addr": payloadLocation,
 		"routing":  x.config.Routing,
 	}
 	ctx = metadata.NewOutgoingContext(ctx, metadata.New(httpMetadata))
@@ -171,17 +178,19 @@ func (x *XDTclient) Put(ctx context.Context, payload []byte) (string, error) {
 	ctx = span.StartSpan(ctx)
 	defer span.EndSpan()
 
-	errorPushData := make(chan error, 1)
-	go func() { errorPushData <- x.PushData(ctx, key, payload) }()
+	if !x.config.NoCopy {
+		errorPushData := make(chan error, 1)
+		go func() { errorPushData <- x.PushData(ctx, key, payload) }()
 
-	select {
-	case <-ctx.Done():
-		<-errorPushData // Wait for f to return.
-		return "", ctx.Err()
-	case err := <-errorPushData:
-		if err != nil {
-			log.Errorf("SDK: [Store & Forward] Push data failed")
-			return "", err
+		select {
+		case <-ctx.Done():
+			<-errorPushData // Wait for f to return.
+			return "", ctx.Err()
+		case err := <-errorPushData:
+			if err != nil {
+				log.Errorf("SDK: [Store & Forward] Push data failed")
+				return "", err
+			}
 		}
 	}
 	return key, nil
@@ -189,13 +198,20 @@ func (x *XDTclient) Put(ctx context.Context, payload []byte) (string, error) {
 
 // BroadcastPut uploads the data to sQP and returns key and sQP address
 func (x *XDTclient) BroadcastPut(ctx context.Context, payload []byte) (string, error) {
-	sQPAddr := x.config.SQPServerHostname + x.config.SQPServerPort
+	var payloadLocation string
+
+	if x.config.NoCopy {
+		payloadLocation = x.config.SrcServerHostname + x.config.SrcServerPort
+		x.serve(payload)
+	} else {
+		payloadLocation = x.config.SQPServerHostname + x.config.SQPServerPort
+	}
 	key, _ := x.splitPayload(&utils.Payload{Data: payload})
 
 	httpMetadata := map[string]string{
 		"is_xdt":   "true",
 		"key":      key,
-		"sqp_addr": sQPAddr,
+		"sqp_addr": payloadLocation,
 		"routing":  x.config.Routing,
 	}
 	ctx = metadata.NewOutgoingContext(ctx, metadata.New(httpMetadata))
@@ -208,17 +224,19 @@ func (x *XDTclient) BroadcastPut(ctx context.Context, payload []byte) (string, e
 	ctx = span.StartSpan(ctx)
 	defer span.EndSpan()
 
-	errorPushData := make(chan error, 1)
-	go func() { errorPushData <- x.PushBroadcastData(ctx, key, payload) }()
+	if !x.config.NoCopy {
+		errorPushData := make(chan error, 1)
+		go func() { errorPushData <- x.PushBroadcastData(ctx, key, payload) }()
 
-	select {
-	case <-ctx.Done():
-		<-errorPushData // Wait for f to return.
-		return "", ctx.Err()
-	case err := <-errorPushData:
-		if err != nil {
-			log.Errorf("SDK: [Store & Forward] Push data failed")
-			return "", err
+		select {
+		case <-ctx.Done():
+			<-errorPushData // Wait for f to return.
+			return "", ctx.Err()
+		case err := <-errorPushData:
+			if err != nil {
+				log.Errorf("SDK: [Store & Forward] Push data failed")
+				return "", err
+			}
 		}
 	}
 	return key, nil
