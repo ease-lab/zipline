@@ -80,7 +80,19 @@ integ-test_SF: export ROUTING = Store&Forward
 integ-test_SF:
 	cd tests && go test ./integration_test.go -run TestSdk_InvokeWithXDT $(GO_TEST_FLAGS)
 
+integ-test-noCopy_CT: export ROUTING = CutThrough
+integ-test-noCopy_CT: export NO_COPY = true
+integ-test-noCopy_CT:
+	cd tests && go test ./integration_test.go -run TestSdk_InvokeWithXDTNoCopy $(GO_TEST_FLAGS)
+
+
+integ-test-noCopy_SF: export ROUTING = Store&Forward
+integ-test-noCopy_SF: export NO_COPY = true
+integ-test-noCopy_SF:
+	cd tests && go test ./integration_test.go -run TestSdk_InvokeWithXDTNoCopy $(GO_TEST_FLAGS)
+
 integ-test: integ-test_CT integ-test_SF
+integ-test-noCopy: integ-test-noCopy_CT integ-test-noCopy_SF
 
 timeout-test_CT: export ROUTING = CutThrough
 timeout-test_CT:
