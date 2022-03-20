@@ -27,6 +27,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"strconv"
+	"sync"
 	"time"
 
 	"go.uber.org/atomic"
@@ -50,7 +51,7 @@ import (
 )
 
 type crossXDTServer struct {
-	payloadDataMap *map[string][]byte
+	payloadDataMap *sync.Map
 	config         utils.Config
 	crossXDT.UnimplementedStreamDataServer
 }
@@ -60,13 +61,12 @@ type XDTclient struct {
 	config         utils.Config
 	client         upXDT.StreamDataClient
 	ip             string
-	payloadDataMap map[string][]byte
+	payloadDataMap sync.Map
 	crossXDTserver crossXDTServer
 }
 
 func NewXDTclient(config utils.Config) (*XDTclient, error) {
 	var xdtClient XDTclient
-	xdtClient.payloadDataMap = make(map[string][]byte)
 	xdtClient.config = config
 	sQPAddr := config.SQPServerHostname + config.SQPServerPort
 	conn, err := utils.GetGRPCConn(context.Background(), sQPAddr, false)
@@ -117,15 +117,20 @@ func (x *XDTclient) splitPayload(xdtPayload *utils.Payload) (string, []byte) {
 }
 
 func (x *XDTclient) serve(key string, payloadData []byte) string {
-	x.payloadDataMap[key] = payloadData
+
+	x.payloadDataMap.Store(key, payloadData)
+
 	return "bla"
 }
 
 // ServeData is the gRPC server to serve the available data to the dQP
 func (s crossXDTServer) ServeData(in *crossXDT.Request, srv crossXDT.StreamData_ServeDataServer) error {
 
-	payloadDataMap := *s.payloadDataMap
-	payloadData := payloadDataMap[in.Key]
+	payloadDataInterface, ok := (*s.payloadDataMap).LoadAndDelete(in.Key)
+	if !ok {
+		return nil
+	}
+	payloadData := payloadDataInterface.([]byte)
 	log.Infof("src: dQP is fetching key: %s", in.Key)
 	payloadSize := len(payloadData)
 	log.Infof("Transfering %d bytes to dQP", payloadSize)
