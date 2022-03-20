@@ -50,8 +50,8 @@ import (
 )
 
 type crossXDTServer struct {
-	payloadData *[]byte
-	config      utils.Config
+	payloadDataMap *map[string][]byte
+	config         utils.Config
 	crossXDT.UnimplementedStreamDataServer
 }
 
@@ -60,12 +60,13 @@ type XDTclient struct {
 	config         utils.Config
 	client         upXDT.StreamDataClient
 	ip             string
-	payloadData    []byte
+	payloadDataMap map[string][]byte
 	crossXDTserver crossXDTServer
 }
 
 func NewXDTclient(config utils.Config) (*XDTclient, error) {
 	var xdtClient XDTclient
+	xdtClient.payloadDataMap = make(map[string][]byte)
 	xdtClient.config = config
 	sQPAddr := config.SQPServerHostname + config.SQPServerPort
 	conn, err := utils.GetGRPCConn(context.Background(), sQPAddr, false)
@@ -91,7 +92,7 @@ func NewXDTclient(config utils.Config) (*XDTclient, error) {
 		} else {
 			server = grpc.NewServer()
 		}
-		xdtClient.crossXDTserver = crossXDTServer{payloadData: &xdtClient.payloadData, config: config}
+		xdtClient.crossXDTserver = crossXDTServer{payloadDataMap: &xdtClient.payloadDataMap, config: config}
 		crossXDT.RegisterStreamDataServer(server, xdtClient.crossXDTserver)
 
 		//errorServerInit := make(chan error, 1)
@@ -115,15 +116,16 @@ func (x *XDTclient) splitPayload(xdtPayload *utils.Payload) (string, []byte) {
 	return key, payloadData
 }
 
-func (x *XDTclient) serve(payloadData []byte) string {
-	x.payloadData = payloadData
+func (x *XDTclient) serve(key string, payloadData []byte) string {
+	x.payloadDataMap[key] = payloadData
 	return "bla"
 }
 
 // ServeData is the gRPC server to serve the available data to the dQP
 func (s crossXDTServer) ServeData(in *crossXDT.Request, srv crossXDT.StreamData_ServeDataServer) error {
 
-	payloadData := *s.payloadData
+	payloadDataMap := *s.payloadDataMap
+	payloadData := payloadDataMap[in.Key]
 	log.Infof("src: dQP is fetching key: %s", in.Key)
 	payloadSize := len(payloadData)
 	log.Infof("Transfering %d bytes to dQP", payloadSize)
@@ -153,14 +155,14 @@ func (s crossXDTServer) ServeData(in *crossXDT.Request, srv crossXDT.StreamData_
 // Put uploads the data to sQP and returns key and sQP address
 func (x *XDTclient) Put(ctx context.Context, payload []byte) (string, error) {
 
+	key, _ := x.splitPayload(&utils.Payload{Data: payload})
 	var payloadLocation string
 	if x.config.NoCopy {
 		payloadLocation = x.config.SrcServerHostname + x.config.SrcServerPort
-		x.serve(payload)
+		x.serve(key, payload)
 	} else {
 		payloadLocation = x.config.SQPServerHostname + x.config.SQPServerPort
 	}
-	key, _ := x.splitPayload(&utils.Payload{Data: payload})
 
 	httpMetadata := map[string]string{
 		"is_xdt":   "true",
@@ -200,13 +202,13 @@ func (x *XDTclient) Put(ctx context.Context, payload []byte) (string, error) {
 func (x *XDTclient) BroadcastPut(ctx context.Context, payload []byte) (string, error) {
 	var payloadLocation string
 
+	key, _ := x.splitPayload(&utils.Payload{Data: payload})
 	if x.config.NoCopy {
 		payloadLocation = x.config.SrcServerHostname + x.config.SrcServerPort
-		x.serve(payload)
+		x.serve(key, payload)
 	} else {
 		payloadLocation = x.config.SQPServerHostname + x.config.SQPServerPort
 	}
-	key, _ := x.splitPayload(&utils.Payload{Data: payload})
 
 	httpMetadata := map[string]string{
 		"is_xdt":   "true",
@@ -268,7 +270,7 @@ func (x *XDTclient) ServeAndInvoke(ctx context.Context, URL string, xdtPayload u
 	ctx = span.StartSpan(ctx)
 	defer span.EndSpan()
 
-	x.serve(payloadData)
+	x.serve(key, payloadData)
 
 	errorFnInvocationCall := make(chan error, 1)
 	responseChannel := make(chan *downXDT.InvocationResponse, 1)
