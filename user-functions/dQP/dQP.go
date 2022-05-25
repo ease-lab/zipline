@@ -32,9 +32,9 @@ import (
 	"golang.org/x/net/http2/h2c"
 
 	ctrdlog "github.com/containerd/containerd/log"
+	tracing "github.com/ease-lab/vSwarm/utils/tracing/go"
 	"github.com/ease-lab/vhive-xdt/queue-proxy/dQP"
 	"github.com/ease-lab/vhive-xdt/utils"
-	tracing "github.com/ease-lab/vhive/utils/tracing/go"
 	log "github.com/sirupsen/logrus"
 	"go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp"
 	pkgnet "knative.dev/pkg/network"

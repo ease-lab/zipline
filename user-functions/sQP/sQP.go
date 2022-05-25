@@ -24,9 +24,9 @@ package main
 
 import (
 	ctrdlog "github.com/containerd/containerd/log"
+	tracing "github.com/ease-lab/vSwarm/utils/tracing/go"
 	"github.com/ease-lab/vhive-xdt/queue-proxy/sQP"
 	"github.com/ease-lab/vhive-xdt/utils"
-	tracing "github.com/ease-lab/vhive/utils/tracing/go"
 	log "github.com/sirupsen/logrus"
 )
 
