@@ -19,7 +19,7 @@ require (
 	go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp v0.32.0
 	golang.org/x/net v0.0.0-20220524220425-1d687d428aca
 	google.golang.org/grpc v1.46.2
-	knative.dev/pkg v0.0.0-20220524202603-19adf798efb8
+	knative.dev/pkg v0.0.0-20220525153005-18f69958870f
 )
 
 require (

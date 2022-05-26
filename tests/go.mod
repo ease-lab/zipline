@@ -28,7 +28,7 @@ require (
 	golang.org/x/net v0.0.0-20220524220425-1d687d428aca
 	google.golang.org/grpc v1.46.2
 	knative.dev/networking v0.0.0-20220524205304-22d1b933cf73
-	knative.dev/pkg v0.0.0-20220524202603-19adf798efb8
+	knative.dev/pkg v0.0.0-20220525153005-18f69958870f
 	knative.dev/serving v0.31.0
 )
 
@@ -87,7 +87,7 @@ require (
 	go.uber.org/multierr v1.6.0 // indirect
 	go.uber.org/zap v1.19.1 // indirect
 	golang.org/x/image v0.0.0-20210216034530-4410531fe030 // indirect
-	golang.org/x/oauth2 v0.0.0-20220524215830-622c5d57e401 // indirect
+	golang.org/x/oauth2 v0.0.0-20220223155221-ee480838109b // indirect
 	golang.org/x/sync v0.0.0-20210220032951-036812b2e83c // indirect
 	golang.org/x/sys v0.0.0-20220412211240-33da011f77ad // indirect
 	golang.org/x/term v0.0.0-20210927222741-03fcf44c2211 // indirect
@@ -96,7 +96,7 @@ require (
 	gomodules.xyz/jsonpatch/v2 v2.2.0 // indirect
 	gonum.org/v1/gonum v0.9.1 // indirect
 	gonum.org/v1/plot v0.9.0 // indirect
-	google.golang.org/api v0.75.0 // indirect
+	google.golang.org/api v0.70.0 // indirect
 	google.golang.org/appengine v1.6.7 // indirect
 	google.golang.org/genproto v0.0.0-20220421151946-72621c1f0bd3 // indirect
 	google.golang.org/protobuf v1.28.0 // indirect
