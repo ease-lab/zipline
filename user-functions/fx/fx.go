@@ -31,7 +31,7 @@ import (
 	"os"
 	"time"
 
-	tracing "github.com/ease-lab/vhive/utils/tracing/go"
+	tracing "github.com/ease-lab/vSwarm/utils/tracing/go"
 
 	"go.opentelemetry.io/contrib/instrumentation/google.golang.org/grpc/otelgrpc"
 	"google.golang.org/grpc"
