@@ -1,6 +1,6 @@
 module github.com/ease-lab/vhive-xdt/transport
 
-go 1.18
+go 1.17
 
 replace github.com/ease-lab/vhive-xdt/utils => ../utils
 

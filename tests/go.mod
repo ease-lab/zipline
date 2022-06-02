@@ -1,6 +1,6 @@
 module github.com/ease-lab/vhive-xdt/integration_tests
 
-go 1.18
+go 1.17
 
 replace (
 	XDTgRPC_stream/plotter => ../plotter
@@ -27,9 +27,9 @@ require (
 	go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp v0.32.0
 	golang.org/x/net v0.0.0-20220524220425-1d687d428aca
 	google.golang.org/grpc v1.46.2
-	knative.dev/networking v0.0.0-20220524205304-22d1b933cf73
+	knative.dev/networking v0.0.0-20220601013938-02f3ab7fe3ff
 	knative.dev/pkg v0.0.0-20220525153005-18f69958870f
-	knative.dev/serving v0.31.0
+	knative.dev/serving v0.32.0
 )
 
 require (

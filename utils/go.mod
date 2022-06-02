@@ -1,6 +1,6 @@
 module github.com/ease-lab/vhive-xdt/utils
 
-go 1.18
+go 1.17
 
 require (
 	github.com/kelseyhightower/envconfig v1.4.0

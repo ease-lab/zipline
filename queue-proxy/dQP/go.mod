@@ -1,6 +1,6 @@
 module github.com/ease-lab/vhive-xdt/queue-proxy/dQP
 
-go 1.18
+go 1.17
 
 replace (
 	github.com/ease-lab/vhive-xdt/proto/crossXDT => ../../proto/crossXDT
