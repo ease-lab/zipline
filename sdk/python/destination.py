@@ -111,7 +111,6 @@ def BroadcastGet(capability, config):
         ('sqp_addr', sQPAddr),
         ('routing', STORE_FORWARD),
     )
-
     request = crossXDT_pb2.BroadcastRequest(key=key, ChunkSizeInBytes=config["ChunkSizeInBytes"])
     with grpc.insecure_channel(sQPAddr) as channel:
         stub = crossXDT_pb2_grpc.StreamDataStub(channel)
