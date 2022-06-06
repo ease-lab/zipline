@@ -12,7 +12,8 @@ replace (
 )
 
 require (
-	github.com/containerd/containerd v1.5.2
+	cloud.google.com/go v0.83.0 // indirect
+	github.com/containerd/containerd v1.5.13
 	github.com/ease-lab/vhive-xdt/queue-proxy/dQP v0.0.0-00010101000000-000000000000
 	github.com/ease-lab/vhive-xdt/utils v0.0.0-00010101000000-000000000000
 	github.com/ease-lab/vhive/utils/tracing/go v0.0.0-20210623161727-460bac97d8c0
@@ -20,6 +21,6 @@ require (
 	go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp v0.0.0-00010101000000-000000000000
 	golang.org/x/net v0.0.0-20210614182718-04defd469f4e
 	google.golang.org/grpc v1.38.0
+	k8s.io/klog/v2 v2.5.0 // indirect
 	knative.dev/pkg v0.0.0-20210625194144-4cdacd04734a
-	knative.dev/serving v0.24.0
 )
