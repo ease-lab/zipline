@@ -23,6 +23,8 @@
 import os
 import sys
 # adding gRPC sources to the system path
+import time
+
 sys.path.insert(0, os.getcwd()+'/../../proto/downXDT')
 sys.path.insert(0, os.getcwd()+'/../../proto/upXDT')
 sys.path.insert(0, os.getcwd()+'/../../proto/crossXDT')
@@ -62,6 +64,16 @@ class StreamDataServicer(crossXDT_pb2_grpc.StreamDataServicer):
         return generate_chunks(payloadBytes, request.key, self.config["ChunkSizeInBytes"], noCopy=True)
 
 
+def startGRPCServer(config, payloadDataMap, event):
+    server = grpc.server(futures.ThreadPoolExecutor(max_workers=config['MaxSrcServerThreadsPython']))
+    xdtServicer = StreamDataServicer(config=config, payloadDataMap=payloadDataMap)
+    crossXDT_pb2_grpc.add_StreamDataServicer_to_server(xdtServicer, server)
+    server.add_insecure_port("[::]"+config['SrcServerPort'])
+    server.start()
+    event.set()
+    server.wait_for_termination()
+
+
 class XDTclient:
     def __init__(self, config):
         self.config = config
@@ -72,11 +84,11 @@ class XDTclient:
         if config["NoCopy"]:
             self.ip = utils.get_self_ip() + config["SrcServerPort"]
             log.info("[src] starting the host server")
-            server = grpc.server(futures.ThreadPoolExecutor(max_workers=config['MaxSrcServerThreadsPython']))
-            xdtServicer = StreamDataServicer(config=config, payloadDataMap=self.payloadDataMap)
-            crossXDT_pb2_grpc.add_StreamDataServicer_to_server(xdtServicer, server)
-            server.add_insecure_port("[::]"+config['SrcServerPort'])
-            server.start()
+            event = threading.Event()
+            thread = threading.Thread(target=startGRPCServer, args=(config, self.payloadDataMap, event,))
+            thread.start()
+            # wait for the GRPC server to start
+            event.wait()
 
     def splitPayload(self, xdtPayload):
         key = ""
