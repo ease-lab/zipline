@@ -24,7 +24,7 @@ package main
 
 import (
 	ctrdlog "github.com/containerd/containerd/log"
-	tracing "github.com/ease-lab/vhive/utils/tracing/go"
+	tracing "github.com/ease-lab/vSwarm/utils/tracing/go"
 	log "github.com/sirupsen/logrus"
 
 	sdk "github.com/ease-lab/vhive-xdt/sdk/golang"
