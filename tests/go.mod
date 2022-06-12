@@ -18,9 +18,6 @@ replace (
 
 require (
 	XDTgRPC_stream/plotter v0.0.0-00010101000000-000000000000
-	cloud.google.com/go/container v1.2.0 // indirect
-	cloud.google.com/go/monitoring v1.5.0 // indirect
-	cloud.google.com/go/trace v1.2.0 // indirect
 	github.com/containerd/containerd v1.6.2
 	github.com/ease-lab/vSwarm/utils/tracing/go v0.0.0-20220609140039-b4da20ea6b36
 	github.com/ease-lab/vhive-xdt/proto/downXDT v0.0.0-00010101000000-000000000000
@@ -31,8 +28,9 @@ require (
 	github.com/sirupsen/logrus v1.8.1
 	go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp v0.20.0
 	golang.org/x/net v0.0.0-20220425223048-2871e0cb64e4
+	google.golang.org/api v0.74.0 // indirect
 	google.golang.org/grpc v1.47.0
-	knative.dev/networking v0.0.0-20210512050647-ace2d3306f0b
-	knative.dev/pkg v0.0.0-20210510175900-4564797bf3b7
-	knative.dev/serving v0.23.1
+	knative.dev/networking v0.0.0-20220610013825-3103f3a72792
+	knative.dev/pkg v0.0.0-20220610014025-7d607d643ee2
+	knative.dev/serving v0.32.0
 )
