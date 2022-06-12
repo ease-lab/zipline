@@ -60,7 +60,7 @@ type XDTclient struct {
 	atom           atomic.Uint64
 	config         utils.Config
 	client         upXDT.StreamDataClient
-	ip             string
+	addr           string
 	payloadDataMap sync.Map
 	crossXDTserver crossXDTServer
 }
@@ -76,10 +76,10 @@ func NewXDTclient(config utils.Config) (*XDTclient, error) {
 	}
 	xdtClient.client = upXDT.NewStreamDataClient(conn)
 	xdtClient.atom.Store(0)
-	xdtClient.ip = utils.FetchSelfIP() + config.SQPServerPort
+	xdtClient.addr = utils.FetchSelfIP() + config.SQPServerPort
 
 	if config.NoCopy {
-		xdtClient.ip = utils.FetchSelfIP() + config.SrcServerPort
+		xdtClient.addr = utils.FetchSelfIP() + config.SrcServerPort
 		log.Infof("[src] starting the host server")
 		lis, err := net.Listen("tcp", config.SrcServerPort)
 		if err != nil {
@@ -107,7 +107,7 @@ func NewXDTclient(config utils.Config) (*XDTclient, error) {
 }
 
 func (x *XDTclient) splitPayload(xdtPayload *utils.Payload) (string, []byte) {
-	key := fmt.Sprintf("%s|%s", strconv.FormatUint(x.atom.Inc(), 10), x.ip)
+	key := fmt.Sprintf("%s|%s", strconv.FormatUint(x.atom.Inc(), 10), x.addr)
 	log.Infof("XDT invoke called with payload size %d", len(xdtPayload.Data))
 
 	payloadData := xdtPayload.Data
@@ -295,7 +295,7 @@ func (x *XDTclient) BroadcastPut(ctx context.Context, payload []byte) (string, e
 // ServeAndInvoke invokes the RPC call with and serves the object for DstQP to pull
 func (x *XDTclient) ServeAndInvoke(ctx context.Context, URL string, xdtPayload utils.Payload) ([]byte, bool, error) {
 
-	srcAddr := x.config.SrcServerHostname + x.config.SrcServerPort
+	srcAddr := x.addr
 	key, payloadData := x.splitPayload(&xdtPayload)
 	serialisedPayload, err := json.Marshal(xdtPayload)
 	if err != nil {
@@ -355,7 +355,7 @@ func (x *XDTclient) Invoke(ctx context.Context, URL string, xdtPayload utils.Pay
 // InvokeWithCopy invokes the RPC call with XDT with copy
 func (x *XDTclient) InvokeWithCopy(ctx context.Context, URL string, xdtPayload utils.Payload) ([]byte, bool, error) {
 
-	sQPAddr := x.config.SQPServerHostname + x.config.SQPServerPort
+	sQPAddr := x.addr
 	key, payloadData := x.splitPayload(&xdtPayload)
 	serialisedPayload, err := json.Marshal(xdtPayload)
 	if err != nil {
