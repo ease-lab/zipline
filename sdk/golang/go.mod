@@ -10,13 +10,13 @@ replace (
 )
 
 require (
+	github.com/ease-lab/vSwarm/utils/tracing/go v0.0.0-20220609140039-b4da20ea6b36
 	github.com/ease-lab/vhive-xdt/proto/crossXDT v0.0.0-00010101000000-000000000000
 	github.com/ease-lab/vhive-xdt/proto/downXDT v0.0.0-00010101000000-000000000000
 	github.com/ease-lab/vhive-xdt/proto/upXDT v0.0.0-00010101000000-000000000000
 	github.com/ease-lab/vhive-xdt/utils v0.0.0-00010101000000-000000000000
-	github.com/ease-lab/vhive/utils/tracing/go v0.0.0-20210708110826-fffc98ca29d6
 	github.com/sirupsen/logrus v1.8.1
-	go.opentelemetry.io/contrib/instrumentation/google.golang.org/grpc/otelgrpc v0.20.0
+	go.opentelemetry.io/contrib/instrumentation/google.golang.org/grpc/otelgrpc v0.31.0
 	go.uber.org/atomic v1.9.0
-	google.golang.org/grpc v1.39.0
+	google.golang.org/grpc v1.47.0
 )
