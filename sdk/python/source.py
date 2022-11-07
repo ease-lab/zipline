@@ -23,19 +23,55 @@
 import os
 import sys
 # adding gRPC sources to the system path
+import time
+
 sys.path.insert(0, os.getcwd()+'/../../proto/downXDT')
 sys.path.insert(0, os.getcwd()+'/../../proto/upXDT')
+sys.path.insert(0, os.getcwd()+'/../../proto/crossXDT')
 
+from concurrent import futures
 import grpc
 import logging as log
 import upXDT_pb2_grpc
 import upXDT_pb2
 import downXDT_pb2_grpc
 import downXDT_pb2
+import crossXDT_pb2_grpc
+import crossXDT_pb2
 import multiprocessing as mp
 import utils
 import queue
 import threading
+
+
+# StreamDataServicer is to be called by dstFn to get object
+class StreamDataServicer(crossXDT_pb2_grpc.StreamDataServicer):
+    def __init__(self, config, payloadDataMap):
+        self.config = config
+        self.payloadDataMap = payloadDataMap
+
+    def ServeData(self, request, context):
+        log.info("SRC: received noCopy get request for key %s", request.key)
+        payloadBytes = self.payloadDataMap[request.key]
+        log.info(len(payloadBytes))
+        del self.payloadDataMap[request.key]
+        return generate_chunks(payloadBytes, request.key, self.config["ChunkSizeInBytes"], noCopy=True)
+
+    def ServeBroadcastData(self, request, context):
+        log.info("SRC: received noCopy broadcast get request for key %s", request.key)
+        payloadBytes = self.payloadDataMap[request.key]
+        log.info(len(payloadBytes))
+        return generate_chunks(payloadBytes, request.key, self.config["ChunkSizeInBytes"], noCopy=True)
+
+
+def startGRPCServer(config, payloadDataMap, event):
+    server = grpc.server(futures.ThreadPoolExecutor(max_workers=config['MaxSrcServerThreadsPython']))
+    xdtServicer = StreamDataServicer(config=config, payloadDataMap=payloadDataMap)
+    crossXDT_pb2_grpc.add_StreamDataServicer_to_server(xdtServicer, server)
+    server.add_insecure_port("[::]"+config['SrcServerPort'])
+    server.start()
+    event.set()
+    server.wait_for_termination()
 
 
 class XDTclient:
@@ -44,6 +80,15 @@ class XDTclient:
         self.ip = utils.get_self_ip() + config["SQPServerPort"]
         self.atom = 0
         self._lock = threading.Lock()
+        self.payloadDataMap = dict()
+        if config["NoCopy"]:
+            self.ip = utils.get_self_ip() + config["SrcServerPort"]
+            log.info("[src] starting the host server")
+            event = threading.Event()
+            thread = threading.Thread(target=startGRPCServer, args=(config, self.payloadDataMap, event,))
+            thread.start()
+            # wait for the GRPC server to start
+            event.wait()
 
     def splitPayload(self, xdtPayload):
         key = ""
@@ -98,30 +143,38 @@ class XDTclient:
 
     # Put uploads the data to sQP and returns key and sQP address
     def Put(self, payload):
-        sQPAddr = self.config["SQPServerHostname"]+self.config["SQPServerPort"]
+        payloadLocation = self.config["SQPServerHostname"]+self.config["SQPServerPort"]
         key, payloadData, _ = self.splitPayload(utils.Payload(FunctionName="foo", Data=payload))
+        if self.config["NoCopy"]:
+            payloadLocation = self.config["SrcServerHostname"]+self.config["SrcServerPort"]
+            self.payloadDataMap[key] = payloadData
 
         metadata = (
             ('is_xdt', 'true'),
             ('key', key),
-            ('sqp_addr', sQPAddr),
+            ('sqp_addr', payloadLocation),
             ('routing', utils.STORE_FORWARD),
         )
-        PushData(metadata, key, payloadData, sQPAddr, self.config["ChunkSizeInBytes"])
+        if not self.config["NoCopy"]:
+            PushData(metadata, key, payloadData, payloadLocation, self.config["ChunkSizeInBytes"])
         return key
 
     # Put uploads the data to sQP and returns key and sQP address
     def BroadcastPut(self, payload):
-        sQPAddr = self.config["SQPServerHostname"]+self.config["SQPServerPort"]
+        payloadLocation = self.config["SQPServerHostname"]+self.config["SQPServerPort"]
         key, payloadData, _ = self.splitPayload(utils.Payload(FunctionName="foo", Data=payload))
+        if self.config["NoCopy"]:
+            payloadLocation = self.config["SrcServerHostname"]+self.config["SrcServerPort"]
+            self.payloadDataMap[key] = payloadData
 
         metadata = (
             ('is_xdt', 'true'),
             ('key', key),
-            ('sqp_addr', sQPAddr),
+            ('sqp_addr', payloadLocation),
             ('routing', utils.STORE_FORWARD),
         )
-        PushBroadcastData(metadata, key, payloadData, sQPAddr, self.config["ChunkSizeInBytes"])
+        if not self.config["NoCopy"]:
+            PushBroadcastData(metadata, key, payloadData, payloadLocation, self.config["ChunkSizeInBytes"])
         return key
 
 
@@ -143,7 +196,7 @@ def fnInvocationCall(URL, serialisedPayload, metadata, config):
 
 
 # generate_chunks is a generator for payload stream
-def generate_chunks(payload, key, chunkSizeInBytes):
+def generate_chunks(payload, key, chunkSizeInBytes, noCopy=False):
     chunkTotal = int(len(payload) / chunkSizeInBytes)
     if len(payload) % chunkSizeInBytes != 0:
         chunkTotal += 1
@@ -155,7 +208,10 @@ def generate_chunks(payload, key, chunkSizeInBytes):
             chunk = payload[currentByte:payloadSize]
         else:
             chunk = payload[currentByte: currentByte+chunkSizeInBytes]
-        req = upXDT_pb2.Request(chunk=chunk, key=key, TotalChunks=chunkTotal)
+        if noCopy:
+            req = crossXDT_pb2.Response(chunk=chunk, TotalChunks=chunkTotal)
+        else:
+            req = upXDT_pb2.Request(chunk=chunk, key=key, TotalChunks=chunkTotal)
         log.debug("Src: pushed %d bytes to sQP", currentByte)
         currentByte += chunkSizeInBytes
         yield req

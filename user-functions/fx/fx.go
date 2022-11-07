@@ -31,7 +31,7 @@ import (
 	"os"
 	"time"
 
-	tracing "github.com/ease-lab/vhive/utils/tracing/go"
+	tracing "github.com/ease-lab/vSwarm/utils/tracing/go"
 
 	"go.opentelemetry.io/contrib/instrumentation/google.golang.org/grpc/otelgrpc"
 	"google.golang.org/grpc"
@@ -58,6 +58,31 @@ func (ps producerServer) SayHello(ctx context.Context, req *pb.HelloRequest) (*p
 	duration := transferPayload(ps.config, ps.url, ps.transferSize)
 	return &pb.HelloReply{Message: fmt.Sprintf("Transferred %d KB in %s", ps.transferSize, duration)}, nil
 }
+
+//func transferPayloadNoCopy(config utils.Config, url string, transferSize int) time.Duration {
+//	payloadData := make([]byte, transferSize*1024) // 10MiB
+//	if _, err := rand.Read(payloadData); err != nil {
+//		log.Fatal(err)
+//	}
+//
+//	payloadToSend := utils.Payload{
+//		FunctionName: "HelloXDT",
+//		Data:         payloadData,
+//	}
+//	xdtClient, err := sdk.NewXDTclient(config)
+//	if err != nil {
+//		log.Fatalf("InitXDT failed %v", err)
+//	}
+//	start := time.Now()
+//	log.Infof("starting ServeAndInvoke XDT call")
+//	log.Infof("using %s as the src addr", config.SrcServerHostname+config.SrcServerPort)
+//	if message, _, err := xdtClient.ServeAndInvoke(context.Background(), url, payloadToSend); err != nil {
+//		log.Fatalf("SRC_to_dQP_data_transfer failed %v", err)
+//	} else {
+//		log.Infof("received %s from the dest", message)
+//	}
+//	return time.Since(start)
+//}
 
 func transferPayload(config utils.Config, url string, transferSize int) time.Duration {
 	payloadData := make([]byte, transferSize*1024) // 10MiB
@@ -88,6 +113,7 @@ func main() {
 	dockerCompose := flag.Bool("dockerCompose", false, "Set to true when used with docker compose")
 	url := flag.String("url", "gx.default.192.168.1.240.sslip.io", "Destination function url")
 	transferSize := flag.Int("transferSize", 10000, "Number of KB's to transfer")
+	noCopy := flag.Bool("noCopy", false, "Set to true to bypass sQP for object transfers")
 	flag.Parse()
 
 	log.SetLevel(log.InfoLevel)
@@ -133,6 +159,9 @@ func main() {
 
 		s := producerServer{}
 		s.config = config
+		if *noCopy {
+			s.config.NoCopy = true
+		}
 		s.url = *url + ":80"
 		s.transferSize = *transferSize
 		pb.RegisterGreeterServer(grpcServer, &s)

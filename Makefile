@@ -44,8 +44,8 @@ TRACING_ENABLED = False
 
 proto_install:
 	pip install grpcio-tools --user
-	GO111MODULE="on" go get google.golang.org/protobuf/cmd/protoc-gen-go \
-            google.golang.org/grpc/cmd/protoc-gen-go-grpc
+	go install google.golang.org/protobuf/cmd/protoc-gen-go@latest
+	go install google.golang.org/grpc/cmd/protoc-gen-go-grpc@latest
 proto_gen: $(PROTO_FILES)
 
 $(PROTO_FILES):
@@ -80,7 +80,19 @@ integ-test_SF: export ROUTING = Store&Forward
 integ-test_SF:
 	cd tests && go test ./integration_test.go -run TestSdk_InvokeWithXDT $(GO_TEST_FLAGS)
 
+integ-test-noCopy_CT: export ROUTING = CutThrough
+integ-test-noCopy_CT: export NO_COPY = true
+integ-test-noCopy_CT:
+	cd tests && go test ./integration_test.go -run TestSdk_InvokeWithXDTNoCopy $(GO_TEST_FLAGS)
+
+
+integ-test-noCopy_SF: export ROUTING = Store&Forward
+integ-test-noCopy_SF: export NO_COPY = true
+integ-test-noCopy_SF:
+	cd tests && go test ./integration_test.go -run TestSdk_InvokeWithXDTNoCopy $(GO_TEST_FLAGS)
+
 integ-test: integ-test_CT integ-test_SF
+integ-test-noCopy: integ-test-noCopy_CT integ-test-noCopy_SF
 
 timeout-test_CT: export ROUTING = CutThrough
 timeout-test_CT:
@@ -192,6 +204,7 @@ python-timeout-test_SF:
 	cd sdk/python && python -m unittest -v test.IntegTest.test_Timeout
 	-fuser -k 50005/tcp
 
+python-get-put-test: install_python_modules
 python-get-put-test: export ROUTING = Store&Forward
 python-get-put-test:
 	cd tests && go test ./integration_test.go -run TestPython_SDK $(GO_TEST_FLAGS) &
@@ -206,6 +219,26 @@ python-broadcast-get-put-test:
 	sleep 60
 	cd sdk/python && python -m unittest -v test.IntegTest.test_Broadcast_GetPut
 	-fuser -k 50005/tcp
+	-fuser -k 50007/tcp
+
+python-noCopy-get-put-test: export ROUTING = Store&Forward
+python-noCopy-get-put-test: export NO_COPY = true
+python-noCopy-get-put-test:
+	cd tests && go test ./integration_test.go -run TestPython_SDK $(GO_TEST_FLAGS) &
+	sleep 60
+	cd sdk/python && python -m unittest -v test.IntegTest.test_GetPut
+	-fuser -k 50005/tcp
+	-fuser -k 50006/tcp
+	-fuser -k 50007/tcp
+
+python-noCopy-broadcast-get-put-test: export ROUTING = Store&Forward
+python-noCopy-broadcast-get-put-test: export NO_COPY = true
+python-noCopy-broadcast-get-put-test:
+	cd tests && go test ./integration_test.go -run TestPython_SDK $(GO_TEST_FLAGS) &
+	sleep 60
+	cd sdk/python && python -m unittest -v test.IntegTest.test_Broadcast_GetPut
+	-fuser -k 50005/tcp
+	-fuser -k 50006/tcp
 	-fuser -k 50007/tcp
 
 docker-images-push:

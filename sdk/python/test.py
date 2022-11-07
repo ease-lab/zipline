@@ -54,20 +54,20 @@ class IntegTest(unittest.TestCase):
 
     def test_GetPut(self):
         payloadData = bytes(os.urandom(1024 * 1024 * 10))
-        log.info("sending %s %s", payloadData[0:9], payloadData[-9:])
+        log.info("sending %s %s", [b for b in payloadData[0:9]], [b for b in payloadData[-9:]])
         xdtClient = XDTclient(config=config)
         capability = xdtClient.Put(payload=payloadData)
         receivedData = Get(capability, config)
-        log.info("received %s %s", receivedData[0:9], receivedData[-9:])
+        log.info("received %s %s", [b for b in receivedData[0:9]], [b for b in receivedData[-9:]])
 
     def test_Broadcast_GetPut(self):
         payloadData = bytes(os.urandom(1024 * 1024 * 10))
-        log.info("sending %s %s", payloadData[0:9], payloadData[-9:])
+        log.info("sending %s %s", [b for b in payloadData[0:9]], [b for b in payloadData[-9:]])
         xdtClient = XDTclient(config=config)
         capability = xdtClient.BroadcastPut(payload=payloadData)
         for i in range(10):
             receivedData = BroadcastGet(capability, config)
-            log.info("received %s %s", receivedData[0:9], receivedData[-9:])
+            log.info("received %s %s", [b for b in receivedData[0:9]], [b for b in receivedData[-9:]])
 
     def test_Timeout(self):
         data = bytes(os.urandom(1024 * 1024))

@@ -26,14 +26,14 @@ jobs:
       - name: Set up Go ${{ matrix.go-version }}
         uses: actions/setup-go@v2
         with:
-          go-version: 1.16
+          go-version: 1.18
         id: go
       - name: Install Dependencies
         run: |
           curl -L https://github.com/google/ko/releases/download/v0.8.3/ko_0.8.3_Linux_x86_64.tar.gz | tar xzf - ko
           chmod +x ./ko
           sudo mv ko /usr/local/bin
-          go get github.com/google/go-licenses
+          go install github.com/google/go-licenses@latest
       - name: Login to Docker Hub
         uses: docker/login-action@v1
         with:
@@ -53,7 +53,7 @@ jobs:
       - name: Set up Go 1.x
         uses: actions/setup-go@v2
         with:
-          go-version: 1.16
+          go-version: 1.18
       - uses: actions/checkout@v2
 
       - name: start multi-container program with docker-compose
