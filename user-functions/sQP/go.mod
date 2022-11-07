@@ -1,6 +1,6 @@
 module github.com/ease-lab/vhive-xdt/user-functions/sQP
 
-go 1.17
+go 1.18
 
 replace (
 	github.com/ease-lab/vhive-xdt/proto/crossXDT => ../../proto/crossXDT
