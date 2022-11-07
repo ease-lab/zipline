@@ -55,8 +55,7 @@ type producerServer struct {
 func (ps producerServer) SayHello(ctx context.Context, req *pb.HelloRequest) (*pb.HelloReply, error) {
 	// establish a connection
 	ps.config.SQPServerHostname = utils.FetchSelfIP()
-	var duration time.Duration
-	duration = transferPayload(ps.config, ps.url, ps.transferSize)
+	duration := transferPayload(ps.config, ps.url, ps.transferSize)
 	return &pb.HelloReply{Message: fmt.Sprintf("Transferred %d KB in %s", ps.transferSize, duration)}, nil
 }
 

@@ -1,6 +1,6 @@
 module github.com/ease-lab/vhive-xdt/integration_tests
 
-go 1.17
+go 1.18
 
 replace (
 	XDTgRPC_stream/plotter => ../plotter

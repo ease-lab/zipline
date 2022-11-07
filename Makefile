@@ -44,8 +44,8 @@ TRACING_ENABLED = False
 
 proto_install:
 	pip install grpcio-tools --user
-	GO111MODULE="on" go get google.golang.org/protobuf/cmd/protoc-gen-go \
-            google.golang.org/grpc/cmd/protoc-gen-go-grpc
+	go install google.golang.org/protobuf/cmd/protoc-gen-go@latest
+	go install google.golang.org/grpc/cmd/protoc-gen-go-grpc@latest
 proto_gen: $(PROTO_FILES)
 
 $(PROTO_FILES):
@@ -204,6 +204,7 @@ python-timeout-test_SF:
 	cd sdk/python && python -m unittest -v test.IntegTest.test_Timeout
 	-fuser -k 50005/tcp
 
+python-get-put-test: install_python_modules
 python-get-put-test: export ROUTING = Store&Forward
 python-get-put-test:
 	cd tests && go test ./integration_test.go -run TestPython_SDK $(GO_TEST_FLAGS) &
