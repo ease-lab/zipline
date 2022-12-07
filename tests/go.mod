@@ -17,7 +17,7 @@ replace (
 
 require (
 	XDTgRPC_stream/plotter v0.0.0-00010101000000-000000000000
-	github.com/containerd/containerd v1.5.2
+	github.com/containerd/containerd v1.5.16
 	github.com/ease-lab/vhive-xdt/proto/downXDT v0.0.0-00010101000000-000000000000
 	github.com/ease-lab/vhive-xdt/queue-proxy/dQP v0.0.0-00010101000000-000000000000
 	github.com/ease-lab/vhive-xdt/queue-proxy/sQP v0.0.0-00010101000000-000000000000
