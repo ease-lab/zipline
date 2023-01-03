@@ -23,65 +23,58 @@
 package dQP
 
 import (
+	"bufio"
 	"context"
+	"google.golang.org/grpc/metadata"
 	"io"
 	"net"
-	"sync"
-
-	"google.golang.org/grpc/metadata"
-
-	"github.com/ease-lab/vhive-xdt/proto/crossXDT"
-	"github.com/ease-lab/vhive-xdt/proto/downXDT"
+	"strconv"
+	"strings"
 
 	"github.com/ease-lab/vhive-xdt/transport"
 	"github.com/ease-lab/vhive-xdt/utils"
 
 	log "github.com/sirupsen/logrus"
-	"go.opentelemetry.io/contrib/instrumentation/google.golang.org/grpc/otelgrpc"
-	"google.golang.org/grpc"
 )
 
 // bufferPool is responsible for managing bounded buffers of channels to store data
 var bufferPool transport.BufferPool
 
-type downXDTServer struct {
-	downXDT.UnimplementedXDTtoFnServer
-}
-
 // XDTDataServe is a gRPC server to serve data to the DstFn
-func (s downXDTServer) XDTDataServe(in *downXDT.DataRequest, srv downXDT.XDTtoFn_XDTDataServeServer) error {
+func XDTDataServe(conn net.Conn) error {
 
-	log.Infof("dQP: data being fetched by DstFn using key : %s", in.Key)
-
-	chunkCount := 0
-	var channel chan []byte
-	var chunkTotal int64
-	// Check whether the first packet has been received at dQP or not
+	//Get the key
+	reader := bufio.NewReader(conn)
 	for {
-		if channel, chunkTotal = bufferPool.GetChannel(in.Key); channel != nil {
-			log.Infof("dQP: found chunkTotal %d for key %s at dQP", chunkTotal, in.Key)
-			break
+		key, err := reader.ReadString('\n')
+		if err != nil {
+			log.Fatal(err)
 		}
-	}
+		key = strings.TrimSuffix(key, "\n")
+		log.Infof("dQP: data being fetched by DstFn using key : %s", key)
 
-	for {
-		select {
-		case chunk := <-channel:
-			resp := downXDT.Data{Chunk: chunk, TotalChunks: chunkTotal}
-			if err := srv.Send(&resp); err != nil {
-				log.Errorf("dQP: send error %v", err)
-				log.Infof("[dQP] freeing channel %s due to send error", in.Key)
-				bufferPool.FreeChannel(in.Key)
-				return err
+		chunkCount := 0
+		var channel chan []byte
+		var chunkTotal int64
+		// Check whether the first packet has been received at dQP or not
+		for {
+			if channel, chunkTotal = bufferPool.GetChannel(key); channel != nil {
+				log.Infof("dQP: found chunkTotal %d for key %s at dQP", chunkTotal, key)
+				break
 			}
-			log.Debugf("dQP: Sending chunk : %d to DstFn", chunkCount)
-			chunkCount += 1
-		default:
-			if chunkTotal == int64(chunkCount) {
-				log.Infof("[dQP] transfer to DST complete, freeing channel %s ", in.Key)
-				bufferPool.FreeChannel(in.Key)
-				return nil
-			}
+		}
+
+		chunk := <-channel
+		chunkCount, err = conn.Write(chunk)
+		if err != nil {
+			log.Errorf("[src] error sending bytes to dQP: %v", err)
+			bufferPool.FreeChannel(key)
+			return nil
+		}
+
+		if chunkTotal == int64(chunkCount) {
+			log.Infof("[dQP] transfer to DST complete, freeing channel %s ", key)
+			bufferPool.FreeChannel(key)
 		}
 	}
 }
@@ -92,57 +85,44 @@ func PullDataFromSrcQP(ctx context.Context) error {
 	headers, _ := metadata.FromOutgoingContext(ctx)
 	key := headers["key"][0]
 	sQPAddr := headers["sqp_addr"][0]
-	routing := headers["routing"][0]
-	conn, err := utils.GetGRPCConn(ctx, sQPAddr, true)
+	payloadSizeString := headers["payload_size_in_bytes"][0]
+	payloadSize, err := strconv.Atoi(payloadSizeString)
 	if err != nil {
-		log.Errorf("SRC: can not connect with server %v", err)
-		return err
+		log.Fatal(err)
 	}
 
-	client := crossXDT.NewStreamDataClient(conn)
-	in := &crossXDT.Request{Key: key}
-	stream, err := client.ServeData(ctx, in)
+	tcpConn, err := net.Dial("tcp", sQPAddr)
+	if err != nil {
+		log.Fatalf("[dqp]: error dialing to src %v", err)
+	}
+
+	defer tcpConn.Close()
+
+	_, err = tcpConn.Write([]byte(key + "\n"))
 	if err != nil {
 		log.Errorf("dQP: open stream error %v", err)
 		return err
 	}
 
-	chunkCount := 0
-	var onlyOnce sync.Once
 	var channel chan []byte
-	var totalChunks int64
-	for {
-		chunk, err := stream.Recv()
-		if err == io.EOF {
-			log.Infof("dQP: %d chunks received", chunkCount)
-			if routing == utils.STORE_FORWARD {
-				bufferPool.StoreChannel(key, totalChunks, channel)
-			}
-			return nil
-		}
-		if err != nil {
-			log.Errorf("dQP: receive error: %v", err)
-			return err
-		}
-		log.Debugf("dQP: Received chunk no. %d", chunkCount)
-		onlyOnce.Do(func() {
-			totalChunks = chunk.TotalChunks
-			log.Debugf("dQP: requesting a new channel")
-			if routing == utils.CUT_THROUGH {
-				channel = bufferPool.CreateChannel()
-				bufferPool.StoreChannel(key, chunk.TotalChunks, channel)
-			} else if routing == utils.STORE_FORWARD {
-				channel = bufferPool.CreateChannel()
-			} else {
-				log.Errorf("dQP: Invalid route type %s. Check config", routing)
-			}
-			log.Debugf("dQP: channel allocated")
-			log.Infof("dQP: chunkTotal = %d", chunk.TotalChunks)
-		})
-		log.Debugf("dQP: Enquing chunk number %d", chunkCount)
-		channel <- chunk.Chunk
-		chunkCount += 1
+	var buffer = make([]byte, payloadSize)
+	bytesRead, err := io.ReadFull(tcpConn, buffer)
+	if err != nil {
+		log.Errorf("dQP: receive error: %v", err)
+		return err
 	}
+	log.Info("[dqp] received ", buffer[0:9], buffer[len(buffer)-9:])
+	if bytesRead != payloadSize {
+		log.Errorf("dQP: bytes read: %d, payloadSize %d", bytesRead, payloadSize)
+		return err
+	}
+	log.Debugf("dQP: Received %d bytes", bytesRead)
+	channel = bufferPool.CreateChannel()
+	log.Debugf("dQP: channel allocated")
+	channel <- buffer
+	bufferPool.StoreChannel(key, int64(bytesRead), channel)
+	log.Debugf("dQP: channel allocated")
+	return nil
 }
 
 // StartServer starts DstQP server
@@ -150,21 +130,15 @@ func StartServer(config utils.Config) {
 
 	bufferPool.Init(config)
 
+	log.Infoln("dQP: start server")
 	lis, err := net.Listen("tcp", config.DQPServerPort)
 	if err != nil {
-		log.Fatalf("dQP: failed to listen: %v", err)
+		log.Fatalf("src: failed to listen: %v", err)
 	}
-	var server *grpc.Server
-	if config.TracingEnabled {
-		server = grpc.NewServer(grpc.UnaryInterceptor(otelgrpc.UnaryServerInterceptor()),
-			grpc.StreamInterceptor(otelgrpc.StreamServerInterceptor()))
-	} else {
-		server = grpc.NewServer()
-	}
-	downXDT.RegisterXDTtoFnServer(server, downXDTServer{})
 
-	log.Infoln("dQP: start server")
-	if err := server.Serve(lis); err != nil {
-		log.Fatalf("dQP: failed to serve: %v", err)
+	conn, err := lis.Accept()
+	if err != nil {
+		log.Fatal(err)
 	}
+	go XDTDataServe(conn)
 }

@@ -29,7 +29,7 @@ services:
 #      - 9411:9411
 
   dQP:
-    image: vhiveease/dqp
+    image: vhiveease/dqp:tcp
     env_file:
       - xdt.env
       - network.env
@@ -38,7 +38,7 @@ services:
       - "50008"
 
   sQP:
-    image: vhiveease/sqp
+    image: vhiveease/sqp:tcp
     env_file:
       - xdt.env
       - network.env
@@ -46,15 +46,17 @@ services:
       - "50005"
 
   gx:
-    image: vhiveease/gx
+    image: vhiveease/gx:tcp
     env_file:
       - xdt.env
       - network.env
     expose:
       - "50007"
+    depends_on:
+      - dQP
 
   fx:
-    image: vhiveease/fx
+    image: vhiveease/fx:tcp
     env_file:
       - xdt.env
       - network.env

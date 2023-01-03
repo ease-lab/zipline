@@ -82,10 +82,11 @@ func main() {
 
 			if r.Header.Get("is_xdt") == "true" {
 				httpMetadata := map[string]string{
-					"is_xdt":   r.Header.Get("is_xdt"),
-					"key":      r.Header.Get("key"),
-					"sqp_addr": r.Header.Get("sqp_addr"),
-					"routing":  r.Header.Get("routing"),
+					"is_xdt":                r.Header.Get("is_xdt"),
+					"key":                   r.Header.Get("key"),
+					"sqp_addr":              r.Header.Get("sqp_addr"),
+					"routing":               r.Header.Get("routing"),
+					"payload_size_in_bytes": r.Header.Get("payload_size_in_bytes"),
 				}
 				ctx := metadata.NewOutgoingContext(r.Context(), metadata.New(httpMetadata))
 				log.Infof("pulling from sQP using key %s addr %s", r.Header.Get("key"), r.Header.Get("sqp_addr"))

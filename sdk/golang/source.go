@@ -23,10 +23,12 @@
 package golang
 
 import (
+	"bufio"
 	"context"
 	"encoding/json"
 	"fmt"
 	"strconv"
+	"strings"
 	"sync"
 	"time"
 
@@ -46,7 +48,6 @@ import (
 	"net"
 
 	"github.com/ease-lab/vhive-xdt/proto/upXDT"
-	"go.opentelemetry.io/contrib/instrumentation/google.golang.org/grpc/otelgrpc"
 	"google.golang.org/grpc"
 )
 
@@ -81,26 +82,8 @@ func NewXDTclient(config utils.Config) (*XDTclient, error) {
 	if config.NoCopy {
 		xdtClient.addr = utils.FetchSelfIP() + config.SrcServerPort
 		log.Infof("[src] starting the host server")
-		lis, err := net.Listen("tcp", config.SrcServerPort)
-		if err != nil {
-			log.Fatalf("src: failed to listen: %v", err)
-		}
-		var server *grpc.Server
-		if config.TracingEnabled {
-			server = grpc.NewServer(grpc.UnaryInterceptor(otelgrpc.UnaryServerInterceptor()),
-				grpc.StreamInterceptor(otelgrpc.StreamServerInterceptor()))
-		} else {
-			server = grpc.NewServer()
-		}
 		xdtClient.crossXDTserver = crossXDTServer{payloadDataMap: &xdtClient.payloadDataMap, config: config}
-		crossXDT.RegisterStreamDataServer(server, xdtClient.crossXDTserver)
-
-		//errorServerInit := make(chan error, 1)
-		go func() {
-			if err := server.Serve(lis); err != nil {
-				log.Fatalf("src: failed to serve: %v", err)
-			}
-		}()
+		go xdtClient.crossXDTserver.ServeData(config.SrcServerPort)
 	}
 
 	return &xdtClient, nil
@@ -124,35 +107,40 @@ func (x *XDTclient) serve(key string, payloadData []byte) string {
 }
 
 // ServeData is the gRPC server to serve the available data to the dQP
-func (s crossXDTServer) ServeData(in *crossXDT.Request, srv crossXDT.StreamData_ServeDataServer) error {
+func (s crossXDTServer) ServeData(serverPort string) error {
 
-	payloadDataInterface, ok := (*s.payloadDataMap).LoadAndDelete(in.Key)
-	if !ok {
-		return nil
+	lis, err := net.Listen("tcp", serverPort)
+	if err != nil {
+		log.Fatalf("src: failed to listen: %v", err)
 	}
-	payloadData := payloadDataInterface.([]byte)
-	log.Infof("src: dQP is fetching key: %s", in.Key)
-	payloadSize := len(payloadData)
-	log.Infof("Transfering %d bytes to dQP", payloadSize)
-	chunkSizeInBytes := s.config.ChunkSizeInBytes
-	chunkTotal := len(payloadData) / chunkSizeInBytes
-	if len(payloadData)%chunkSizeInBytes != 0 {
-		chunkTotal += 1
-	}
-	var resp crossXDT.Response
 
-	for currentByte := 0; currentByte < payloadSize; currentByte += chunkSizeInBytes {
-		if currentByte+chunkSizeInBytes > payloadSize {
-			resp = crossXDT.Response{Chunk: payloadData[currentByte:payloadSize], TotalChunks: int64(chunkTotal)}
-		} else {
-			resp = crossXDT.Response{Chunk: payloadData[currentByte : currentByte+chunkSizeInBytes], TotalChunks: int64(chunkTotal)}
+	for {
+		// accept connection
+		conn, err := lis.Accept()
+		if err != nil {
+			log.Fatalf("src: failed to accept connection: %v", err)
 		}
-		if err := srv.Send(&resp); err != nil {
-			log.Errorf("src: send error %v", err)
-			log.Infof("[src] freeing channel %s due to send error", in.Key)
-			return err
-		}
-		log.Debugf("finishing sending : %d bytes", currentByte)
+		go func(conn net.Conn) {
+			defer conn.Close()
+			//Get the key
+			reader := bufio.NewReader(conn)
+			var err error
+			key, err := reader.ReadString('\n')
+			if err != nil {
+				log.Fatal(err)
+			}
+			key = strings.TrimSuffix(key, "\n")
+			payloadDataInterface, ok := (*s.payloadDataMap).LoadAndDelete(key)
+			if !ok {
+				log.Errorf("[src] error getting payload from the map")
+			}
+			payloadData := payloadDataInterface.([]byte)
+			log.Infof("src: dQP is fetching key: %s", key)
+			_, err = conn.Write(payloadData)
+			if err != nil {
+				log.Errorf("[src] error sending bytes to dQP: %v", err)
+			}
+		}(conn)
 	}
 	return nil
 }
@@ -213,10 +201,11 @@ func (x *XDTclient) Put(ctx context.Context, payload []byte) (string, error) {
 	}
 
 	httpMetadata := map[string]string{
-		"is_xdt":   "true",
-		"key":      key,
-		"sqp_addr": payloadLocation,
-		"routing":  x.config.Routing,
+		"is_xdt":                "true",
+		"key":                   key,
+		"sqp_addr":              payloadLocation,
+		"routing":               x.config.Routing,
+		"payload_size_in_bytes": strconv.Itoa(len(payload)),
 	}
 	ctx = metadata.NewOutgoingContext(ctx, metadata.New(httpMetadata))
 	//  This timeout must be large enough for the request to complete
@@ -259,10 +248,11 @@ func (x *XDTclient) BroadcastPut(ctx context.Context, payload []byte) (string, e
 	}
 
 	httpMetadata := map[string]string{
-		"is_xdt":   "true",
-		"key":      key,
-		"sqp_addr": payloadLocation,
-		"routing":  x.config.Routing,
+		"is_xdt":                "true",
+		"key":                   key,
+		"sqp_addr":              payloadLocation,
+		"routing":               x.config.Routing,
+		"payload_size_in_bytes": strconv.Itoa(len(payload)),
 	}
 	ctx = metadata.NewOutgoingContext(ctx, metadata.New(httpMetadata))
 	//  This timeout must be large enough for the request to complete
@@ -301,12 +291,12 @@ func (x *XDTclient) ServeAndInvoke(ctx context.Context, URL string, xdtPayload u
 	if err != nil {
 		return nil, false, err
 	}
-
 	httpMetadata := map[string]string{
-		"is_xdt":   "true",
-		"key":      key,
-		"sqp_addr": srcAddr,
-		"routing":  x.config.Routing,
+		"is_xdt":                "true",
+		"key":                   key,
+		"sqp_addr":              srcAddr,
+		"routing":               x.config.Routing,
+		"payload_size_in_bytes": strconv.Itoa(len(payloadData)),
 	}
 	ctx = metadata.NewOutgoingContext(ctx, metadata.New(httpMetadata))
 	//  This timeout must be large enough for the request to complete
@@ -363,10 +353,11 @@ func (x *XDTclient) InvokeWithCopy(ctx context.Context, URL string, xdtPayload u
 	}
 
 	httpMetadata := map[string]string{
-		"is_xdt":   "true",
-		"key":      key,
-		"sqp_addr": sQPAddr,
-		"routing":  x.config.Routing,
+		"is_xdt":                "true",
+		"key":                   key,
+		"sqp_addr":              sQPAddr,
+		"routing":               x.config.Routing,
+		"payload_size_in_bytes": strconv.Itoa(len(payloadData)),
 	}
 	ctx = metadata.NewOutgoingContext(ctx, metadata.New(httpMetadata))
 	//  This timeout must be large enough for the request to complete
