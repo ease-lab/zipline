@@ -3,6 +3,7 @@ module github.com/ease-lab/vhive-xdt/proto/crossXDT
 go 1.18
 
 require (
+	capnproto.org/go/capnp/v3 v3.0.0-alpha.18
 	google.golang.org/grpc v1.38.0
 	google.golang.org/protobuf v1.26.0
 )
@@ -10,6 +11,7 @@ require (
 require (
 	github.com/golang/protobuf v1.5.0 // indirect
 	golang.org/x/net v0.0.0-20190311183353-d8887717615a // indirect
+	golang.org/x/sync v0.0.0-20201020160332-67f06af15bc9 // indirect
 	golang.org/x/sys v0.0.0-20190215142949-d0b11bdaac8a // indirect
 	golang.org/x/text v0.3.0 // indirect
 	google.golang.org/genproto v0.0.0-20200526211855-cb27e3aa2013 // indirect

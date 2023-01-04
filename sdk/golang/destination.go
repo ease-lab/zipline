@@ -23,6 +23,7 @@
 package golang
 
 import (
+	"capnproto.org/go/capnp/v3/rpc"
 	"context"
 	"io"
 	"net"
@@ -45,7 +46,7 @@ import (
 type downXDTServer struct {
 	config  utils.Config
 	handler func([]byte) ([]byte, bool)
-	client  downXDT.XDTtoFnClient
+	conn    *rpc.Conn
 	downXDT.UnimplementedXDTtoFnServer
 }
 
@@ -61,7 +62,7 @@ func (s downXDTServer) XDTFnCall(ctx context.Context, in *downXDT.InvocationRequ
 		log.Infof("DST: using %s routing", headers["routing"][0])
 
 		// fetch data from dQP
-		payloadBytes, err := FetchFromDQP(ctx, key, s.client)
+		payloadBytes, err := FetchFromDQP(ctx, key, s.conn)
 		if err != nil {
 			log.Errorf("DST: FetchFromDQP failed %v", err)
 			return &downXDT.InvocationResponse{}, err
@@ -75,42 +76,25 @@ func (s downXDTServer) XDTFnCall(ctx context.Context, in *downXDT.InvocationRequ
 }
 
 // FetchFromDQP fetches data from dQP to DstFn
-func FetchFromDQP(ctx context.Context, key string, client downXDT.XDTtoFnClient) ([]byte, error) {
-	in := &downXDT.DataRequest{Key: key}
-	stream, err := client.XDTDataServe(ctx, in)
+func FetchFromDQP(ctx context.Context, key string, capconn *rpc.Conn) ([]byte, error) {
+	client := downXDT.XDTtoFn(capconn.Bootstrap(context.Background()))
+	f, _ := client.XDTDataServe(ctx, func(ps downXDT.XDTtoFn_xDTDataServe_Params) error {
+		ps.SetKey(key)
+		return nil
+	})
+	//defer release()
+
+	res, err := f.Struct()
 	if err != nil {
-		log.Errorf("DST: open stream error %v", err)
-		return []byte{}, err
+		log.Fatal(err)
+	}
+	payload, err := res.Payload()
+	if err != nil {
+		log.Fatal(err)
 	}
 
-	chunkCount := 0
-	byteCount := 0
-	var onlyOnce sync.Once
-	var totalChunks int64
-	var payloadBytes []byte
-	for {
-		chunk, err := stream.Recv()
-		if err == io.EOF {
-			log.Infof("DST: Received %d chunks at DstFn with first/last bytes as:", chunkCount)
-			log.Info(payloadBytes[0:9], payloadBytes[byteCount-9:byteCount])
-			return payloadBytes[:byteCount], nil
-		}
-		if err != nil {
-			log.Errorf("DST: receive error: %v", err)
-			return []byte{}, err
-		}
-		log.Debugf("DST: Received chunk no. %d", chunkCount)
-		onlyOnce.Do(func() {
-			totalChunks = chunk.TotalChunks
-			log.Infof("DST: creating a new buffer")
-			payloadBytes = make([]byte, int(totalChunks)*len(chunk.Chunk))
-			log.Infof("DST: chunkTotal = %d", totalChunks)
-		})
-		log.Debugf("DST: appending chunk number %d", chunkCount)
-		copy(payloadBytes[byteCount:], chunk.Chunk)
-		byteCount += len(chunk.Chunk)
-		chunkCount += 1
-	}
+	log.Info("DST: ", payload[0:9], payload[len(payload)-9:])
+	return payload, nil
 }
 
 // Get pulls payload from DQP server using the key
@@ -241,17 +225,17 @@ func StartDstServer(config utils.Config, handler func([]byte) ([]byte, bool)) {
 	} else {
 		server = grpc.NewServer()
 	}
-	// connect to DQP
-	conn, err := utils.GetGRPCConn(context.Background(), config.DQPServerHostname+config.DQPServerPort, false)
+
+	conn, err := net.Dial("tcp", config.DQPServerHostname+config.DQPServerPort)
 	if err != nil {
-		log.Fatalf("DST: can not connect with dQP server %v", err)
+		log.Fatal(err)
 	}
-	client := downXDT.NewXDTtoFnClient(conn)
+	capconn := rpc.NewConn(rpc.NewStreamTransport(conn), nil)
 
 	s := downXDTServer{}
 	s.config = config
 	s.handler = handler
-	s.client = client
+	s.conn = capconn
 	downXDT.RegisterXDTtoFnServer(server, s)
 
 	log.Infoln("DST: start server")

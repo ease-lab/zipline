@@ -242,10 +242,10 @@ python-noCopy-broadcast-get-put-test:
 	-fuser -k 50007/tcp
 
 docker-images-push:
-	cd user-functions/fx && ko publish ./ -B
-	cd user-functions/dQP && ko publish ./ -B
-	cd user-functions/sQP && ko publish ./ -B
-	cd user-functions/gx && ko publish ./ -B
+	cd user-functions/fx && ko publish ./ -B --tags=capnp
+	cd user-functions/dQP && ko publish ./ -B --tags=capnp
+	cd user-functions/sQP && ko publish ./ -B --tags=capnp
+	cd user-functions/gx && ko publish ./ -B --tags=capnp
 
 benchmark-XDT: export ROUTING = CutThrough
 benchmark-XDT:

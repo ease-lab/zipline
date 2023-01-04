@@ -23,6 +23,8 @@
 package golang
 
 import (
+	"capnproto.org/go/capnp/v3"
+	"capnproto.org/go/capnp/v3/rpc"
 	"context"
 	"encoding/json"
 	"fmt"
@@ -37,6 +39,7 @@ import (
 	"google.golang.org/grpc/metadata"
 
 	"github.com/ease-lab/vhive-xdt/proto/crossXDT"
+
 	"github.com/ease-lab/vhive-xdt/proto/downXDT"
 
 	"github.com/ease-lab/vhive-xdt/utils"
@@ -46,7 +49,6 @@ import (
 	"net"
 
 	"github.com/ease-lab/vhive-xdt/proto/upXDT"
-	"go.opentelemetry.io/contrib/instrumentation/google.golang.org/grpc/otelgrpc"
 	"google.golang.org/grpc"
 )
 
@@ -85,20 +87,26 @@ func NewXDTclient(config utils.Config) (*XDTclient, error) {
 		if err != nil {
 			log.Fatalf("src: failed to listen: %v", err)
 		}
-		var server *grpc.Server
-		if config.TracingEnabled {
-			server = grpc.NewServer(grpc.UnaryInterceptor(otelgrpc.UnaryServerInterceptor()),
-				grpc.StreamInterceptor(otelgrpc.StreamServerInterceptor()))
-		} else {
-			server = grpc.NewServer()
-		}
 		xdtClient.crossXDTserver = crossXDTServer{payloadDataMap: &xdtClient.payloadDataMap, config: config}
-		crossXDT.RegisterStreamDataServer(server, xdtClient.crossXDTserver)
-
-		//errorServerInit := make(chan error, 1)
 		go func() {
-			if err := server.Serve(lis); err != nil {
-				log.Fatalf("src: failed to serve: %v", err)
+			for {
+				client := crossXDT.StreamData_ServerToClient(xdtClient.crossXDTserver)
+				// accept connection
+				conn, err := lis.Accept()
+				if err != nil {
+					log.Fatal(err)
+				}
+				capnpconn := rpc.NewConn(rpc.NewStreamTransport(conn), &rpc.Options{
+					// The BootstrapClient is the RPC interface that will be made available
+					// to the remote endpoint by default.  In this case, Arith.
+					BootstrapClient: capnp.Client(client),
+				})
+				// Block until the connection terminates.
+				select {
+				case <-capnpconn.Done():
+					capnpconn.Close()
+					continue
+				}
 			}
 		}()
 	}
@@ -124,35 +132,29 @@ func (x *XDTclient) serve(key string, payloadData []byte) string {
 }
 
 // ServeData is the gRPC server to serve the available data to the dQP
-func (s crossXDTServer) ServeData(in *crossXDT.Request, srv crossXDT.StreamData_ServeDataServer) error {
+func (s crossXDTServer) ServeData(ctx context.Context, req crossXDT.StreamData_serveData) error {
 
-	payloadDataInterface, ok := (*s.payloadDataMap).LoadAndDelete(in.Key)
+	res, err := req.AllocResults() // allocate the results struct
+	if err != nil {
+		log.Fatalf("[src]: error allocating response %v", err)
+		return err
+	}
+	key, err := req.Args().Key()
+	if err != nil {
+		log.Fatalf("[src]: error getting key %v", err)
+		return err
+	}
+
+	payloadDataInterface, ok := (*s.payloadDataMap).LoadAndDelete(key)
 	if !ok {
 		return nil
 	}
 	payloadData := payloadDataInterface.([]byte)
-	log.Infof("src: dQP is fetching key: %s", in.Key)
-	payloadSize := len(payloadData)
-	log.Infof("Transfering %d bytes to dQP", payloadSize)
-	chunkSizeInBytes := s.config.ChunkSizeInBytes
-	chunkTotal := len(payloadData) / chunkSizeInBytes
-	if len(payloadData)%chunkSizeInBytes != 0 {
-		chunkTotal += 1
-	}
-	var resp crossXDT.Response
-
-	for currentByte := 0; currentByte < payloadSize; currentByte += chunkSizeInBytes {
-		if currentByte+chunkSizeInBytes > payloadSize {
-			resp = crossXDT.Response{Chunk: payloadData[currentByte:payloadSize], TotalChunks: int64(chunkTotal)}
-		} else {
-			resp = crossXDT.Response{Chunk: payloadData[currentByte : currentByte+chunkSizeInBytes], TotalChunks: int64(chunkTotal)}
-		}
-		if err := srv.Send(&resp); err != nil {
-			log.Errorf("src: send error %v", err)
-			log.Infof("[src] freeing channel %s due to send error", in.Key)
-			return err
-		}
-		log.Debugf("finishing sending : %d bytes", currentByte)
+	log.Infof("src: dQP is fetching key: %s", key)
+	err = res.SetPayload(payloadData)
+	if err != nil {
+		log.Fatalf("[src]: error setting response %v", err)
+		return err
 	}
 	return nil
 }
