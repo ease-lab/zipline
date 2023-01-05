@@ -32,6 +32,7 @@ import (
 )
 
 var handler = func(data []byte) ([]byte, bool) {
+	log.Info("[gx] received", data[0:9], data[len(data)-9:])
 	log.Infof("gx: destination handler received data of size %d", len(data))
 	return []byte("sample response"), true
 }

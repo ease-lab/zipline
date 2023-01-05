@@ -6,4 +6,5 @@ $Go.import("github.com/ease-lab/vhive-xdt/proto/crossXDT");
 # Declare the serveData capability
 interface StreamData {
 	serveData @0 (key :Text) -> (payload :Data);
+	serveBroadcastData @0 (key :Text) -> (payload :Data);
 }
