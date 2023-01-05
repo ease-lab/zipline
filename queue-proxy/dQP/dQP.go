@@ -27,7 +27,6 @@ import (
 	"capnproto.org/go/capnp/v3/rpc"
 	"context"
 	"github.com/ease-lab/vhive-xdt/proto/crossXDT"
-	"github.com/ease-lab/vhive-xdt/proto/downXDT"
 	"google.golang.org/grpc/metadata"
 	"net"
 	"sync"
@@ -39,11 +38,11 @@ import (
 
 var packetMap = sync.Map{}
 
-type DownXDTServer struct {
+type crossXDTServer struct {
 }
 
-// XDTDataServe is a gRPC server to serve data to the DstFn
-func (s DownXDTServer) XDTDataServe(ctx context.Context, req downXDT.XDTtoFn_xDTDataServe) error {
+// ServeData is a gRPC server to serve data to the DstFn
+func (s crossXDTServer) ServeData(ctx context.Context, req crossXDT.StreamData_serveData) error {
 
 	res, err := req.AllocResults() // allocate the results struct
 	if err != nil {
@@ -104,7 +103,6 @@ func PullDataFromSrcQP(ctx context.Context) error {
 	headers, _ := metadata.FromOutgoingContext(ctx)
 	key := headers["key"][0]
 	sQPAddr := headers["sqp_addr"][0]
-	//routing := headers["routing"][0]
 
 	conn, err := net.Dial("tcp", sQPAddr)
 	if err != nil {
@@ -158,9 +156,9 @@ func StartServer(config utils.Config) {
 	if err != nil {
 		log.Fatalf("dQP: failed to listen: %v", err)
 	}
-	server := DownXDTServer{}
+	server := crossXDTServer{}
 	for {
-		client := downXDT.XDTtoFn_ServerToClient(&server)
+		client := crossXDT.StreamData_ServerToClient(&server)
 		// accept connection
 		conn, err := lis.Accept()
 		if err != nil {

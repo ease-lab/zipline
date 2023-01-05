@@ -23,13 +23,13 @@
 package tests
 
 import (
+	"capnproto.org/go/capnp/v3/rpc"
 	"context"
 	"crypto/rand"
+	"net"
 	"strconv"
 	"testing"
 	"time"
-
-	"github.com/ease-lab/vhive-xdt/proto/downXDT"
 
 	"google.golang.org/grpc/metadata"
 
@@ -168,16 +168,16 @@ func TestDQP_to_DstFn_data_transfer(t *testing.T) {
 	log.Infof("transferred packet from sQP to dQP in %s", duration)
 
 	// connect to dQP
-	conn, err := utils.GetGRPCConn(context.Background(), config.DQPServerHostname+config.DQPServerPort, false)
+	conn, err := net.Dial("tcp", config.DQPServerHostname+config.DQPServerPort)
 	if err != nil {
-		log.Fatalf("DST: can not connect with dQP server %v", err)
+		log.Fatal(err)
 	}
-	dstClient := downXDT.NewXDTtoFnClient(conn)
+	capconn := rpc.NewConn(rpc.NewStreamTransport(conn), nil)
 
 	start = time.Now()
-	payloadBytes, err := sdk.FetchFromDQP(context.Background(), key, dstClient)
+	payloadBytes, err := sdk.FetchData(context.Background(), key, capconn)
 	if err != nil {
-		log.Fatalf("FetchFromDQP failed %v", err)
+		log.Fatalf("FetchData failed %v", err)
 	}
 	duration = time.Since(start)
 

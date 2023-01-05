@@ -25,14 +25,10 @@ package golang
 import (
 	"capnproto.org/go/capnp/v3/rpc"
 	"context"
-	"io"
+	"github.com/ease-lab/vhive-xdt/proto/crossXDT"
+	"google.golang.org/grpc/metadata"
 	"net"
 	"strings"
-	"sync"
-
-	"github.com/ease-lab/vhive-xdt/proto/crossXDT"
-
-	"google.golang.org/grpc/metadata"
 
 	"github.com/ease-lab/vhive-xdt/proto/downXDT"
 	"github.com/ease-lab/vhive-xdt/utils"
@@ -62,9 +58,9 @@ func (s downXDTServer) XDTFnCall(ctx context.Context, in *downXDT.InvocationRequ
 		log.Infof("DST: using %s routing", headers["routing"][0])
 
 		// fetch data from dQP
-		payloadBytes, err := FetchFromDQP(ctx, key, s.conn)
+		payloadBytes, err := FetchData(ctx, key, s.conn)
 		if err != nil {
-			log.Errorf("DST: FetchFromDQP failed %v", err)
+			log.Errorf("DST: FetchData failed %v", err)
 			return &downXDT.InvocationResponse{}, err
 		}
 
@@ -75,10 +71,10 @@ func (s downXDTServer) XDTFnCall(ctx context.Context, in *downXDT.InvocationRequ
 	return &downXDT.InvocationResponse{Message: message, Ok: ok}, nil
 }
 
-// FetchFromDQP fetches data from dQP to DstFn
-func FetchFromDQP(ctx context.Context, key string, capconn *rpc.Conn) ([]byte, error) {
-	client := downXDT.XDTtoFn(capconn.Bootstrap(context.Background()))
-	f, _ := client.XDTDataServe(ctx, func(ps downXDT.XDTtoFn_xDTDataServe_Params) error {
+// FetchData fetches data from dQP to DstFn
+func FetchData(ctx context.Context, key string, capconn *rpc.Conn) ([]byte, error) {
+	client := crossXDT.StreamData(capconn.Bootstrap(context.Background()))
+	f, _ := client.ServeData(ctx, func(ps crossXDT.StreamData_serveData_Params) error {
 		ps.SetKey(key)
 		return nil
 	})
@@ -110,105 +106,18 @@ func Get(ctx context.Context, capability string, config utils.Config) ([]byte, e
 		"routing":  config.Routing,
 	}
 	ctx = metadata.NewOutgoingContext(ctx, metadata.New(httpMetadata))
-	conn, err := utils.GetGRPCConn(ctx, sQPAddr, true)
-	if err != nil {
-		log.Errorf("DST: can not connect with SQP server %v", err)
-		return nil, err
-	}
 
-	client := crossXDT.NewStreamDataClient(conn)
-	in := &crossXDT.Request{Key: key}
-	stream, err := client.ServeData(ctx, in)
+	conn, err := net.Dial("tcp", sQPAddr)
 	if err != nil {
-		log.Errorf("dST: open stream error %v", err)
-		return nil, err
+		log.Fatal(err)
 	}
-
-	chunkCount := 0
-	byteCount := 0
-	var onlyOnce sync.Once
-	var payloadBytes []byte
-	var totalChunks int64
-	for {
-		chunk, err := stream.Recv()
-		if err == io.EOF {
-			log.Infof("DST: Received %d chunks at DstFn with first/last bytes as:", chunkCount)
-			log.Info(payloadBytes[0:9], payloadBytes[byteCount-9:byteCount])
-			return payloadBytes[:byteCount], nil
-		}
-		if err != nil {
-			log.Errorf("dQP: receive error: %v", err)
-			return nil, err
-		}
-		log.Debugf("dQP: Received chunk no. %d", chunkCount)
-		onlyOnce.Do(func() {
-			totalChunks = chunk.TotalChunks
-			log.Infof("DST: creating a new buffer")
-			payloadBytes = make([]byte, totalChunks*int64(config.ChunkSizeInBytes))
-			log.Infof("DST: chunkTotal = %d", totalChunks)
-		})
-		log.Debugf("DST: appending chunk number %d", chunkCount)
-		copy(payloadBytes[byteCount:], chunk.Chunk)
-		byteCount += len(chunk.Chunk)
-		chunkCount += 1
-	}
+	capconn := rpc.NewConn(rpc.NewStreamTransport(conn), nil)
+	return FetchData(ctx, key, capconn)
 }
 
 // BroadcastGet pulls payload from DQP server using the key
 func BroadcastGet(ctx context.Context, capability string, config utils.Config) ([]byte, error) {
-	log.Infof("attempting Get using capability %s", capability)
-	key := capability
-	splitString := strings.SplitN(capability, "|", 2)
-	sQPAddr := splitString[1]
-	httpMetadata := map[string]string{
-		"is_xdt":   "true",
-		"key":      key,
-		"sqp_addr": sQPAddr,
-		"routing":  config.Routing,
-	}
-	ctx = metadata.NewOutgoingContext(ctx, metadata.New(httpMetadata))
-	conn, err := utils.GetGRPCConn(ctx, sQPAddr, true)
-	if err != nil {
-		log.Errorf("DST: can not connect with SQP server %v", err)
-		return nil, err
-	}
-
-	client := crossXDT.NewStreamDataClient(conn)
-	in := &crossXDT.BroadcastRequest{Key: key, ChunkSizeInBytes: int64(config.ChunkSizeInBytes)}
-	stream, err := client.ServeBroadcastData(ctx, in)
-	if err != nil {
-		log.Errorf("dST: open stream error %v", err)
-		return nil, err
-	}
-
-	chunkCount := 0
-	byteCount := 0
-	var onlyOnce sync.Once
-	var payloadBytes []byte
-	var totalChunks int64
-	for {
-		chunk, err := stream.Recv()
-		if err == io.EOF {
-			log.Infof("DST: Received %d chunks at DstFn with first/last bytes as:", chunkCount)
-			log.Info(payloadBytes[0:9], payloadBytes[byteCount-9:byteCount])
-			return payloadBytes[:byteCount], nil
-		}
-		if err != nil {
-			log.Errorf("DST: receive error: %v", err)
-			return nil, err
-		}
-		log.Debugf("DST: Received chunk no. %d", chunkCount)
-		onlyOnce.Do(func() {
-			totalChunks = chunk.TotalChunks
-			log.Infof("DST: creating a new buffer")
-			payloadBytes = make([]byte, totalChunks*int64(len(chunk.Chunk)))
-			log.Infof("DST: chunkTotal = %d", totalChunks)
-		})
-		log.Debugf("DST: appending chunk number %d", chunkCount)
-		copy(payloadBytes[byteCount:], chunk.Chunk)
-		byteCount += len(chunk.Chunk)
-		chunkCount += 1
-	}
+	return Get(ctx, capability, config)
 }
 
 // StartDstServer starts DstQP server
