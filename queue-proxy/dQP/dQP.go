@@ -41,6 +41,12 @@ var packetMap = sync.Map{}
 type crossXDTServer struct {
 }
 
+// ServeBroadcastData is a gRPC server to serve data to the DstFn
+func (s crossXDTServer) ServeBroadcastData(ctx context.Context, req crossXDT.StreamData_serveBroadcastData) error {
+	log.Fatal("[dqp] No op. Should not have reached here")
+	return nil
+}
+
 // ServeData is a gRPC server to serve data to the DstFn
 func (s crossXDTServer) ServeData(ctx context.Context, req crossXDT.StreamData_serveData) error {
 
@@ -73,27 +79,6 @@ func (s crossXDTServer) ServeData(ctx context.Context, req crossXDT.StreamData_s
 	}
 	packetMap.Delete(key)
 	return nil
-
-	//for {
-	//	select {
-	//	case chunk := <-channel:
-	//		resp := downXDT.Data{Chunk: chunk, TotalChunks: chunkTotal}
-	//		if err := srv.Send(&resp); err != nil {
-	//			log.Errorf("dQP: send error %v", err)
-	//			log.Infof("[dQP] freeing channel %s due to send error", in.Key)
-	//			bufferPool.FreeChannel(in.Key)
-	//			return err
-	//		}
-	//		log.Debugf("dQP: Sending chunk : %d to DstFn", chunkCount)
-	//		chunkCount += 1
-	//	default:
-	//		if chunkTotal == int64(chunkCount) {
-	//			log.Infof("[dQP] transfer to DST complete, freeing channel %s ", in.Key)
-	//			bufferPool.FreeChannel(in.Key)
-	//			return nil
-	//		}
-	//	}
-	//}
 
 }
 

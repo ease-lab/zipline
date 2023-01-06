@@ -117,7 +117,41 @@ func Get(ctx context.Context, capability string, config utils.Config) ([]byte, e
 
 // BroadcastGet pulls payload from DQP server using the key
 func BroadcastGet(ctx context.Context, capability string, config utils.Config) ([]byte, error) {
-	return Get(ctx, capability, config)
+	log.Infof("attempting Get using capability %s", capability)
+	key := capability
+	splitString := strings.SplitN(capability, "|", 2)
+	sQPAddr := splitString[1]
+	httpMetadata := map[string]string{
+		"is_xdt":   "true",
+		"key":      key,
+		"sqp_addr": sQPAddr,
+		"routing":  config.Routing,
+	}
+	ctx = metadata.NewOutgoingContext(ctx, metadata.New(httpMetadata))
+
+	conn, err := net.Dial("tcp", sQPAddr)
+	if err != nil {
+		log.Fatal(err)
+	}
+	capconn := rpc.NewConn(rpc.NewStreamTransport(conn), nil)
+	client := crossXDT.StreamData(capconn.Bootstrap(context.Background()))
+	f, _ := client.ServeBroadcastData(ctx, func(ps crossXDT.StreamData_serveBroadcastData_Params) error {
+		ps.SetKey(key)
+		return nil
+	})
+	//defer release()
+
+	res, err := f.Struct()
+	if err != nil {
+		log.Fatal(err)
+	}
+	payload, err := res.Payload()
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	log.Info("DST: ", payload[0:9], payload[len(payload)-9:])
+	return payload, nil
 }
 
 // StartDstServer starts DstQP server

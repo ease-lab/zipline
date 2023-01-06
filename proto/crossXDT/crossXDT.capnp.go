@@ -22,7 +22,7 @@ func (c StreamData) ServeData(ctx context.Context, params func(StreamData_serveD
 		Method: capnp.Method{
 			InterfaceID:   0xc7110414b2c7b8e7,
 			MethodID:      0,
-			InterfaceName: "crossXDT.capnp:StreamData",
+			InterfaceName: "proto/crossXDT.capnp:StreamData",
 			MethodName:    "serveData",
 		},
 	}
@@ -32,6 +32,22 @@ func (c StreamData) ServeData(ctx context.Context, params func(StreamData_serveD
 	}
 	ans, release := capnp.Client(c).SendCall(ctx, s)
 	return StreamData_serveData_Results_Future{Future: ans.Future()}, release
+}
+func (c StreamData) ServeBroadcastData(ctx context.Context, params func(StreamData_serveBroadcastData_Params) error) (StreamData_serveBroadcastData_Results_Future, capnp.ReleaseFunc) {
+	s := capnp.Send{
+		Method: capnp.Method{
+			InterfaceID:   0xc7110414b2c7b8e7,
+			MethodID:      1,
+			InterfaceName: "proto/crossXDT.capnp:StreamData",
+			MethodName:    "serveBroadcastData",
+		},
+	}
+	if params != nil {
+		s.ArgsSize = capnp.ObjectSize{DataSize: 0, PointerCount: 1}
+		s.PlaceArgs = func(s capnp.Struct) error { return params(StreamData_serveBroadcastData_Params(s)) }
+	}
+	ans, release := capnp.Client(c).SendCall(ctx, s)
+	return StreamData_serveBroadcastData_Results_Future{Future: ans.Future()}, release
 }
 
 // String returns a string that identifies this capability for debugging
@@ -102,6 +118,8 @@ func (c StreamData) GetFlowLimiter() fc.FlowLimiter {
 } // A StreamData_Server is a StreamData with a local implementation.
 type StreamData_Server interface {
 	ServeData(context.Context, StreamData_serveData) error
+
+	ServeBroadcastData(context.Context, StreamData_serveBroadcastData) error
 }
 
 // StreamData_NewServer creates a new Server from an implementation of StreamData_Server.
@@ -120,18 +138,30 @@ func StreamData_ServerToClient(s StreamData_Server) StreamData {
 // This can be used to create a more complicated Server.
 func StreamData_Methods(methods []server.Method, s StreamData_Server) []server.Method {
 	if cap(methods) == 0 {
-		methods = make([]server.Method, 0, 1)
+		methods = make([]server.Method, 0, 2)
 	}
 
 	methods = append(methods, server.Method{
 		Method: capnp.Method{
 			InterfaceID:   0xc7110414b2c7b8e7,
 			MethodID:      0,
-			InterfaceName: "crossXDT.capnp:StreamData",
+			InterfaceName: "proto/crossXDT.capnp:StreamData",
 			MethodName:    "serveData",
 		},
 		Impl: func(ctx context.Context, call *server.Call) error {
 			return s.ServeData(ctx, StreamData_serveData{call})
+		},
+	})
+
+	methods = append(methods, server.Method{
+		Method: capnp.Method{
+			InterfaceID:   0xc7110414b2c7b8e7,
+			MethodID:      1,
+			InterfaceName: "proto/crossXDT.capnp:StreamData",
+			MethodName:    "serveBroadcastData",
+		},
+		Impl: func(ctx context.Context, call *server.Call) error {
+			return s.ServeBroadcastData(ctx, StreamData_serveBroadcastData{call})
 		},
 	})
 
@@ -153,6 +183,23 @@ func (c StreamData_serveData) Args() StreamData_serveData_Params {
 func (c StreamData_serveData) AllocResults() (StreamData_serveData_Results, error) {
 	r, err := c.Call.AllocResults(capnp.ObjectSize{DataSize: 0, PointerCount: 1})
 	return StreamData_serveData_Results(r), err
+}
+
+// StreamData_serveBroadcastData holds the state for a server call to StreamData.serveBroadcastData.
+// See server.Call for documentation.
+type StreamData_serveBroadcastData struct {
+	*server.Call
+}
+
+// Args returns the call's arguments.
+func (c StreamData_serveBroadcastData) Args() StreamData_serveBroadcastData_Params {
+	return StreamData_serveBroadcastData_Params(c.Call.Args())
+}
+
+// AllocResults allocates the results struct.
+func (c StreamData_serveBroadcastData) AllocResults() (StreamData_serveBroadcastData_Results, error) {
+	r, err := c.Call.AllocResults(capnp.ObjectSize{DataSize: 0, PointerCount: 1})
+	return StreamData_serveBroadcastData_Results(r), err
 }
 
 // StreamData_List is a list of StreamData.
@@ -323,27 +370,195 @@ func (f StreamData_serveData_Results_Future) Struct() (StreamData_serveData_Resu
 	return StreamData_serveData_Results(p.Struct()), err
 }
 
-const schema_85d3acc39d94e0f8 = "x\xda\x12\x98\xe8\xc0b\xc8\x9b\xcf\xc4\xc0\x14(\xc3\xca" +
-	"\xf6\xff\xc61\xd6]q\x1f\xcd\xba\x19\x04\xa5\x18\x19\x18" +
-	"X\x19\xd9\x19\x18\x8ce\x19\x93\x18\x19\x18\x855\x19\xed" +
-	"\x19\x18\xffk-\x15k\xf8\xb0\xea\x12\x8a\x02O\xc6(" +
-	"\x90\x82P\xb0\x82\xe7;\x8eo\x12a\x11<\xce \xc8" +
-	"\xcf\xfc\xff\xc7\x83)s\x0f\xaf\xb9\xdc\xca\xc0\xc0(\\" +
-	"\xcaxI\xb8\x11\xa4^\xb8\x96\xd1]x%#;\x83" +
-	"\xce\xff\xe4\xa2\xfc\xe2\xe2\x08\x97\x10\x16\xbd\xe4\xc4\x82\xbc" +
-	"\x02\xab\xe0\x92\xa2\xd4\xc4\\\x97\xc4\x92D\xbd\xe2\xd4\xa2" +
-	"\xb2T\x10K%(\xb5\xb8\x94=\xa7\xa48\x90\x85\x99" +
-	"\x85\x81\x81\x85\x91\x81A\x90\xd7\x89\x81!\x90\x83\x991" +
-	"P\x84\x89\xb1\xbe \xb12'?1\x85\x91\x97\x81\x89" +
-	"\x91\x97\x81\x918C\x03\x12\x8b\x12\x99sQ\xccTB" +
-	"\x98\xc9\x9e\x9dZ\xc9\xc8\xc3\xc0\xc4\xc8\x83d\x1e\x13\xba" +
-	"y\x8c\x89\x01\x8c\x8c\x81,\xcc\xac\x0c\x0c\xf0pa\x84" +
-	"\x85\xa0\xa0`\x10\x03\x93 '\xfb\x7f\x98\x9d\x0c\x8c\x89" +
-	"\x0e\x8c\x01\x8c\x8c\x80\x00\x00\x00\xff\xff-\xc4d\x8f"
+type StreamData_serveBroadcastData_Params capnp.Struct
+
+// StreamData_serveBroadcastData_Params_TypeID is the unique identifier for the type StreamData_serveBroadcastData_Params.
+const StreamData_serveBroadcastData_Params_TypeID = 0xa4ddd6b9c74ee513
+
+func NewStreamData_serveBroadcastData_Params(s *capnp.Segment) (StreamData_serveBroadcastData_Params, error) {
+	st, err := capnp.NewStruct(s, capnp.ObjectSize{DataSize: 0, PointerCount: 1})
+	return StreamData_serveBroadcastData_Params(st), err
+}
+
+func NewRootStreamData_serveBroadcastData_Params(s *capnp.Segment) (StreamData_serveBroadcastData_Params, error) {
+	st, err := capnp.NewRootStruct(s, capnp.ObjectSize{DataSize: 0, PointerCount: 1})
+	return StreamData_serveBroadcastData_Params(st), err
+}
+
+func ReadRootStreamData_serveBroadcastData_Params(msg *capnp.Message) (StreamData_serveBroadcastData_Params, error) {
+	root, err := msg.Root()
+	return StreamData_serveBroadcastData_Params(root.Struct()), err
+}
+
+func (s StreamData_serveBroadcastData_Params) String() string {
+	str, _ := text.Marshal(0xa4ddd6b9c74ee513, capnp.Struct(s))
+	return str
+}
+
+func (s StreamData_serveBroadcastData_Params) EncodeAsPtr(seg *capnp.Segment) capnp.Ptr {
+	return capnp.Struct(s).EncodeAsPtr(seg)
+}
+
+func (StreamData_serveBroadcastData_Params) DecodeFromPtr(p capnp.Ptr) StreamData_serveBroadcastData_Params {
+	return StreamData_serveBroadcastData_Params(capnp.Struct{}.DecodeFromPtr(p))
+}
+
+func (s StreamData_serveBroadcastData_Params) ToPtr() capnp.Ptr {
+	return capnp.Struct(s).ToPtr()
+}
+func (s StreamData_serveBroadcastData_Params) IsValid() bool {
+	return capnp.Struct(s).IsValid()
+}
+
+func (s StreamData_serveBroadcastData_Params) Message() *capnp.Message {
+	return capnp.Struct(s).Message()
+}
+
+func (s StreamData_serveBroadcastData_Params) Segment() *capnp.Segment {
+	return capnp.Struct(s).Segment()
+}
+func (s StreamData_serveBroadcastData_Params) Key() (string, error) {
+	p, err := capnp.Struct(s).Ptr(0)
+	return p.Text(), err
+}
+
+func (s StreamData_serveBroadcastData_Params) HasKey() bool {
+	return capnp.Struct(s).HasPtr(0)
+}
+
+func (s StreamData_serveBroadcastData_Params) KeyBytes() ([]byte, error) {
+	p, err := capnp.Struct(s).Ptr(0)
+	return p.TextBytes(), err
+}
+
+func (s StreamData_serveBroadcastData_Params) SetKey(v string) error {
+	return capnp.Struct(s).SetText(0, v)
+}
+
+// StreamData_serveBroadcastData_Params_List is a list of StreamData_serveBroadcastData_Params.
+type StreamData_serveBroadcastData_Params_List = capnp.StructList[StreamData_serveBroadcastData_Params]
+
+// NewStreamData_serveBroadcastData_Params creates a new list of StreamData_serveBroadcastData_Params.
+func NewStreamData_serveBroadcastData_Params_List(s *capnp.Segment, sz int32) (StreamData_serveBroadcastData_Params_List, error) {
+	l, err := capnp.NewCompositeList(s, capnp.ObjectSize{DataSize: 0, PointerCount: 1}, sz)
+	return capnp.StructList[StreamData_serveBroadcastData_Params](l), err
+}
+
+// StreamData_serveBroadcastData_Params_Future is a wrapper for a StreamData_serveBroadcastData_Params promised by a client call.
+type StreamData_serveBroadcastData_Params_Future struct{ *capnp.Future }
+
+func (f StreamData_serveBroadcastData_Params_Future) Struct() (StreamData_serveBroadcastData_Params, error) {
+	p, err := f.Future.Ptr()
+	return StreamData_serveBroadcastData_Params(p.Struct()), err
+}
+
+type StreamData_serveBroadcastData_Results capnp.Struct
+
+// StreamData_serveBroadcastData_Results_TypeID is the unique identifier for the type StreamData_serveBroadcastData_Results.
+const StreamData_serveBroadcastData_Results_TypeID = 0xb728c969adbd9d92
+
+func NewStreamData_serveBroadcastData_Results(s *capnp.Segment) (StreamData_serveBroadcastData_Results, error) {
+	st, err := capnp.NewStruct(s, capnp.ObjectSize{DataSize: 0, PointerCount: 1})
+	return StreamData_serveBroadcastData_Results(st), err
+}
+
+func NewRootStreamData_serveBroadcastData_Results(s *capnp.Segment) (StreamData_serveBroadcastData_Results, error) {
+	st, err := capnp.NewRootStruct(s, capnp.ObjectSize{DataSize: 0, PointerCount: 1})
+	return StreamData_serveBroadcastData_Results(st), err
+}
+
+func ReadRootStreamData_serveBroadcastData_Results(msg *capnp.Message) (StreamData_serveBroadcastData_Results, error) {
+	root, err := msg.Root()
+	return StreamData_serveBroadcastData_Results(root.Struct()), err
+}
+
+func (s StreamData_serveBroadcastData_Results) String() string {
+	str, _ := text.Marshal(0xb728c969adbd9d92, capnp.Struct(s))
+	return str
+}
+
+func (s StreamData_serveBroadcastData_Results) EncodeAsPtr(seg *capnp.Segment) capnp.Ptr {
+	return capnp.Struct(s).EncodeAsPtr(seg)
+}
+
+func (StreamData_serveBroadcastData_Results) DecodeFromPtr(p capnp.Ptr) StreamData_serveBroadcastData_Results {
+	return StreamData_serveBroadcastData_Results(capnp.Struct{}.DecodeFromPtr(p))
+}
+
+func (s StreamData_serveBroadcastData_Results) ToPtr() capnp.Ptr {
+	return capnp.Struct(s).ToPtr()
+}
+func (s StreamData_serveBroadcastData_Results) IsValid() bool {
+	return capnp.Struct(s).IsValid()
+}
+
+func (s StreamData_serveBroadcastData_Results) Message() *capnp.Message {
+	return capnp.Struct(s).Message()
+}
+
+func (s StreamData_serveBroadcastData_Results) Segment() *capnp.Segment {
+	return capnp.Struct(s).Segment()
+}
+func (s StreamData_serveBroadcastData_Results) Payload() ([]byte, error) {
+	p, err := capnp.Struct(s).Ptr(0)
+	return []byte(p.Data()), err
+}
+
+func (s StreamData_serveBroadcastData_Results) HasPayload() bool {
+	return capnp.Struct(s).HasPtr(0)
+}
+
+func (s StreamData_serveBroadcastData_Results) SetPayload(v []byte) error {
+	return capnp.Struct(s).SetData(0, v)
+}
+
+// StreamData_serveBroadcastData_Results_List is a list of StreamData_serveBroadcastData_Results.
+type StreamData_serveBroadcastData_Results_List = capnp.StructList[StreamData_serveBroadcastData_Results]
+
+// NewStreamData_serveBroadcastData_Results creates a new list of StreamData_serveBroadcastData_Results.
+func NewStreamData_serveBroadcastData_Results_List(s *capnp.Segment, sz int32) (StreamData_serveBroadcastData_Results_List, error) {
+	l, err := capnp.NewCompositeList(s, capnp.ObjectSize{DataSize: 0, PointerCount: 1}, sz)
+	return capnp.StructList[StreamData_serveBroadcastData_Results](l), err
+}
+
+// StreamData_serveBroadcastData_Results_Future is a wrapper for a StreamData_serveBroadcastData_Results promised by a client call.
+type StreamData_serveBroadcastData_Results_Future struct{ *capnp.Future }
+
+func (f StreamData_serveBroadcastData_Results_Future) Struct() (StreamData_serveBroadcastData_Results, error) {
+	p, err := f.Future.Ptr()
+	return StreamData_serveBroadcastData_Results(p.Struct()), err
+}
+
+const schema_85d3acc39d94e0f8 = "x\xda\xac\x92?H\xf3P\x14\xc5\xef}/i\xfaA" +
+	"\x03\xdf#Up(\x8atP\x91J)8\x08b)" +
+	"up\x91\xa6:8\x09\x8f6\x83\xd8\x9a\x90\xa4B'" +
+	"]\x8a\xa0[q\x12:\x08v\x11]\x04\xf1\x0f8\x09" +
+	"\x16\xd7\x8a\"\x82\xe0R\xc4M7\xb7H\x0a\xb1\xe9\xa0" +
+	"Pp\xbb\xc3\x8f\xdf=\x1c\xce\xffVR\x88\xcb\x83\x14" +
+	"\x88\x1a\x15\x03\xce\xe3\x8dx\xb9\xfc1\xb9\x03l\x08\x01" +
+	"D\x94\x00\x12%\xac\"\xa0R\xc1\x19@g\xac\xde\xbf" +
+	"\xf9~\xd8\xec\x02\xea\xb8\xed\x02\xa7m@i\xcd7." +
+	"\x1e\x9e\x0f\xfc\xc0=6]\xe0\xad\x0dTkW\xc7+" +
+	"\xb7#g~\xe0\x1fyr\x81\x08q\x81\xd7\xf3\xc6I" +
+	"X`\x0d`}\xd4\xf9|\xd9\xad]\x1f\xddU\x000" +
+	"1M\x08*sD\x02Pf\xc9\x96\xb2O$\x18w" +
+	"\x0cS\xb7\xf5\x89\x9c)\xea\x96\xb5\x94^\x8c\xe5\xb8\xb1" +
+	"fL-\xd8\xa6\xc6\x8bin\xf3\x98\xa5\x99\xeb\x9a{" +
+	"E\xb3\x9aU*\xd8h\xa9\x02\x15\x00\x04\x04`r\x0a" +
+	"@\x0dRT\xc3\x047\x0c^.\xe8<\x8f2\x10\x94" +
+	"\x01{Qg\xb8\xc9\x8b\x16\x80_=\xdcQK\xabZ" +
+	"\x19C@0\xe4\xd3\x06~\xd5\xa6L\x9d\xe7s\xdc\xb2" +
+	";\xfe\xee\xe4\x7f\xa9o7C\xed\x9e\x9b\xa1?\xfc\x80" +
+	"\x0c\xa2\x1a\xa4\"\xc0\xf7`\xd0\x9b\x16\x8bg\x81\xb0Q" +
+	"\x09;[Ao\x13,\xb2\x07\x84\x0dH\x8e\xd7, " +
+	"O\xa2\xe3%F/2\xb5y\x123\x88_\x01\x00\x00" +
+	"\xff\xff)6\xc7\xf3"
 
 func init() {
 	schemas.Register(schema_85d3acc39d94e0f8,
 		0x8b36f15eba05c6d8,
 		0x8bd2aaf08016a52a,
+		0xa4ddd6b9c74ee513,
+		0xb728c969adbd9d92,
 		0xc7110414b2c7b8e7)
 }

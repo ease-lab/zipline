@@ -18,9 +18,9 @@ replace (
 
 require (
 	XDTgRPC_stream/plotter v0.0.0-00010101000000-000000000000
+	capnproto.org/go/capnp/v3 v3.0.0-alpha.18
 	github.com/containerd/containerd v1.6.2
 	github.com/ease-lab/vSwarm/utils/tracing/go v0.0.0-20220609140039-b4da20ea6b36
-	github.com/ease-lab/vhive-xdt/proto/downXDT v0.0.0-00010101000000-000000000000
 	github.com/ease-lab/vhive-xdt/queue-proxy/dQP v0.0.0-00010101000000-000000000000
 	github.com/ease-lab/vhive-xdt/queue-proxy/sQP v0.0.0-00010101000000-000000000000
 	github.com/ease-lab/vhive-xdt/sdk/golang v0.0.0-00010101000000-000000000000
@@ -44,6 +44,7 @@ require (
 	github.com/cespare/xxhash/v2 v2.1.2 // indirect
 	github.com/davecgh/go-spew v1.1.1 // indirect
 	github.com/ease-lab/vhive-xdt/proto/crossXDT v0.0.0-00010101000000-000000000000 // indirect
+	github.com/ease-lab/vhive-xdt/proto/downXDT v0.0.0-00010101000000-000000000000 // indirect
 	github.com/ease-lab/vhive-xdt/proto/upXDT v0.0.0-00010101000000-000000000000 // indirect
 	github.com/ease-lab/vhive-xdt/transport v0.0.0-00010101000000-000000000000 // indirect
 	github.com/evanphx/json-patch/v5 v5.6.0 // indirect
