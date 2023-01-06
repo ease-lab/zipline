@@ -96,17 +96,19 @@ func NewXDTclient(config utils.Config) (*XDTclient, error) {
 				if err != nil {
 					log.Fatal(err)
 				}
-				capnpconn := rpc.NewConn(rpc.NewStreamTransport(conn), &rpc.Options{
-					// The BootstrapClient is the RPC interface that will be made available
-					// to the remote endpoint by default.  In this case, Arith.
-					BootstrapClient: capnp.Client(client),
-				})
-				// Block until the connection terminates.
-				select {
-				case <-capnpconn.Done():
-					capnpconn.Close()
-					continue
-				}
+				go func() {
+					capnpconn := rpc.NewConn(rpc.NewStreamTransport(conn), &rpc.Options{
+						// The BootstrapClient is the RPC interface that will be made available
+						// to the remote endpoint by default.  In this case, Arith.
+						BootstrapClient: capnp.Client(client),
+					})
+					// Block until the connection terminates.
+					select {
+					case <-capnpconn.Done():
+						capnpconn.Close()
+						return
+					}
+				}()
 			}
 		}()
 	}
@@ -160,7 +162,7 @@ func (s crossXDTServer) ServeData(ctx context.Context, req crossXDT.StreamData_s
 }
 
 // ServeBroadcastData is the gRPC server to serve the available data to the dQP
-func (s crossXDTServer) ServeBroadcastData(ctx context.Context, req crossXDT.StreamData_serveData) error {
+func (s crossXDTServer) ServeBroadcastData(ctx context.Context, req crossXDT.StreamData_serveBroadcastData) error {
 
 	res, err := req.AllocResults() // allocate the results struct
 	if err != nil {
@@ -241,7 +243,7 @@ func (x *XDTclient) BroadcastPut(ctx context.Context, payload []byte) (string, e
 		x.serve(key, payload)
 		return key, nil
 	}
-
+	payloadLocation = x.config.SQPServerHostname + x.config.SQPServerPort
 	httpMetadata := map[string]string{
 		"is_xdt":   "true",
 		"key":      key,
