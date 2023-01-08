@@ -42,6 +42,10 @@ import multiprocessing as mp
 import utils
 import queue
 import threading
+import capnp
+crossXDT_capnp = capnp.load('crossXDT.py.capnp')
+capnp.remove_event_loop()
+capnp.create_event_loop(threaded=True)
 
 
 # StreamDataServicer is to be called by dstFn to get object
@@ -53,25 +57,45 @@ class StreamDataServicer(crossXDT_pb2_grpc.StreamDataServicer):
     def ServeData(self, request, context):
         log.info("SRC: received noCopy get request for key %s", request.key)
         payloadBytes = self.payloadDataMap[request.key]
-        log.info(len(payloadBytes))
         del self.payloadDataMap[request.key]
         return generate_chunks(payloadBytes, request.key, self.config["ChunkSizeInBytes"], noCopy=True)
 
     def ServeBroadcastData(self, request, context):
         log.info("SRC: received noCopy broadcast get request for key %s", request.key)
         payloadBytes = self.payloadDataMap[request.key]
-        log.info(len(payloadBytes))
         return generate_chunks(payloadBytes, request.key, self.config["ChunkSizeInBytes"], noCopy=True)
 
 
-def startGRPCServer(config, payloadDataMap, event):
-    server = grpc.server(futures.ThreadPoolExecutor(max_workers=config['MaxSrcServerThreadsPython']))
-    xdtServicer = StreamDataServicer(config=config, payloadDataMap=payloadDataMap)
-    crossXDT_pb2_grpc.add_StreamDataServicer_to_server(xdtServicer, server)
-    server.add_insecure_port("[::]"+config['SrcServerPort'])
-    server.start()
+class StreamDataCapnpImpl(crossXDT_capnp.StreamData.Server):
+    def __init__(self, config, payloadDataMap):
+        self.config = config
+        self.payloadDataMap = payloadDataMap
+
+    def serveData(self, key, _context, **kwargs):
+        log.info("SRC: received noCopy get request for key %s", key)
+        payloadBytes = self.payloadDataMap[key]
+        del self.payloadDataMap[key]
+        return payloadBytes
+
+    def serveBroadcastData(self, key, _context, **kwargs):
+        log.info("SRC: received noCopy broadcast get request for key %s", key)
+        payloadBytes = self.payloadDataMap[key]
+        return payloadBytes
+
+
+def startCapnpServer(config, payloadDataMap, event):
+    # server = grpc.server(futures.ThreadPoolExecutor(max_workers=config['MaxSrcServerThreadsPython']))
+    # xdtServicer = StreamDataServicer(config=config, payloadDataMap=payloadDataMap)
+    # crossXDT_pb2_grpc.add_StreamDataServicer_to_server(xdtServicer, server)
+    # server.add_insecure_port("[::]"+config['SrcServerPort'])
+    # server.start()
+    server = capnp.TwoPartyServer("[::]"+config['SrcServerPort'], bootstrap=StreamDataCapnpImpl(config=config, payloadDataMap=payloadDataMap))
+    # mark server as started
+    log.info("[src]: capnp server started")
     event.set()
-    server.wait_for_termination()
+    while True:
+        server.poll_once()
+        time.sleep(0.001)
 
 
 class XDTclient:
@@ -85,7 +109,8 @@ class XDTclient:
             self.ip = utils.get_self_ip() + config["SrcServerPort"]
             log.info("[src] starting the host server")
             event = threading.Event()
-            thread = threading.Thread(target=startGRPCServer, args=(config, self.payloadDataMap, event,))
+            thread = threading.Thread(target=startCapnpServer, args=(config, self.payloadDataMap, event,))
+            thread.daemon = True
             thread.start()
             # wait for the GRPC server to start
             event.wait()
@@ -106,8 +131,8 @@ class XDTclient:
     # InvokeWithXDT invokes the RPC call with XDT
     def Invoke(self, URL, xdtPayload):
 
-        sQPAddr = self.config["SQPServerHostname"]+self.config["SQPServerPort"]
-        log.info("Src: calling SQP at %s", sQPAddr)
+        sQPAddr = self.ip
+        log.info("Src: Sourcing the payload at at %s", sQPAddr)
         key, payloadData, xdtPayload = self.splitPayload(xdtPayload)
         serialisedPayload = xdtPayload.tobytes()
 
@@ -118,27 +143,31 @@ class XDTclient:
             ('routing', self.config['Routing']),
         )
 
-        mpQueue = mp.Queue()
-        thread = threading.Thread(target=PushData, args=(metadata, key, payloadData, sQPAddr, self.config["ChunkSizeInBytes"], mpQueue,))
+        if not self.config["NoCopy"]:
+            mpQueue = mp.Queue()
+            thread = threading.Thread(target=PushData, args=(metadata, key, payloadData, sQPAddr, self.config["ChunkSizeInBytes"], mpQueue,))
 
-        if self.config['Routing'] == utils.CUT_THROUGH:
-            log.info("SDK: using CutThrough routing")
-            thread.start()
-        elif self.config['Routing'] == utils.STORE_FORWARD:
-            log.info("SDK: using store & forward routing")
-            PushData(metadata, key, payloadData, sQPAddr, self.config["ChunkSizeInBytes"])
+            if self.config['Routing'] == utils.CUT_THROUGH:
+                log.info("SDK: using CutThrough routing")
+                thread.start()
+            elif self.config['Routing'] == utils.STORE_FORWARD:
+                log.info("SDK: using store & forward routing")
+                PushData(metadata, key, payloadData, sQPAddr, self.config["ChunkSizeInBytes"])
+            else:
+                log.fatal("SDK: invalid routing specified in config")
         else:
-            log.fatal("SDK: invalid routing specified in config")
+            self.payloadDataMap[key] = payloadData
 
         response = fnInvocationCall(URL, serialisedPayload, metadata, self.config)
-        if self.config['Routing'] == utils.CUT_THROUGH:
-            try:
-                err = mpQueue.get(block=True, timeout=self.config['RPCTimeoutDuration']/1000)
-                if err is not None:
-                    raise err
-            except queue.Empty:
-                raise grpc.RpcError
-            thread.join()
+        if not self.config["NoCopy"]:
+            if self.config['Routing'] == utils.CUT_THROUGH:
+                try:
+                    err = mpQueue.get(block=True, timeout=self.config['RPCTimeoutDuration']/1000)
+                    if err is not None:
+                        raise err
+                except queue.Empty:
+                    raise grpc.RpcError
+                thread.join()
         return response.message, response.ok
 
     # Put uploads the data to sQP and returns key and sQP address
@@ -146,8 +175,9 @@ class XDTclient:
         payloadLocation = self.config["SQPServerHostname"]+self.config["SQPServerPort"]
         key, payloadData, _ = self.splitPayload(utils.Payload(FunctionName="foo", Data=payload))
         if self.config["NoCopy"]:
-            payloadLocation = self.config["SrcServerHostname"]+self.config["SrcServerPort"]
+            # payloadLocation = self.config["SrcServerHostname"]+self.config["SrcServerPort"]
             self.payloadDataMap[key] = payloadData
+            return key
 
         metadata = (
             ('is_xdt', 'true'),
@@ -164,8 +194,9 @@ class XDTclient:
         payloadLocation = self.config["SQPServerHostname"]+self.config["SQPServerPort"]
         key, payloadData, _ = self.splitPayload(utils.Payload(FunctionName="foo", Data=payload))
         if self.config["NoCopy"]:
-            payloadLocation = self.config["SrcServerHostname"]+self.config["SrcServerPort"]
+            # payloadLocation = self.config["SrcServerHostname"]+self.config["SrcServerPort"]
             self.payloadDataMap[key] = payloadData
+            return key
 
         metadata = (
             ('is_xdt', 'true'),

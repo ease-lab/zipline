@@ -45,7 +45,7 @@ type Config struct {
 	CTBufferSize              int    `default:"157" envconfig:"CT_BUFFER_SIZE"`
 	NumberOfBuffers           int    `default:"10" envconfig:"NUMBER_OF_BUFFERS"`
 	StAndFwBufferSize         int    `default:"1600" envconfig:"ST_AND_FW_BUFFER_SIZE"`
-	Routing                   string `default:"CutThrough" envconfig:"ROUTING"`
+	Routing                   string `default:"Store&Forward" envconfig:"ROUTING"`
 	TracingEnabled            bool   `default:"false" envconfig:"TRACING_ENABLED"`
 	NoCopy                    bool   `default:"true" envconfig:"NO_COPY"`
 	RPCTimeoutMaxBackoff      int    `default:"1000" envconfig:"RPC_TIMEOUT_MAX_BACK_OFF"`
