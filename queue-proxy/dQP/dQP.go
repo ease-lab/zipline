@@ -149,16 +149,18 @@ func StartServer(config utils.Config) {
 		if err != nil {
 			log.Fatal(err)
 		}
-		capnpconn := rpc.NewConn(rpc.NewStreamTransport(conn), &rpc.Options{
-			// The BootstrapClient is the RPC interface that will be made available
-			// to the remote endpoint by default.  In this case, Arith.
-			BootstrapClient: capnp.Client(client),
-		})
-		// Block until the connection terminates.
-		select {
-		case <-capnpconn.Done():
-			capnpconn.Close()
-			continue
-		}
+		go func() {
+			capnpconn := rpc.NewConn(rpc.NewStreamTransport(conn), &rpc.Options{
+				// The BootstrapClient is the RPC interface that will be made available
+				// to the remote endpoint by default.  In this case, Arith.
+				BootstrapClient: capnp.Client(client),
+			})
+			// Block until the connection terminates.
+			select {
+			case <-capnpconn.Done():
+				capnpconn.Close()
+				return
+			}
+		}()
 	}
 }
