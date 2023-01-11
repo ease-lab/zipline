@@ -24,6 +24,7 @@ import os
 import sys
 # adding gRPC sources to the system path
 import time
+from socket import socket
 
 sys.path.insert(0, os.getcwd()+'/../../proto/downXDT')
 sys.path.insert(0, os.getcwd()+'/../../proto/upXDT')
@@ -48,24 +49,6 @@ capnp.remove_event_loop()
 capnp.create_event_loop(threaded=True)
 
 
-# StreamDataServicer is to be called by dstFn to get object
-class StreamDataServicer(crossXDT_pb2_grpc.StreamDataServicer):
-    def __init__(self, config, payloadDataMap):
-        self.config = config
-        self.payloadDataMap = payloadDataMap
-
-    def ServeData(self, request, context):
-        log.info("SRC: received noCopy get request for key %s", request.key)
-        payloadBytes = self.payloadDataMap[request.key]
-        del self.payloadDataMap[request.key]
-        return generate_chunks(payloadBytes, request.key, self.config["ChunkSizeInBytes"], noCopy=True)
-
-    def ServeBroadcastData(self, request, context):
-        log.info("SRC: received noCopy broadcast get request for key %s", request.key)
-        payloadBytes = self.payloadDataMap[request.key]
-        return generate_chunks(payloadBytes, request.key, self.config["ChunkSizeInBytes"], noCopy=True)
-
-
 class StreamDataCapnpImpl(crossXDT_capnp.StreamData.Server):
     def __init__(self, config, payloadDataMap):
         self.config = config
@@ -84,18 +67,23 @@ class StreamDataCapnpImpl(crossXDT_capnp.StreamData.Server):
 
 
 def startCapnpServer(config, payloadDataMap, event):
-    # server = grpc.server(futures.ThreadPoolExecutor(max_workers=config['MaxSrcServerThreadsPython']))
-    # xdtServicer = StreamDataServicer(config=config, payloadDataMap=payloadDataMap)
-    # crossXDT_pb2_grpc.add_StreamDataServicer_to_server(xdtServicer, server)
-    # server.add_insecure_port("[::]"+config['SrcServerPort'])
-    # server.start()
-    server = capnp.TwoPartyServer("[::]"+config['SrcServerPort'], bootstrap=StreamDataCapnpImpl(config=config, payloadDataMap=payloadDataMap))
-    # mark server as started
-    log.info("[src]: capnp server started")
+    # server = capnp.TwoPartyServer("[::]"+config['SrcServerPort'], bootstrap=StreamDataCapnpImpl(config=config, payloadDataMap=payloadDataMap))
+    # # mark server as started
+    # log.info("[src]: capnp server started")
+    # event.set()
+    # while True:
+    #     server.poll_once()
+    #     time.sleep(0.001)
+    log.info("init socket")
+    s = socket()
+    log.info("binding socket to %s %d", '0.0.0.0', int(config['SrcServerPort'][1:]))
+    s.bind(('0.0.0.0', int(config['SrcServerPort'][1:])))
     event.set()
+    s.listen(1)
     while True:
-        server.poll_once()
-        time.sleep(0.001)
+        conn, addr = s.accept()
+        server = capnp.TwoPartyServer(conn, bootstrap=StreamDataCapnpImpl(config=config, payloadDataMap=payloadDataMap))
+        server.on_disconnect().wait()
 
 
 class XDTclient:
@@ -110,7 +98,6 @@ class XDTclient:
             log.info("[src] starting the host server")
             event = threading.Event()
             thread = threading.Thread(target=startCapnpServer, args=(config, self.payloadDataMap, event,))
-            thread.daemon = True
             thread.start()
             # wait for the GRPC server to start
             event.wait()
