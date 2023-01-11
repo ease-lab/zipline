@@ -22,6 +22,7 @@
 
 import sys
 import os
+from socket import socket
 
 # adding gRPC sources to the system path
 sys.path.insert(0, os.getcwd() + '/../../proto/downXDT')
@@ -71,8 +72,10 @@ class Fetcher:
     def FetchFromDQP(self, key):
         # serverAddr = self.config['DQPServerHostname']+self.config['DQPServerPort']
         log.info("[dst] making a call to dqp @ %s using key %s", self.config['DQPServerHostname']+self.config['DQPServerPort'], key)
-        client = capnp.TwoPartyClient(self.config['DQPServerHostname']+self.config['DQPServerPort'])
-        # request = downXDT_pb2.DataRequest(key=key)
+        # client = capnp.TwoPartyClient(self.config['DQPServerHostname']+self.config['DQPServerPort'])
+        s = socket()
+        s.connect((self.config['DQPServerHostname'].encode(), int(self.config['DQPServerPort'][1:])))
+        client = capnp.TwoPartyClient(s)
         packet = client.bootstrap().cast_as(crossXDT_capnp.StreamData)
 
         request = packet.serveData_request()
