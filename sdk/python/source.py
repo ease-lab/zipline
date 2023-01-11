@@ -89,6 +89,7 @@ def startCapnpServer(config, payloadDataMap, event):
         while True:
             conn, addr = s.accept()
             t = threading.Thread(target=handleConnection, args=(conn, config, payloadDataMap,))
+            t.daemon = True
             t.start()
             log.info("[src] Thread started, looping back")
 
@@ -105,6 +106,7 @@ class XDTclient:
             log.info("[src] starting the host server")
             event = threading.Event()
             thread = threading.Thread(target=startCapnpServer, args=(config, self.payloadDataMap, event,))
+            thread.daemon = True
             thread.start()
             # wait for the GRPC server to start
             event.wait()
