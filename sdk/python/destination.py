@@ -73,19 +73,19 @@ class Fetcher:
         # serverAddr = self.config['DQPServerHostname']+self.config['DQPServerPort']
         log.info("[dst] making a call to dqp @ %s using key %s", self.config['DQPServerHostname']+self.config['DQPServerPort'], key)
         # client = capnp.TwoPartyClient(self.config['DQPServerHostname']+self.config['DQPServerPort'])
-        s = socket()
-        s.connect((self.config['DQPServerHostname'].encode(), int(self.config['DQPServerPort'][1:])))
-        client = capnp.TwoPartyClient(s)
-        packet = client.bootstrap().cast_as(crossXDT_capnp.StreamData)
+        with socket() as s:
+            s.connect((self.config['DQPServerHostname'].encode(), int(self.config['DQPServerPort'][1:])))
+            client = capnp.TwoPartyClient(s)
+            packet = client.bootstrap().cast_as(crossXDT_capnp.StreamData)
 
-        request = packet.serveData_request()
-        request.key = key
+            request = packet.serveData_request()
+            request.key = key
 
-        # Send it, which returns a promise for the result (without blocking).
-        get_promise = request.send()
-        log.info("[dst] waiting for a response from dqp")
-        response = get_promise.wait()
-        return response.payload
+            # Send it, which returns a promise for the result (without blocking).
+            get_promise = request.send()
+            log.info("[dst] waiting for a response from dqp")
+            response = get_promise.wait()
+            return response.payload
         # with grpc.insecure_channel(serverAddr) as channel:
         #     stub = downXDT_pb2_grpc.XDTtoFnStub(channel)
         #     chunks = stub.XDTDataServe(request)
@@ -154,6 +154,7 @@ def BroadcastGet(capability, config):
     # Send it, which returns a promise for the result (without blocking).
     get_promise = request.send()
     response = get_promise.wait()
+    log.info("fetched payload of size %s", len(response.payload))
     return response.payload
     # request = crossXDT_pb2.BroadcastRequest(key=key, ChunkSizeInBytes=config["ChunkSizeInBytes"])
     # with grpc.insecure_channel(sQPAddr) as channel:

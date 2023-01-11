@@ -1,5 +1,5 @@
 # MIT License
-
+import multiprocessing
 # Copyright (c) 2021 Shyam Jesalpura and EASE lab
 
 # Permission is hereby granted, free of charge, to any person obtaining a copy
@@ -66,6 +66,12 @@ class StreamDataCapnpImpl(crossXDT_capnp.StreamData.Server):
         return payloadBytes
 
 
+def handleConnection(conn, config, payloadDataMap):
+    with conn:
+        server = capnp.TwoPartyServer(conn, bootstrap=StreamDataCapnpImpl(config=config, payloadDataMap=payloadDataMap))
+        server.on_disconnect().wait()
+
+
 def startCapnpServer(config, payloadDataMap, event):
     # server = capnp.TwoPartyServer("[::]"+config['SrcServerPort'], bootstrap=StreamDataCapnpImpl(config=config, payloadDataMap=payloadDataMap))
     # # mark server as started
@@ -75,15 +81,16 @@ def startCapnpServer(config, payloadDataMap, event):
     #     server.poll_once()
     #     time.sleep(0.001)
     log.info("init socket")
-    s = socket()
-    log.info("binding socket to %s %d", '0.0.0.0', int(config['SrcServerPort'][1:]))
-    s.bind(('0.0.0.0', int(config['SrcServerPort'][1:])))
-    event.set()
-    s.listen(1)
-    while True:
-        conn, addr = s.accept()
-        server = capnp.TwoPartyServer(conn, bootstrap=StreamDataCapnpImpl(config=config, payloadDataMap=payloadDataMap))
-        server.on_disconnect().wait()
+    with socket() as s:
+        log.info("binding socket to %s %d", '0.0.0.0', int(config['SrcServerPort'][1:]))
+        s.bind(('0.0.0.0', int(config['SrcServerPort'][1:])))
+        s.listen()
+        event.set()
+        while True:
+            conn, addr = s.accept()
+            t = threading.Thread(target=handleConnection, args=(conn, config, payloadDataMap,))
+            t.start()
+            log.info("[src] Thread started, looping back")
 
 
 class XDTclient:
