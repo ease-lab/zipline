@@ -29,6 +29,7 @@ import (
 	"google.golang.org/grpc/metadata"
 	"net"
 	"strings"
+	"time"
 
 	"github.com/ease-lab/vhive-xdt/proto/downXDT"
 	"github.com/ease-lab/vhive-xdt/utils"
@@ -58,7 +59,10 @@ func (s downXDTServer) XDTFnCall(ctx context.Context, in *downXDT.InvocationRequ
 		log.Infof("DST: using %s routing", headers["routing"][0])
 
 		// fetch data from dQP
+		start := time.Now()
 		payloadBytes, err := FetchData(ctx, key, s.conn)
+		duration := time.Since(start).Microseconds()
+		log.Infof("stream put took %f", float64(duration)/float64(1000000))
 		if err != nil {
 			log.Errorf("DST: FetchData failed %v", err)
 			return &downXDT.InvocationResponse{}, err

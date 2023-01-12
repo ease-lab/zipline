@@ -22,6 +22,7 @@
 
 import sys
 import os
+from datetime import datetime
 from socket import socket
 
 # adding gRPC sources to the system path
@@ -54,7 +55,10 @@ class XDTtoFnServicer(downXDT_pb2_grpc.XDTtoFnServicer):
         if metadict['is_xdt'] == "true":
             key = metadict['key']
             # fetch data from dQP
+            start = datetime.now()
             log.info("Fetching payload using key %s", key)
+            duration = datetime.now() - start
+            log.info("XDT pull keys took %f seconds", duration.total_seconds())
             payloadBytes = self.payloadFetcher.FetchFromDQP(key)
 
             # call destination function
