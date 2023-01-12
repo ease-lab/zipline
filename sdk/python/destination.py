@@ -57,10 +57,9 @@ class XDTtoFnServicer(downXDT_pb2_grpc.XDTtoFnServicer):
             # fetch data from dQP
             start = datetime.now()
             log.info("Fetching payload using key %s", key)
+            payloadBytes = self.payloadFetcher.FetchFromDQP(key)
             duration = datetime.now() - start
             log.info("XDT pull keys took %f seconds", duration.total_seconds())
-            payloadBytes = self.payloadFetcher.FetchFromDQP(key)
-
             # call destination function
             message, ok = self.dstHandler(payloadBytes)
             return downXDT_pb2.InvocationResponse(message=message, ok=ok)
