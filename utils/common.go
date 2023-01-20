@@ -31,28 +31,19 @@ import (
 )
 
 type Config struct {
-	ChunkSizeInBytes          int    `default:"65536" envconfig:"CHUNK_SIZE_IN_BYTES"`
-	SQPServerHostname         string `default:"localhost" envconfig:"SQP_SERVER_HOSTNAME"`
-	SQPServerPort             string `default:":50005" envconfig:"SQP_SERVER_PORT"`
-	DQPServerHostname         string `default:"localhost" envconfig:"DQP_SERVER_HOSTNAME"`
-	DQPServerPort             string `default:":50006" envconfig:"DQP_SERVER_PORT"`
-	SrcServerHostname         string `default:"localhost" envconfig:"SRC_SERVER_HOSTNAME"`
-	SrcServerPort             string `default:":50004" envconfig:"SRC_SERVER_PORT"`
-	DstServerHostname         string `default:"localhost" envconfig:"DST_SERVER_HOSTNAME"`
-	DstServerPort             string `default:":50007" envconfig:"DST_SERVER_PORT"`
-	ProxyHostname             string `default:"localhost" envconfig:"PROXY_HOSTNAME"`
-	ProxyPort                 string `default:":50008" envconfig:"PROXY_PORT"`
-	CTBufferSize              int    `default:"157" envconfig:"CT_BUFFER_SIZE"`
-	NumberOfBuffers           int    `default:"10" envconfig:"NUMBER_OF_BUFFERS"`
-	StAndFwBufferSize         int    `default:"1600" envconfig:"ST_AND_FW_BUFFER_SIZE"`
-	Routing                   string `default:"Store&Forward" envconfig:"ROUTING"`
-	TracingEnabled            bool   `default:"false" envconfig:"TRACING_ENABLED"`
-	NoCopy                    bool   `default:"true" envconfig:"NO_COPY"`
-	RPCTimeoutMaxBackoff      int    `default:"1000" envconfig:"RPC_TIMEOUT_MAX_BACK_OFF"`
-	RPCTimeoutDuration        int    `default:"60000" envconfig:"RPC_TIMEOUT_DURATION"`
-	RPCRetryDelay             int    `default:"1" envconfig:"RPC_RETRY_DELAY"`
-	MaxDstServerThreadsPython int    `default:"10" envconfig:"MAX_DST_SERVER_THREADS_PYTHON"`
-	ZipkinEndpoint            string `default:"http://zipkin.istio-system.svc.cluster.local:9411/api/v2/spans" envconfig:"ZIPKIN_ENDPOINT"`
+	DQPServerHostname    string `default:"localhost" envconfig:"DQP_SERVER_HOSTNAME"`
+	DQPServerPort        string `default:":50006" envconfig:"DQP_SERVER_PORT"`
+	SrcServerHostname    string `default:"localhost" envconfig:"SRC_SERVER_HOSTNAME"`
+	SrcServerPort        string `default:":50004" envconfig:"SRC_SERVER_PORT"`
+	DstServerHostname    string `default:"localhost" envconfig:"DST_SERVER_HOSTNAME"`
+	DstServerPort        string `default:":50007" envconfig:"DST_SERVER_PORT"`
+	ProxyHostname        string `default:"localhost" envconfig:"PROXY_HOSTNAME"`
+	ProxyPort            string `default:":50008" envconfig:"PROXY_PORT"`
+	TracingEnabled       bool   `default:"false" envconfig:"TRACING_ENABLED"`
+	RPCTimeoutMaxBackoff int    `default:"1000" envconfig:"RPC_TIMEOUT_MAX_BACK_OFF"`
+	RPCTimeoutDuration   int    `default:"60000" envconfig:"RPC_TIMEOUT_DURATION"`
+	RPCRetryDelay        int    `default:"1" envconfig:"RPC_RETRY_DELAY"`
+	ZipkinEndpoint       string `default:"http://zipkin.istio-system.svc.cluster.local:9411/api/v2/spans" envconfig:"ZIPKIN_ENDPOINT"`
 }
 
 type Payload struct {

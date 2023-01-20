@@ -23,22 +23,9 @@
 package tests
 
 import (
-	"capnproto.org/go/capnp/v3/rpc"
-	"context"
-	"crypto/rand"
-	"net"
-	"strconv"
-	"testing"
-	"time"
-
-	"google.golang.org/grpc/metadata"
-
-	sdk "github.com/ease-lab/vhive-xdt/sdk/golang"
-
 	ctrdlog "github.com/containerd/containerd/log"
 
 	"github.com/ease-lab/vhive-xdt/queue-proxy/dQP"
-	"github.com/ease-lab/vhive-xdt/queue-proxy/sQP"
 	"github.com/ease-lab/vhive-xdt/utils"
 
 	log "github.com/sirupsen/logrus"
@@ -51,136 +38,5 @@ func init() {
 		FullTimestamp:   true,
 		ForceColors:     true})
 
-	go sQP.StartServer(utils.ReadConfig())
 	go dQP.StartServer(utils.ReadConfig())
-}
-
-func TestSDK_to_sQP_data_transfer(t *testing.T) {
-
-	now := time.Now()
-	key := strconv.Itoa(int(now.UnixNano()))
-	payloadData := make([]byte, 10*1024*1024) // 10MiB
-
-	if _, err := rand.Read(payloadData); err != nil {
-		log.Fatal(err)
-	}
-	config := utils.ReadConfig()
-
-	start := time.Now()
-	httpMetadata := map[string]string{
-		"is_xdt":   "true",
-		"key":      key,
-		"sqp_addr": config.SQPServerHostname + config.SQPServerPort,
-		"routing":  config.Routing,
-	}
-
-	xdtClient, err := sdk.NewXDTclient(config)
-	if err != nil {
-		log.Fatalf("InitXDT failed %v", err)
-	}
-
-	ctx := metadata.NewOutgoingContext(context.Background(), metadata.New(httpMetadata))
-	if err := xdtClient.PushData(ctx, key, payloadData); err != nil {
-		log.Fatalf("TestSDK_to_sQP_data_transfer failed %v", err)
-	}
-	duration := time.Since(start)
-	log.Infof("sent %d bytes in %s", len(payloadData), duration)
-}
-
-func TestSQP_to_dQP_data_transfer(t *testing.T) {
-
-	now := time.Now()
-	key := strconv.Itoa(int(now.UnixNano()))
-	payloadData := make([]byte, 10*1024*1024) // 10MiB
-	//create random blob
-	if _, err := rand.Read(payloadData); err != nil {
-		log.Fatal(err)
-	}
-	config := utils.ReadConfig()
-
-	start := time.Now()
-	httpMetadata := map[string]string{
-		"is_xdt":   "true",
-		"key":      key,
-		"sqp_addr": config.SQPServerHostname + config.SQPServerPort,
-		"routing":  config.Routing,
-	}
-	ctx := metadata.NewOutgoingContext(context.Background(), metadata.New(httpMetadata))
-
-	xdtClient, err := sdk.NewXDTclient(config)
-	if err != nil {
-		log.Fatalf("InitXDT failed %v", err)
-	}
-
-	if err := xdtClient.PushData(ctx, key, payloadData); err != nil {
-		log.Fatalf("TestSDK_to_sQP_data_transfer failed %v", err)
-	}
-	duration := time.Since(start)
-	log.Infof("sent %d bytes in %s", len(payloadData), duration)
-
-	log.Infof("transferred %d bytes from SrcFn to sQP in %s", len(payloadData), duration)
-
-	err = dQP.PullDataFromSrcQP(ctx)
-	if err != nil {
-		log.Fatal(err)
-	}
-
-	log.Infof("transferred packet from sQP to dQP in %s", duration)
-}
-
-func TestDQP_to_DstFn_data_transfer(t *testing.T) {
-
-	now := time.Now()
-	key := strconv.Itoa(int(now.UnixNano()))
-	payloadData := make([]byte, 10*1024*1024) // 10MiB
-	//create random blob
-	if _, err := rand.Read(payloadData); err != nil {
-		log.Fatal(err)
-	}
-	config := utils.ReadConfig()
-
-	start := time.Now()
-	httpMetadata := map[string]string{
-		"is_xdt":   "true",
-		"key":      key,
-		"sqp_addr": config.SQPServerHostname + config.SQPServerPort,
-		"routing":  config.Routing,
-	}
-	ctx := metadata.NewOutgoingContext(context.Background(), metadata.New(httpMetadata))
-	xdtClient, err := sdk.NewXDTclient(config)
-	if err != nil {
-		log.Fatalf("InitXDT failed %v", err)
-	}
-	if err := xdtClient.PushData(ctx, key, payloadData); err != nil {
-		log.Fatalf("TestDQP_to_DstFn_data_transfer failed %v", err)
-	}
-	duration := time.Since(start)
-
-	log.Infof("transferred %d bytes from SrcFn to sQP in %s", len(payloadData), duration)
-
-	start = time.Now()
-	err = dQP.PullDataFromSrcQP(ctx)
-	if err != nil {
-		log.Fatal(err)
-	}
-	duration = time.Since(start)
-
-	log.Infof("transferred packet from sQP to dQP in %s", duration)
-
-	// connect to dQP
-	conn, err := net.Dial("tcp", config.DQPServerHostname+config.DQPServerPort)
-	if err != nil {
-		log.Fatal(err)
-	}
-	capconn := rpc.NewConn(rpc.NewStreamTransport(conn), nil)
-
-	start = time.Now()
-	payloadBytes, err := sdk.FetchData(context.Background(), key, capconn)
-	if err != nil {
-		log.Fatalf("FetchData failed %v", err)
-	}
-	duration = time.Since(start)
-
-	log.Infof("transferred %d bytes from dQP to DstFn in %s", len(payloadBytes), duration)
-
 }

@@ -37,14 +37,6 @@ services:
       - "50006"
       - "50008"
 
-  sQP:
-    image: vhiveease/sqp:capnp
-    env_file:
-      - xdt.env
-      - network.env
-    expose:
-      - "50005"
-
   gx:
     image: vhiveease/gx:capnp
     env_file:
@@ -67,8 +59,6 @@ services:
     command:
       - -url=dQP:50006
       - -dockerCompose
-      - -noCopy
     depends_on:
       - gx
-      - sQP
       - dQP
