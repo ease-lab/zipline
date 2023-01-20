@@ -10,12 +10,10 @@ replace (
 )
 
 require (
+	capnproto.org/go/capnp/v3 v3.0.0-alpha.18
 	github.com/ease-lab/vhive-xdt/proto/crossXDT v0.0.0-00010101000000-000000000000
-	github.com/ease-lab/vhive-xdt/proto/downXDT v0.0.0-00010101000000-000000000000
-	github.com/ease-lab/vhive-xdt/transport v0.0.0-00010101000000-000000000000
 	github.com/ease-lab/vhive-xdt/utils v0.0.0-00010101000000-000000000000
 	github.com/sirupsen/logrus v1.8.1
-	go.opentelemetry.io/contrib/instrumentation/google.golang.org/grpc/otelgrpc v0.20.0
 	google.golang.org/grpc v1.38.0
 )
 
@@ -25,12 +23,14 @@ require (
 	github.com/kelseyhightower/envconfig v1.4.0 // indirect
 	github.com/pkg/errors v0.9.1 // indirect
 	go.opentelemetry.io/contrib v0.20.0 // indirect
+	go.opentelemetry.io/contrib/instrumentation/google.golang.org/grpc/otelgrpc v0.20.0 // indirect
 	go.opentelemetry.io/otel v0.20.0 // indirect
 	go.opentelemetry.io/otel/metric v0.20.0 // indirect
 	go.opentelemetry.io/otel/trace v0.20.0 // indirect
 	golang.org/x/lint v0.0.0-20200302205851-738671d3881b // indirect
 	golang.org/x/net v0.0.0-20210226172049-e18ecbb05110 // indirect
 	golang.org/x/oauth2 v0.0.0-20200107190931-bf48bf16ab8d // indirect
+	golang.org/x/sync v0.0.0-20201020160332-67f06af15bc9 // indirect
 	golang.org/x/sys v0.0.0-20210324051608-47abb6519492 // indirect
 	golang.org/x/text v0.3.5 // indirect
 	golang.org/x/tools v0.0.0-20210106214847-113979e3529a // indirect

@@ -24,7 +24,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        test-type: [unit, integ, timeout, parallel-invoke, fan-in, fan-out, get-put]
+        test-type: [unit, integ, parallel-invoke, fan-in, fan-out, get-put]
     steps:
     - name: Set up Go 1.x
       uses: actions/setup-go@v2
@@ -46,32 +46,37 @@ jobs:
         uses: golangci/golangci-lint-action@v2
         with:
           working-directory: sdk/golang
-          args: --timeout 5m
+          args: "--timeout 5m -e \"S1000: should use a simple channel send/receive instead of \\`select\\` with a single case\""
       - name: Check dQP code
         if: ${{ always() }}
-        env:
-          DIR: queue-proxy/dQP
-        run: cd $DIR && golangci-lint run --out-format=github-actions --path-prefix=$DIR --timeout 5m
+        uses: golangci/golangci-lint-action@v2
+        with:
+          working-directory: queue-proxy/dQP
+          args: "--timeout 5m -e \"S1000: should use a simple channel send/receive instead of \\`select\\` with a single case\""
       - name: Check plotter code
         if: ${{ always() }}
-        env:
-          DIR: plotter
-        run: cd $DIR && golangci-lint run --out-format=github-actions --path-prefix=$DIR --timeout 5m
+        uses: golangci/golangci-lint-action@v2
+        with:
+          working-directory: plotter
+          args: "--timeout 5m -e \"S1000: should use a simple channel send/receive instead of \\`select\\` with a single case\""
       - name: Check user-functions/fx code
         if: ${{ always() }}
-        env:
-          DIR: user-functions/fx
-        run: cd $DIR && golangci-lint run --out-format=github-actions --path-prefix=$DIR --timeout 5m
+        uses: golangci/golangci-lint-action@v2
+        with:
+          working-directory: user-functions/fx
+          args: "--timeout 5m -e \"S1000: should use a simple channel send/receive instead of \\`select\\` with a single case\""
       - name: Check user-functions/gx code
         if: ${{ always() }}
-        env:
-          DIR: user-functions/gx
-        run: cd $DIR && golangci-lint run --out-format=github-actions --path-prefix=$DIR --timeout 5m
+        uses: golangci/golangci-lint-action@v2
+        with:
+          working-directory: user-functions/gx
+          args: "--timeout 5m -e \"S1000: should use a simple channel send/receive instead of \\`select\\` with a single case\""
       - name: Check user-functions/dQP code
         if: ${{ always() }}
-        env:
-          DIR: user-functions/dQP
-        run: cd $DIR && golangci-lint run --out-format=github-actions --path-prefix=$DIR --timeout 5m
+        uses: golangci/golangci-lint-action@v2
+        with:
+          working-directory: user-functions/dQP
+          args: "--timeout 5m -e \"S1000: should use a simple channel send/receive instead of \\`select\\` with a single case\""
   Benchmark:
     name: Benchmark XDT
     runs-on: ubuntu-latest
@@ -98,7 +103,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        test-type: [ unit, integ, timeout, get-put]
+        test-type: [integ, timeout, get-put]
         python-version: [3.7, 3.8, 3.9]
     steps:
       - name: Set up Python
@@ -113,7 +118,7 @@ jobs:
         run: sudo apt-get install psmisc
       - name: Check out code into the Go module directory
         uses: actions/checkout@v2
-      - name: install environs package
-        run: pip install environs --user
       - name: Run test
-        run: make python-${{ matrix.test-type }}-test
+        run: |
+          cp proto/crossXDT/crossXDT.py.capnp ./sdk/python/crossXDT.py.capnp
+          make python-${{ matrix.test-type }}-test

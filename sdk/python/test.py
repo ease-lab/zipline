@@ -21,7 +21,7 @@
 # SOFTWARE.
 
 from utils import Payload, loadConfig
-from source import PushData, XDTclient
+from source import XDTclient
 from destination import Get, BroadcastGet
 import logging as log
 import grpc

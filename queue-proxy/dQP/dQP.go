@@ -42,13 +42,13 @@ type crossXDTServer struct {
 }
 
 // ServeBroadcastData is a gRPC server to serve data to the DstFn
-func (s crossXDTServer) ServeBroadcastData(ctx context.Context, req crossXDT.StreamData_serveBroadcastData) error {
+func (s crossXDTServer) ServeBroadcastData(_ context.Context, _ crossXDT.StreamData_serveBroadcastData) error {
 	log.Fatal("[dqp] No op. Should not have reached here")
 	return nil
 }
 
 // ServeData is a gRPC server to serve data to the DstFn
-func (s crossXDTServer) ServeData(ctx context.Context, req crossXDT.StreamData_serveData) error {
+func (s crossXDTServer) ServeData(_ context.Context, req crossXDT.StreamData_serveData) error {
 
 	res, err := req.AllocResults() // allocate the results struct
 	if err != nil {
@@ -93,7 +93,12 @@ func PullDataFromSrc(ctx context.Context) error {
 	if err != nil {
 		log.Fatal(err)
 	}
-	defer conn.Close()
+	defer func(conn net.Conn) {
+		err := conn.Close()
+		if err != nil {
+			log.Fatal(err)
+		}
+	}(conn)
 	capconn := rpc.NewConn(rpc.NewStreamTransport(conn), nil)
 	client := crossXDT.StreamData(capconn.Bootstrap(ctx))
 
@@ -110,7 +115,10 @@ func PullDataFromSrc(ctx context.Context) error {
 	//     the RPC call and its results.
 	// do release
 	f, _ := client.ServeData(ctx, func(ps crossXDT.StreamData_serveData_Params) error {
-		ps.SetKey(key)
+		err := ps.SetKey(key)
+		if err != nil {
+			log.Fatal(err)
+		}
 		return nil
 	})
 
@@ -158,7 +166,10 @@ func StartServer(config utils.Config) {
 			// Block until the connection terminates.
 			select {
 			case <-capnpconn.Done():
-				capnpconn.Close()
+				err := capnpconn.Close()
+				if err != nil {
+					log.Fatal(err)
+				}
 				return
 			}
 		}()
