@@ -20,7 +20,7 @@ env:
 jobs:
   Test:
     name: Test
-    runs-on: [self-hosted]
+    runs-on: ubuntu-latest
     strategy:
       fail-fast: false
       matrix:
@@ -37,7 +37,7 @@ jobs:
   
   CodeLint:
     name: Test Code quality
-    runs-on: [self-hosted]
+    runs-on: ubuntu-latest
     steps:
       - name: Check out code into the Go module directory
         uses: actions/checkout@v2
@@ -74,7 +74,7 @@ jobs:
         run: cd $DIR && golangci-lint run --out-format=github-actions --path-prefix=$DIR --timeout 5m
   Benchmark:
     name: Benchmark XDT
-    runs-on: [self-hosted]
+    runs-on: ubuntu-latest
     steps:
       - name: Set up Go 1.x
         uses: actions/setup-go@v2
@@ -94,7 +94,7 @@ jobs:
 
   Python-SDK-Test:
     name: Python SDK Test
-    runs-on: [ self-hosted ]
+    runs-on: ubuntu-latest
     strategy:
       fail-fast: false
       matrix:
