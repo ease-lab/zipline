@@ -32,18 +32,6 @@ config = loadConfig()
 log.basicConfig(level=log.INFO)
 
 
-class UnitTest(unittest.TestCase):
-    def test_Push_data(self):
-        metadata = (
-            ('is_xdt', 'true'),
-            ('key', 'secret'),
-            ('sqp_addr', config['SQPServerHostname']+config['SQPServerPort']),
-            ('routing', config['Routing']),
-        )
-        PushData(metadata=metadata, key='secret', payload=b'01234567890',
-                 sQPAddr=config['SQPServerHostname']+config['SQPServerPort'], chunkSizeInBytes=2)
-
-
 class IntegTest(unittest.TestCase):
     def test_Invoke_XDT(self):
         data = bytes(os.urandom(1024 * 1024 * 10))

@@ -84,16 +84,16 @@ func main() {
 				httpMetadata := map[string]string{
 					"is_xdt":   r.Header.Get("is_xdt"),
 					"key":      r.Header.Get("key"),
-					"sqp_addr": r.Header.Get("sqp_addr"),
+					"src_addr": r.Header.Get("src_addr"),
 					"routing":  r.Header.Get("routing"),
 				}
 				ctx := metadata.NewOutgoingContext(r.Context(), metadata.New(httpMetadata))
-				log.Infof("pulling from sQP using key %s addr %s", r.Header.Get("key"), r.Header.Get("sqp_addr"))
+				log.Infof("pulling from src using key %s addr %s", r.Header.Get("key"), r.Header.Get("src_addr"))
 				go func() {
 					// FIXME: support many payloads per invocation
-					err := dQP.PullDataFromSrcQP(ctx)
+					err := dQP.PullDataFromSrc(ctx)
 					if err != nil {
-						log.Fatalf("Proxy: Failed to pull data from sQP: %v", err)
+						log.Fatalf("Proxy: Failed to pull data from src: %v", err)
 					}
 				}()
 			}

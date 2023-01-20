@@ -55,7 +55,6 @@ import (
 type crossXDTServer struct {
 	payloadDataMap *sync.Map
 	config         utils.Config
-	crossXDT.UnimplementedStreamDataServer
 }
 
 type XDTclient struct {
@@ -70,48 +69,38 @@ type XDTclient struct {
 func NewXDTclient(config utils.Config) (*XDTclient, error) {
 	var xdtClient XDTclient
 	xdtClient.config = config
-	sQPAddr := config.SQPServerHostname + config.SQPServerPort
-	conn, err := utils.GetGRPCConn(context.Background(), sQPAddr, false)
-	if err != nil {
-		log.Errorf("SRC: can not connect to SQP %v", err)
-		return &xdtClient, err
-	}
-	xdtClient.client = upXDT.NewStreamDataClient(conn)
 	xdtClient.atom.Store(0)
-	xdtClient.addr = utils.FetchSelfIP() + config.SQPServerPort
-
-	if config.NoCopy {
-		xdtClient.addr = utils.FetchSelfIP() + config.SrcServerPort
-		log.Infof("[src] starting the host server")
-		lis, err := net.Listen("tcp", config.SrcServerPort)
-		if err != nil {
-			log.Fatalf("src: failed to listen: %v", err)
-		}
-		xdtClient.crossXDTserver = crossXDTServer{payloadDataMap: &xdtClient.payloadDataMap, config: config}
-		go func() {
-			for {
-				client := crossXDT.StreamData_ServerToClient(xdtClient.crossXDTserver)
-
-				conn, err := lis.Accept()
-				if err != nil {
-					log.Fatal(err)
-				}
-				go func() {
-					capnpconn := rpc.NewConn(rpc.NewStreamTransport(conn), &rpc.Options{
-						// The BootstrapClient is the RPC interface that will be made available
-						// to the remote endpoint by default.  In this case, Arith.
-						BootstrapClient: capnp.Client(client),
-					})
-					// Block until the connection terminates.
-					select {
-					case <-capnpconn.Done():
-						capnpconn.Close()
-						return
-					}
-				}()
-			}
-		}()
+	//start server for serving payloads
+	xdtClient.addr = utils.FetchSelfIP() + config.SrcServerPort
+	log.Infof("[src] starting the host server")
+	lis, err := net.Listen("tcp", config.SrcServerPort)
+	if err != nil {
+		log.Fatalf("src: failed to listen: %v", err)
 	}
+	xdtClient.crossXDTserver = crossXDTServer{payloadDataMap: &xdtClient.payloadDataMap, config: config}
+	go func() {
+		for {
+			client := crossXDT.StreamData_ServerToClient(xdtClient.crossXDTserver)
+
+			conn, err := lis.Accept()
+			if err != nil {
+				log.Fatal(err)
+			}
+			go func() {
+				capnpconn := rpc.NewConn(rpc.NewStreamTransport(conn), &rpc.Options{
+					// The BootstrapClient is the RPC interface that will be made available
+					// to the remote endpoint by default.  In this case, Arith.
+					BootstrapClient: capnp.Client(client),
+				})
+				// Block until the connection terminates.
+				select {
+				case <-capnpconn.Done():
+					capnpconn.Close()
+					return
+				}
+			}()
+		}
+	}()
 
 	return &xdtClient, nil
 }
@@ -189,96 +178,20 @@ func (s crossXDTServer) ServeBroadcastData(ctx context.Context, req crossXDT.Str
 	return nil
 }
 
-// Put uploads the data to sQP and returns key and sQP address
+// Put adds the src server and returns key and src address
 func (x *XDTclient) Put(ctx context.Context, payload []byte) (string, error) {
-
 	key, _ := x.splitPayload(&utils.Payload{Data: payload})
-	var payloadLocation string
-	if x.config.NoCopy {
-		payloadLocation = x.config.SrcServerHostname + x.config.SrcServerPort
-		x.serve(key, payload)
-		return key, nil
-	}
-
-	payloadLocation = x.config.SQPServerHostname + x.config.SQPServerPort
-	httpMetadata := map[string]string{
-		"is_xdt":   "true",
-		"key":      key,
-		"sqp_addr": payloadLocation,
-		"routing":  x.config.Routing,
-	}
-	ctx = metadata.NewOutgoingContext(ctx, metadata.New(httpMetadata))
-	//  This timeout must be large enough for the request to complete
-	timeoutDuration := time.Duration(x.config.RPCTimeoutDuration) * time.Millisecond
-	ctx, cancel := context.WithTimeout(ctx, timeoutDuration)
-	defer cancel()
-
-	span := tracing.Span{SpanName: "PutXDT", TracerName: "PutXDT-Tracer"}
-	ctx = span.StartSpan(ctx)
-	defer span.EndSpan()
-
-	errorPushData := make(chan error, 1)
-	go func() { errorPushData <- x.PushData(ctx, key, payload) }()
-
-	select {
-	case <-ctx.Done():
-		<-errorPushData // Wait for f to return.
-		return "", ctx.Err()
-	case err := <-errorPushData:
-		if err != nil {
-			log.Errorf("SDK: [Store & Forward] Push data failed")
-			return "", err
-		}
-	}
+	x.serve(key, payload)
 	return key, nil
 }
 
-// BroadcastPut uploads the data to sQP and returns key and sQP address
+// BroadcastPut adds the src server and returns key and src address
 func (x *XDTclient) BroadcastPut(ctx context.Context, payload []byte) (string, error) {
-	var payloadLocation string
-
-	key, _ := x.splitPayload(&utils.Payload{Data: payload})
-	if x.config.NoCopy {
-		payloadLocation = x.config.SrcServerHostname + x.config.SrcServerPort
-		x.serve(key, payload)
-		return key, nil
-	}
-	payloadLocation = x.config.SQPServerHostname + x.config.SQPServerPort
-	httpMetadata := map[string]string{
-		"is_xdt":   "true",
-		"key":      key,
-		"sqp_addr": payloadLocation,
-		"routing":  x.config.Routing,
-	}
-	ctx = metadata.NewOutgoingContext(ctx, metadata.New(httpMetadata))
-	//  This timeout must be large enough for the request to complete
-	timeoutDuration := time.Duration(x.config.RPCTimeoutDuration) * time.Millisecond
-	ctx, cancel := context.WithTimeout(ctx, timeoutDuration)
-	defer cancel()
-
-	span := tracing.Span{SpanName: "PutXDT", TracerName: "PutXDT-Tracer"}
-	ctx = span.StartSpan(ctx)
-	defer span.EndSpan()
-
-	errorPushData := make(chan error, 1)
-	go func() { errorPushData <- x.PushBroadcastData(ctx, key, payload) }()
-
-	select {
-	case <-ctx.Done():
-		<-errorPushData // Wait for f to return.
-		return "", ctx.Err()
-	case err := <-errorPushData:
-		if err != nil {
-			log.Errorf("SDK: [Store & Forward] Push data failed")
-			return "", err
-		}
-	}
-	return key, nil
+	return x.Put(ctx, payload)
 }
 
-// ServeAndInvoke invokes the RPC call with and serves the object for DstQP to pull
-func (x *XDTclient) ServeAndInvoke(ctx context.Context, URL string, xdtPayload utils.Payload) ([]byte, bool, error) {
-
+// Invoke invokes the RPC call with proper version
+func (x *XDTclient) Invoke(ctx context.Context, URL string, xdtPayload utils.Payload) ([]byte, bool, error) {
 	srcAddr := x.addr
 	key, payloadData := x.splitPayload(&xdtPayload)
 	serialisedPayload, err := json.Marshal(xdtPayload)
@@ -289,8 +202,7 @@ func (x *XDTclient) ServeAndInvoke(ctx context.Context, URL string, xdtPayload u
 	httpMetadata := map[string]string{
 		"is_xdt":   "true",
 		"key":      key,
-		"sqp_addr": srcAddr,
-		"routing":  x.config.Routing,
+		"src_addr": srcAddr,
 	}
 	ctx = metadata.NewOutgoingContext(ctx, metadata.New(httpMetadata))
 	//  This timeout must be large enough for the request to complete
@@ -324,97 +236,6 @@ func (x *XDTclient) ServeAndInvoke(ctx context.Context, URL string, xdtPayload u
 
 	response := <-responseChannel
 	return response.Message, response.Ok, nil
-
-}
-
-// Invoke invokes the RPC call with proper version
-func (x *XDTclient) Invoke(ctx context.Context, URL string, xdtPayload utils.Payload) ([]byte, bool, error) {
-	if x.config.NoCopy {
-		return x.ServeAndInvoke(ctx, URL, xdtPayload)
-	} else {
-		return x.InvokeWithCopy(ctx, URL, xdtPayload)
-	}
-}
-
-// InvokeWithCopy invokes the RPC call with XDT with copy
-func (x *XDTclient) InvokeWithCopy(ctx context.Context, URL string, xdtPayload utils.Payload) ([]byte, bool, error) {
-
-	sQPAddr := x.addr
-	key, payloadData := x.splitPayload(&xdtPayload)
-	serialisedPayload, err := json.Marshal(xdtPayload)
-	if err != nil {
-		return nil, false, err
-	}
-
-	httpMetadata := map[string]string{
-		"is_xdt":   "true",
-		"key":      key,
-		"sqp_addr": sQPAddr,
-		"routing":  x.config.Routing,
-	}
-	ctx = metadata.NewOutgoingContext(ctx, metadata.New(httpMetadata))
-	//  This timeout must be large enough for the request to complete
-	timeoutDuration := time.Duration(x.config.RPCTimeoutDuration) * time.Millisecond
-	ctx, cancel := context.WithTimeout(ctx, timeoutDuration)
-	defer cancel()
-
-	span := tracing.Span{SpanName: "InvokeWithXDT", TracerName: "InvokeWithXDT-Tracer"}
-	ctx = span.StartSpan(ctx)
-	defer span.EndSpan()
-
-	errorPushData := make(chan error, 1)
-	go func() { errorPushData <- x.PushData(ctx, key, payloadData) }()
-	if x.config.Routing == utils.STORE_FORWARD {
-		log.Info("SDK: using store & forward routing")
-		select {
-		case <-ctx.Done():
-			<-errorPushData // Wait for f to return.
-			return nil, false, ctx.Err()
-		case err := <-errorPushData:
-			if err != nil {
-				log.Errorf("SDK: [Store & Forward] Push data failed")
-				return nil, false, err
-			}
-		}
-	}
-
-	errorFnInvocationCall := make(chan error, 1)
-	responseChannel := make(chan *downXDT.InvocationResponse, 1)
-	go func() {
-		response, err := fnInvocationCall(ctx, URL, serialisedPayload)
-		errorFnInvocationCall <- err
-		responseChannel <- response
-	}()
-	select {
-	case <-ctx.Done():
-		<-errorFnInvocationCall
-		return nil, false, ctx.Err()
-	case err := <-errorFnInvocationCall:
-		if err != nil {
-			log.Errorf("SDK: InvokeWithXDT: fnInvocationCall failed: %v", err)
-			return nil, false, err
-		}
-	}
-
-	if x.config.Routing == utils.CUT_THROUGH {
-		log.Info("SDK: using cut through routing")
-		// Wait for completion and return the first error (if any)
-		select {
-		case <-ctx.Done():
-			<-errorPushData
-			return nil, false, ctx.Err()
-		case err := <-errorPushData:
-			if err != nil {
-				log.Errorf("SDK: [Cut Through] Push data failed")
-				return nil, false, err
-			}
-			response := <-responseChannel
-			return response.Message, response.Ok, nil
-		}
-	} else {
-		response := <-responseChannel
-		return response.Message, response.Ok, nil
-	}
 }
 
 // fnInvocationCall makes fn invocation call to dQP with xdt payload
@@ -459,94 +280,4 @@ func fnInvocationCall(ctx context.Context, URL string, serialisedPayload []byte)
 		log.Infof("SDK: Fn invocation successful")
 		return <-responseChannel, nil
 	}
-}
-
-// PushData to source QP
-func (x *XDTclient) PushData(ctx context.Context, key string, payload []byte) error {
-
-	payloadSize := len(payload)
-	log.Infof("Transfering %d bytes to sQP", payloadSize)
-	stream, err := x.client.SendData(ctx)
-	if err != nil {
-		log.Errorf("open stream error %v", err)
-		return err
-	}
-	chunkSizeInBytes := x.config.ChunkSizeInBytes
-	chunkTotal := len(payload) / chunkSizeInBytes
-	if len(payload)%chunkSizeInBytes != 0 {
-		chunkTotal += 1
-	}
-
-	for currentByte := 0; currentByte < payloadSize; currentByte += chunkSizeInBytes {
-
-		if currentByte+chunkSizeInBytes > payloadSize {
-			req := upXDT.Request{Chunk: payload[currentByte:payloadSize], Key: key, TotalChunks: int64(chunkTotal)}
-			if err := stream.Send(&req); err != nil {
-				log.Errorf("send error %v", err)
-				return err
-			}
-			log.Debugf("finishing request number : %d", currentByte)
-		} else {
-			req := upXDT.Request{Chunk: payload[currentByte : currentByte+chunkSizeInBytes], Key: key, TotalChunks: int64(chunkTotal)}
-			if err := stream.Send(&req); err != nil {
-				log.Errorf("send error %v", err)
-				return err
-
-			}
-			log.Debugf("finishing request number : %d", currentByte)
-		}
-
-	}
-	_, err = stream.CloseAndRecv()
-	if err != nil {
-		log.Errorf("%v.CloseAndRecv() got error %v, want %v", stream, err, nil)
-		return err
-	}
-	log.Infof("SDK: data push successful")
-	return nil
-}
-
-// PushBroadcastData to source QP
-func (x *XDTclient) PushBroadcastData(ctx context.Context, key string, payload []byte) error {
-
-	payloadSize := len(payload)
-	log.Infof("Transfering %d bytes to sQP", payloadSize)
-	stream, err := x.client.BroadcastUpload(ctx)
-	if err != nil {
-		log.Errorf("open stream error %v", err)
-		return err
-	}
-	chunkSizeInBytes := x.config.ChunkSizeInBytes
-	chunkTotal := len(payload) / chunkSizeInBytes
-	if len(payload)%chunkSizeInBytes != 0 {
-		chunkTotal += 1
-	}
-
-	for currentByte := 0; currentByte < payloadSize; currentByte += chunkSizeInBytes {
-
-		if currentByte+chunkSizeInBytes > payloadSize {
-			req := upXDT.Request{Chunk: payload[currentByte:payloadSize], Key: key, TotalChunks: int64(chunkTotal)}
-			if err := stream.Send(&req); err != nil {
-				log.Errorf("send error %v", err)
-				return err
-			}
-			log.Debugf("finishing request number : %d", currentByte)
-		} else {
-			req := upXDT.Request{Chunk: payload[currentByte : currentByte+chunkSizeInBytes], Key: key, TotalChunks: int64(chunkTotal)}
-			if err := stream.Send(&req); err != nil {
-				log.Errorf("send error %v", err)
-				return err
-
-			}
-			log.Debugf("finishing request number : %d", currentByte)
-		}
-
-	}
-	_, err = stream.CloseAndRecv()
-	if err != nil {
-		log.Errorf("%v.CloseAndRecv() got error %v, want %v", stream, err, nil)
-		return err
-	}
-	log.Infof("SDK: data push successful")
-	return nil
 }

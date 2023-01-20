@@ -27,8 +27,6 @@ require (
 	capnproto.org/go/capnp/v3 v3.0.0-alpha.18 // indirect
 	cloud.google.com/go v0.83.0 // indirect
 	github.com/ease-lab/vhive-xdt/proto/crossXDT v0.0.0-00010101000000-000000000000 // indirect
-	github.com/ease-lab/vhive-xdt/proto/downXDT v0.0.0-00010101000000-000000000000 // indirect
-	github.com/ease-lab/vhive-xdt/transport v0.0.0-00010101000000-000000000000 // indirect
 	github.com/felixge/httpsnoop v1.0.1 // indirect
 	github.com/go-logr/logr v0.4.0 // indirect
 	github.com/golang/protobuf v1.5.2 // indirect

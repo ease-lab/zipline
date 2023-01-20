@@ -56,7 +56,6 @@ func (s downXDTServer) XDTFnCall(ctx context.Context, in *downXDT.InvocationRequ
 	var message []byte
 	if ok && headers["is_xdt"][0] == "true" {
 		key := headers["key"][0]
-		log.Infof("DST: using %s routing", headers["routing"][0])
 
 		// fetch data from dQP
 		start := time.Now()
@@ -102,16 +101,15 @@ func Get(ctx context.Context, capability string, config utils.Config) ([]byte, e
 	log.Infof("attempting Get using capability %s", capability)
 	key := capability
 	splitString := strings.SplitN(capability, "|", 2)
-	sQPAddr := splitString[1]
+	srcAddr := splitString[1]
 	httpMetadata := map[string]string{
 		"is_xdt":   "true",
 		"key":      key,
-		"sqp_addr": sQPAddr,
-		"routing":  config.Routing,
+		"src_addr": srcAddr,
 	}
 	ctx = metadata.NewOutgoingContext(ctx, metadata.New(httpMetadata))
 
-	conn, err := net.Dial("tcp", sQPAddr)
+	conn, err := net.Dial("tcp", srcAddr)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -124,16 +122,15 @@ func BroadcastGet(ctx context.Context, capability string, config utils.Config) (
 	log.Infof("attempting Get using capability %s", capability)
 	key := capability
 	splitString := strings.SplitN(capability, "|", 2)
-	sQPAddr := splitString[1]
+	srcAddr := splitString[1]
 	httpMetadata := map[string]string{
 		"is_xdt":   "true",
 		"key":      key,
-		"sqp_addr": sQPAddr,
-		"routing":  config.Routing,
+		"src_addr": srcAddr,
 	}
 	ctx = metadata.NewOutgoingContext(ctx, metadata.New(httpMetadata))
 
-	conn, err := net.Dial("tcp", sQPAddr)
+	conn, err := net.Dial("tcp", srcAddr)
 	if err != nil {
 		log.Fatal(err)
 	}

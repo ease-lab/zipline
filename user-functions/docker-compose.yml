@@ -37,13 +37,6 @@ services:
       - "50006"
       - "50008"
 
-  sQP:
-    image: vhiveease/sqp
-    env_file:
-      - xdt.env
-      - network.env
-    expose:
-      - "50005"
   gx:
     image: vhiveease/gx
     env_file:
@@ -62,6 +55,5 @@ services:
       - -dockerCompose
     depends_on:
       - gx
-      - sQP
       - dQP
       - zipkin

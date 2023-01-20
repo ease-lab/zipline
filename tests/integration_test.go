@@ -50,7 +50,6 @@ import (
 	ctrdlog "github.com/containerd/containerd/log"
 	tracing "github.com/ease-lab/vSwarm/utils/tracing/go"
 	"github.com/ease-lab/vhive-xdt/queue-proxy/dQP"
-	"github.com/ease-lab/vhive-xdt/queue-proxy/sQP"
 	"github.com/ease-lab/vhive-xdt/utils"
 
 	log "github.com/sirupsen/logrus"
@@ -60,7 +59,6 @@ var sampleSize = flag.Int("sample", 10, "sampleSize")
 var URL = flag.String("url", "helloworld.default.192.168.1.240.nip.io", "Function URL")
 var zipkinEndpoint = flag.String("zipkinEndpoint", "http://localhost:9411/api/v2/spans", "zipkin endpoint URL")
 var numConcurrentFunctions = flag.Int("concurrentCalls", 5, "num of simultaneous calls")
-var chunkSizeInBytes = utils.ReadConfig().ChunkSizeInBytes
 
 func init() {
 	log.SetLevel(log.InfoLevel)
@@ -113,16 +111,16 @@ func knativeQP(config utils.Config) {
 				httpMetadata := map[string]string{
 					"is_xdt":   r.Header.Get("is_xdt"),
 					"key":      r.Header.Get("key"),
-					"sqp_addr": r.Header.Get("sqp_addr"),
+					"src_addr": r.Header.Get("src_addr"),
 					"routing":  r.Header.Get("routing"),
 				}
 				ctx := metadata.NewOutgoingContext(r.Context(), metadata.New(httpMetadata))
-				log.Infof("pulling from sQP using key %s addr %s", r.Header.Get("key"), r.Header.Get("sqp_addr"))
+				log.Infof("pulling from src using key %s addr %s", r.Header.Get("key"), r.Header.Get("src_addr"))
 				go func() {
 					// FIXME: support many payloads per invocation
-					err := dQP.PullDataFromSrcQP(ctx)
+					err := dQP.PullDataFromSrc(ctx)
 					if err != nil {
-						log.Fatalf("Proxy: Failed to pull data from sQP: %v", err)
+						log.Fatalf("Proxy: Failed to pull data from src: %v", err)
 					}
 				}()
 			}
@@ -171,8 +169,7 @@ func TestSdk_InvokeWithXDT(t *testing.T) {
 		}
 		defer shutdown()
 	}
-	// start server at sQP
-	go sQP.StartServer(config)
+	// start servers
 	go knativeQP(config)
 	go sdk.StartDstServer(config, handler)
 
@@ -204,8 +201,7 @@ func TestErr_DQPTimeout(t *testing.T) {
 		defer shutdown()
 	}
 
-	// start server at sQP
-	go sQP.StartServer(config)
+	// start servers
 	time.Sleep(time.Second)
 	go sdk.StartDstServer(config, handler)
 
@@ -238,8 +234,7 @@ func TestParallel_Invoke(t *testing.T) {
 		defer shutdown()
 	}
 
-	// start server at sQP
-	go sQP.StartServer(config)
+	// start servers
 	go knativeQP(config)
 	go sdk.StartDstServer(config, handler)
 
@@ -283,15 +278,8 @@ func TestParallel_FanIn(t *testing.T) {
 		defer shutdown()
 	}
 
-	// start server at sQP
-	sQPPort := 50009
-	for i := 0; i < *numConcurrentFunctions; i += 1 {
-		tmpConfig := utils.ReadConfig()
-		tmpConfig.SQPServerPort = ":" + fmt.Sprint(sQPPort+i)
-		log.Infof("starting sQP server no. %d", i+1)
-		go sQP.StartServer(tmpConfig)
-		time.Sleep(time.Second * 10)
-	}
+	// start servers
+	srcPort := 50009
 	go knativeQP(config)
 	time.Sleep(time.Second * 2)
 	go sdk.StartDstServer(config, handler)
@@ -306,7 +294,7 @@ func TestParallel_FanIn(t *testing.T) {
 	for i := 0; i < numberOfSources; i += 1 {
 		i := i
 		go func(config utils.Config) {
-			config.SQPServerPort = ":" + fmt.Sprint(sQPPort+i)
+			config.SrcServerPort = ":" + fmt.Sprint(srcPort+i)
 			xdtClient, err := sdk.NewXDTclient(config)
 			if err != nil {
 				log.Fatalf("InitXDT failed %v", err)
@@ -339,7 +327,7 @@ func TestParallel_FanOut(t *testing.T) {
 		defer shutdown()
 	}
 
-	// start server at sQP
+	// start servers
 	dQPPort := 50009
 	for i := 0; i < *numConcurrentFunctions; i += 1 {
 		config.DstServerPort = ":" + fmt.Sprint(dQPPort+i)
@@ -355,7 +343,6 @@ func TestParallel_FanOut(t *testing.T) {
 		time.Sleep(time.Second * 10)
 	}
 	time.Sleep(time.Second * 5)
-	go sQP.StartServer(config)
 
 	time.Sleep(time.Second * 1)
 
@@ -393,15 +380,7 @@ func TestPython_SDK(t *testing.T) {
 
 	config := utils.ReadConfig()
 	// start servers
-	go sQP.StartServer(config)
 	knativeQP(config)
-}
-
-func TestPython_SDKTimeout(t *testing.T) {
-
-	config := utils.ReadConfig()
-	// start servers
-	sQP.StartServer(config)
 }
 
 func TestBroadcast_GetPut(t *testing.T) {
@@ -414,8 +393,7 @@ func TestBroadcast_GetPut(t *testing.T) {
 		}
 		defer shutdown()
 	}
-	// start server at sQP
-	go sQP.StartServer(config)
+	// start servers
 	go knativeQP(config)
 	go sdk.StartDstServer(config, handler)
 
@@ -472,8 +450,7 @@ func TestGet_Put(t *testing.T) {
 		}
 		defer shutdown()
 	}
-	// start server at sQP
-	go sQP.StartServer(config)
+	// start servers
 	go knativeQP(config)
 	go sdk.StartDstServer(config, handler)
 
@@ -509,7 +486,6 @@ func TestBenchmark_XDT(t *testing.T) {
 		log.Fatal("invalid sample size. Acceptable input is integers >= 10")
 	}
 
-	go sQP.StartServer(config)
 	go knativeQP(config)
 	go sdk.StartDstServer(config, handler)
 
@@ -527,7 +503,7 @@ func TestBenchmark_XDT(t *testing.T) {
 		log.Fatalf("InitXDT failed %v", err)
 	}
 
-	benchPayload := func(payloadSize int, chunkSizeInBytes int, sampleSize int, URL string, payloadData []byte) []float64 {
+	benchPayload := func(payloadSize int, sampleSize int, URL string, payloadData []byte) []float64 {
 		var latencies []float64
 		payloadToSend := utils.Payload{
 			FunctionName: "HelloXDT",
@@ -549,7 +525,7 @@ func TestBenchmark_XDT(t *testing.T) {
 	for _, payloadSize := range payloadSizes {
 		payloadSizeInBytes := payloadSize * 1024
 		log.Infof("checking for %dKiB", payloadSize)
-		latencies := benchPayload(payloadSizeInBytes, chunkSizeInBytes, *sampleSize, *URL, payloadData)
+		latencies := benchPayload(payloadSizeInBytes, *sampleSize, *URL, payloadData)
 		plotter.PlotLatenciesCDF(latencies, payloadSize)
 		latencyMap[payloadSize] = latencies
 	}

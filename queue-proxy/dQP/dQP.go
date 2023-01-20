@@ -82,14 +82,14 @@ func (s crossXDTServer) ServeData(ctx context.Context, req crossXDT.StreamData_s
 
 }
 
-// PullDataFromSrcQP pulls data from src QP to dst QP
-func PullDataFromSrcQP(ctx context.Context) error {
+// PullDataFromSrc pulls data from src QP to dst QP
+func PullDataFromSrc(ctx context.Context) error {
 
 	headers, _ := metadata.FromOutgoingContext(ctx)
 	key := headers["key"][0]
-	sQPAddr := headers["sqp_addr"][0]
+	srcAddr := headers["src_addr"][0]
 
-	conn, err := net.Dial("tcp", sQPAddr)
+	conn, err := net.Dial("tcp", srcAddr)
 	if err != nil {
 		log.Fatal(err)
 	}

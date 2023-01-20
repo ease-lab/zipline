@@ -54,7 +54,6 @@ type producerServer struct {
 
 func (ps producerServer) SayHello(ctx context.Context, req *pb.HelloRequest) (*pb.HelloReply, error) {
 	// establish a connection
-	ps.config.SQPServerHostname = utils.FetchSelfIP()
 	duration := transferPayload(ps.config, ps.url, ps.transferSize)
 	return &pb.HelloReply{Message: fmt.Sprintf("Transferred %d KB in %s", ps.transferSize, duration)}, nil
 }
@@ -100,9 +99,9 @@ func transferPayload(config utils.Config, url string, transferSize int) time.Dur
 	}
 	start := time.Now()
 	log.Infof("starting XDT call")
-	log.Infof("using %s as the SQP addr", config.SQPServerHostname+config.SQPServerPort)
+	log.Infof("using %s as the src addr", config.SrcServerHostname+config.SrcServerPort)
 	if message, _, err := xdtClient.Invoke(context.Background(), url, payloadToSend); err != nil {
-		log.Fatalf("SQP_to_dQP_data_transfer failed %v", err)
+		log.Fatalf("Invoke failed %v", err)
 	} else {
 		log.Infof("received %s from the dest", message)
 	}
@@ -113,7 +112,6 @@ func main() {
 	dockerCompose := flag.Bool("dockerCompose", false, "Set to true when used with docker compose")
 	url := flag.String("url", "gx.default.192.168.1.240.sslip.io", "Destination function url")
 	transferSize := flag.Int("transferSize", 10000, "Number of KB's to transfer")
-	noCopy := flag.Bool("noCopy", false, "Set to true to bypass sQP for object transfers")
 	flag.Parse()
 
 	log.SetLevel(log.InfoLevel)
@@ -159,9 +157,6 @@ func main() {
 
 		s := producerServer{}
 		s.config = config
-		if *noCopy {
-			s.config.NoCopy = true
-		}
 		s.url = *url + ":80"
 		s.transferSize = *transferSize
 		pb.RegisterGreeterServer(grpcServer, &s)

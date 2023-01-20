@@ -32,8 +32,6 @@ SDK_GO_FILES:=./source.go ./destination.go
 .EXPORT_ALL_VARIABLES:
 include user-functions/xdt.env
 # network config
-SQP_SERVER_HOSTNAME = localhost
-SQP_SERVER_PORT = :50005
 DQP_SERVER_HOSTNAME = localhost
 DQP_SERVER_PORT = :50006
 DST_SERVER_HOSTNAME = localhost
@@ -41,6 +39,7 @@ DST_SERVER_PORT = :50007
 PROXY_HOSTNAME = localhost
 PROXY_PORT = :50008
 TRACING_ENABLED = False
+ROOT = ./
 
 proto_install:
 	pip install grpcio-tools --user
@@ -61,7 +60,6 @@ build_local:
 	mkdir -p bins
 	cd user-functions/fx && go build -o ../../bins/fx
 	cd user-functions/dQP && go build -o ../../bins/dQP
-	cd user-functions/sQP && go build -o ../../bins/sQP
 	cd user-functions/gx && go build -o ../../bins/gx
 
 clean:
@@ -244,9 +242,21 @@ python-noCopy-broadcast-get-put-test:
 docker-images-push:
 	cd user-functions/fx && ko publish ./ -B --tags=capnp
 	cd user-functions/dQP && ko publish ./ -B --tags=capnp
-	cd user-functions/sQP && ko publish ./ -B --tags=capnp
 	cd user-functions/gx && ko publish ./ -B --tags=capnp
 
+python-images-push:
+	DOCKER_BUILDKIT=1 docker build \
+        	-t vhiveease/pyfx:latest \
+        	--target pyfx \
+        	-f Dockerfile \
+        	$(ROOT)
+	DOCKER_BUILDKIT=1 docker build \
+			-t vhiveease/pygx:latest \
+			--target pygx \
+			-f Dockerfile \
+			$(ROOT)
+	docker push vhiveease/pygx:latest
+	docker push vhiveease/pyfx:latest
 benchmark-XDT: export ROUTING = CutThrough
 benchmark-XDT:
 		cd tests && go test ./integration_test.go -run TestBenchmark_XDT -v

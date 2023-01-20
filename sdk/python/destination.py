@@ -89,30 +89,21 @@ class Fetcher:
             log.info("[dst] waiting for a response from dqp")
             response = get_promise.wait()
             return response.payload
-        # with grpc.insecure_channel(serverAddr) as channel:
-        #     stub = downXDT_pb2_grpc.XDTtoFnStub(channel)
-        #     chunks = stub.XDTDataServe(request)
-        #
-        #     payloadBytes = bytearray()
-        #     for chunk in chunks:
-        #         payloadBytes += chunk.chunk
-        #     log.info("DST: payload of length %d received", len(payloadBytes))
-        #     return payloadBytes
 
 
-# Get fetches data from sQP
+# Get fetches data from src
 def Get(capability, config):
     log.info("fetching payload using capability %s", capability)
     key = capability
     splitString = capability.split("|", 1)
-    sQPAddr = splitString[1]
+    srcAddr = splitString[1]
     metadata = (
         ('is_xdt', 'true'),
         ('key', key),
-        ('sqp_addr', sQPAddr),
+        ('src_addr', srcAddr),
         ('routing', STORE_FORWARD),
     )
-    client = capnp.TwoPartyClient(sQPAddr)
+    client = capnp.TwoPartyClient(srcAddr)
     packet = client.bootstrap().cast_as(crossXDT_capnp.StreamData)
     log.debug("Getting from server... ")
 
@@ -123,31 +114,21 @@ def Get(capability, config):
     get_promise = request.send()
     response = get_promise.wait()
     return response.payload
-    # request = crossXDT_pb2.Request(key=key)
-    # with grpc.insecure_channel(sQPAddr) as channel:
-    #     stub = crossXDT_pb2_grpc.StreamDataStub(channel)
-    #     chunks = stub.ServeData(request, metadata=metadata)
-    #
-    #     payloadBytes = bytearray()
-    #     for chunk in chunks:
-    #         payloadBytes += chunk.chunk
-    #     log.info("DST: payload of length %d received", len(payloadBytes))
-    #     return payloadBytes
 
 
-# Get fetches data from sQP
+# Get fetches data from src
 def BroadcastGet(capability, config):
     log.info("fetching payload using capability %s", capability)
     key = capability
     splitString = capability.split("|", 1)
-    sQPAddr = splitString[1]
+    srcAddr = splitString[1]
     metadata = (
         ('is_xdt', 'true'),
         ('key', key),
-        ('sqp_addr', sQPAddr),
+        ('src_addr', srcAddr),
         ('routing', STORE_FORWARD),
     )
-    client = capnp.TwoPartyClient(sQPAddr)
+    client = capnp.TwoPartyClient(srcAddr)
     packet = client.bootstrap().cast_as(crossXDT_capnp.StreamData)
     log.debug("Getting from server... ")
 
@@ -159,29 +140,18 @@ def BroadcastGet(capability, config):
     response = get_promise.wait()
     log.info("fetched payload of size %s", len(response.payload))
     return response.payload
-    # request = crossXDT_pb2.BroadcastRequest(key=key, ChunkSizeInBytes=config["ChunkSizeInBytes"])
-    # with grpc.insecure_channel(sQPAddr) as channel:
-    #     stub = crossXDT_pb2_grpc.StreamDataStub(channel)
-    #     chunks = stub.ServeBroadcastData(request, metadata=metadata)
-    #
-    #     payloadBytes = bytearray()
-    #     for chunk in chunks:
-    #         payloadBytes += chunk.chunk
-    #     log.info("DST: payload of length %d received", len(payloadBytes))
-    #     return payloadBytes
 
 
 # StartDstServer starts DstQP server
 def StartDstServer(config, dstHandler):
 
     payloadFetcher = Fetcher(config=config)
-    server = grpc.server(futures.ThreadPoolExecutor(max_workers=config['MaxDstServerThreadsPython']))
+    server = grpc.server(futures.ThreadPoolExecutor())
     xdtServicer = XDTtoFnServicer(dstHandler=dstHandler, payloadFetcher=payloadFetcher)
     downXDT_pb2_grpc.add_XDTtoFnServicer_to_server(
         xdtServicer, server)
     server.add_insecure_port("[::]"+config['DstServerPort'])
     server.start()
-
 
     server.wait_for_termination()
 
