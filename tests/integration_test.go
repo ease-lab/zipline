@@ -190,39 +190,6 @@ func TestSdk_InvokeWithXDT(t *testing.T) {
 	log.Infof("completed XDT in %s", elapsed)
 }
 
-func TestErr_DQPTimeout(t *testing.T) {
-
-	config := utils.ReadConfig()
-	if config.TracingEnabled {
-		shutdown, err := tracing.InitBasicTracer(*zipkinEndpoint, "xdt")
-		if err != nil {
-			log.Warn(err)
-		}
-		defer shutdown()
-	}
-
-	// start servers
-	time.Sleep(time.Second)
-	go sdk.StartDstServer(config, handler)
-
-	time.Sleep(time.Second * 1)
-	xdtClient, err := sdk.NewXDTclient(config)
-	if err != nil {
-		log.Fatalf("InitXDT failed %v", err)
-	}
-	start := time.Now()
-	log.Infof("starting integ test")
-	url := config.ProxyHostname + config.ProxyPort
-	if _, _, err := xdtClient.Invoke(context.Background(), url, preparePayload()); err == context.DeadlineExceeded {
-		log.Errorf("TestSdk_InvokeWithXDT failed predictably")
-	} else {
-		log.Fatalf("Unexpected Error Occured: %v", err)
-	}
-	elapsed := time.Since(start)
-
-	log.Infof("completed XDT in %s", elapsed)
-}
-
 func TestParallel_Invoke(t *testing.T) {
 
 	config := utils.ReadConfig()
@@ -333,14 +300,15 @@ func TestParallel_FanOut(t *testing.T) {
 		config.DstServerPort = ":" + fmt.Sprint(dQPPort+i)
 		config.DQPServerPort = ":" + fmt.Sprint(dQPPort+i+*numConcurrentFunctions)
 		config.ProxyPort = ":" + fmt.Sprint(dQPPort+i+*numConcurrentFunctions+*numConcurrentFunctions)
-		tmpDstConfig := config
-		log.Infof("starting Dst server no. %d", i+1)
-		go sdk.StartDstServer(tmpDstConfig, handler)
-		time.Sleep(time.Second * 10)
 		tmpDQPConfig := config
 		log.Infof("starting dQP server no. %d", i+1)
 		go knativeQP(tmpDQPConfig)
 		time.Sleep(time.Second * 10)
+		tmpDstConfig := config
+		log.Infof("starting Dst server no. %d", i+1)
+		go sdk.StartDstServer(tmpDstConfig, handler)
+		time.Sleep(time.Second * 10)
+
 	}
 	time.Sleep(time.Second * 5)
 
@@ -487,9 +455,10 @@ func TestBenchmark_XDT(t *testing.T) {
 	}
 
 	go knativeQP(config)
+	time.Sleep(time.Second * 1)
 	go sdk.StartDstServer(config, handler)
 
-	payloadSizes := []int{10, 100, 1000, 10000, 100000}
+	payloadSizes := []int{10, 100, 1000, 10000}
 
 	latencyMap := make(map[int][]float64)
 

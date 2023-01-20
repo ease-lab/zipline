@@ -78,7 +78,10 @@ func (s downXDTServer) XDTFnCall(ctx context.Context, in *downXDT.InvocationRequ
 func FetchData(ctx context.Context, key string, capconn *rpc.Conn) ([]byte, error) {
 	client := crossXDT.StreamData(capconn.Bootstrap(context.Background()))
 	f, _ := client.ServeData(ctx, func(ps crossXDT.StreamData_serveData_Params) error {
-		ps.SetKey(key)
+		err := ps.SetKey(key)
+		if err != nil {
+			log.Fatal(err)
+		}
 		return nil
 	})
 	//defer release()
@@ -97,7 +100,7 @@ func FetchData(ctx context.Context, key string, capconn *rpc.Conn) ([]byte, erro
 }
 
 // Get pulls payload from DQP server using the key
-func Get(ctx context.Context, capability string, config utils.Config) ([]byte, error) {
+func Get(ctx context.Context, capability string, _ utils.Config) ([]byte, error) {
 	log.Infof("attempting Get using capability %s", capability)
 	key := capability
 	splitString := strings.SplitN(capability, "|", 2)
@@ -118,7 +121,7 @@ func Get(ctx context.Context, capability string, config utils.Config) ([]byte, e
 }
 
 // BroadcastGet pulls payload from DQP server using the key
-func BroadcastGet(ctx context.Context, capability string, config utils.Config) ([]byte, error) {
+func BroadcastGet(ctx context.Context, capability string, _ utils.Config) ([]byte, error) {
 	log.Infof("attempting Get using capability %s", capability)
 	key := capability
 	splitString := strings.SplitN(capability, "|", 2)
@@ -137,7 +140,10 @@ func BroadcastGet(ctx context.Context, capability string, config utils.Config) (
 	capconn := rpc.NewConn(rpc.NewStreamTransport(conn), nil)
 	client := crossXDT.StreamData(capconn.Bootstrap(context.Background()))
 	f, _ := client.ServeBroadcastData(ctx, func(ps crossXDT.StreamData_serveBroadcastData_Params) error {
-		ps.SetKey(key)
+		err := ps.SetKey(key)
+		if err != nil {
+			log.Fatal(err)
+		}
 		return nil
 	})
 	//defer release()

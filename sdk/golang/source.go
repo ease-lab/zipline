@@ -23,7 +23,7 @@
 package golang
 
 import (
-	"capnproto.org/go/capnp/v3"
+	capnp "capnproto.org/go/capnp/v3"
 	"capnproto.org/go/capnp/v3/rpc"
 	"context"
 	"encoding/json"
@@ -48,7 +48,6 @@ import (
 
 	"net"
 
-	"github.com/ease-lab/vhive-xdt/proto/upXDT"
 	"google.golang.org/grpc"
 )
 
@@ -60,7 +59,6 @@ type crossXDTServer struct {
 type XDTclient struct {
 	atom           atomic.Uint64
 	config         utils.Config
-	client         upXDT.StreamDataClient
 	addr           string
 	payloadDataMap sync.Map
 	crossXDTserver crossXDTServer
@@ -95,7 +93,10 @@ func NewXDTclient(config utils.Config) (*XDTclient, error) {
 				// Block until the connection terminates.
 				select {
 				case <-capnpconn.Done():
-					capnpconn.Close()
+					err := capnpconn.Close()
+					if err != nil {
+						log.Fatal(err)
+					}
 					return
 				}
 			}()
@@ -123,7 +124,7 @@ func (x *XDTclient) serve(key string, payloadData []byte) string {
 }
 
 // ServeData is the gRPC server to serve the available data to the dQP
-func (s crossXDTServer) ServeData(ctx context.Context, req crossXDT.StreamData_serveData) error {
+func (s crossXDTServer) ServeData(_ context.Context, req crossXDT.StreamData_serveData) error {
 
 	res, err := req.AllocResults() // allocate the results struct
 	if err != nil {
@@ -151,7 +152,7 @@ func (s crossXDTServer) ServeData(ctx context.Context, req crossXDT.StreamData_s
 }
 
 // ServeBroadcastData is the gRPC server to serve the available data to the dQP
-func (s crossXDTServer) ServeBroadcastData(ctx context.Context, req crossXDT.StreamData_serveBroadcastData) error {
+func (s crossXDTServer) ServeBroadcastData(_ context.Context, req crossXDT.StreamData_serveBroadcastData) error {
 
 	res, err := req.AllocResults() // allocate the results struct
 	if err != nil {
@@ -179,7 +180,7 @@ func (s crossXDTServer) ServeBroadcastData(ctx context.Context, req crossXDT.Str
 }
 
 // Put adds the src server and returns key and src address
-func (x *XDTclient) Put(ctx context.Context, payload []byte) (string, error) {
+func (x *XDTclient) Put(_ context.Context, payload []byte) (string, error) {
 	key, _ := x.splitPayload(&utils.Payload{Data: payload})
 	x.serve(key, payload)
 	return key, nil

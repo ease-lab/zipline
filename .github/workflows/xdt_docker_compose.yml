@@ -43,7 +43,7 @@ jobs:
         env:
           KO_DOCKER_REPO: ${{ secrets.DOCKER_HUB_USERNAME }}
         run: |
-          make docker-images-push
+          make all-images-push
 
   docker-compose-integ-test:
     name: Docker compose integ test
@@ -60,3 +60,5 @@ jobs:
         run: |
           cd ./user-functions
           docker-compose up --abort-on-container-exit --exit-code-from fx
+          docker-compose -f docker-compose-python.yml up --abort-on-container-exit --exit-code-from fx
+          
